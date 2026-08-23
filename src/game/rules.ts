@@ -1,0 +1,30 @@
+import { baseValue, Caravan, Card, GameState, PlacedCard, TargetRef } from "./types";
+
+export function placedValue(p: PlacedCard): number {
+  return baseValue(p.card) * Math.pow(2, p.kingCount);
+}
+
+export function caravanTotal(c: Caravan): number {
+  return c.cards.reduce((sum, p) => sum + placedValue(p), 0);
+}
+
+export function isInRange(total: number): boolean {
+  return total >= 21 && total <= 26;
+}
+
+export function canPlayValue(card: Card, caravan: Caravan): boolean {
+  if (caravan.cards.length === 0) return true;
+  const prev = caravan.cards[caravan.cards.length - 1];
+  if (card.rank === prev.card.rank) return false;
+  if (caravan.direction === null) return true;
+  const cv = baseValue(card);
+  const pv = baseValue(prev.card);
+  const continues = caravan.direction === "asc" ? cv > pv : cv < pv;
+  const matchesSuit = card.suit === prev.card.suit;
+  return continues || matchesSuit;
+}
+
+export function isValidTarget(state: GameState, target: TargetRef): boolean {
+  const car = state.players[target.player].caravans[target.caravan];
+  return !!car && target.cardIndex >= 0 && target.cardIndex < car.cards.length;
+}

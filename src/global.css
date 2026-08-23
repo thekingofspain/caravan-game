@@ -1,0 +1,676 @@
+:root {
+  --c-bg: #0a0f0a;
+  --c-felt: #0d5c2e;
+  --c-panel: #0e6b34;
+  --c-panel-2: #117a3d;
+  --c-sidebar: #1c1c1e;
+  --c-fg: #f5f5dc;
+  --c-accent: #d4af37;
+  --c-dim: #8a9a7a;
+  --c-line: #1a4a2a;
+  --c-bad: #c0392b;
+
+  --c-suit-spades: #8ab4f8;
+  --c-suit-hearts: #ff6b6b;
+  --c-suit-diamonds: #ffd166;
+  --c-suit-clubs: #c08bff;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  --radius: 6px;
+  --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  /* neon mono no longer used; kept name for compatibility */
+  --font-mono: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+
+  /* cards are sized from the viewport height: ~8 card heights fill the screen */
+  --card-h: calc(100vh / 8);
+  --card-w: calc(var(--card-h) * 169.075 / 244.64);
+  --card-gap: var(--sp-1);
+
+  /* shared card-overlap offset used by both the hand and the caravans */
+  --overlap-h: calc(var(--card-w) * 0.55);
+  --overlap-v: calc(var(--card-h) * 0.22);
+
+  /* card-unit system (vh-derived) for caravan slot positioning */
+  --cu: var(--overlap-v);
+  --cu-x: var(--overlap-h);
+  --card-offset: calc(var(--card-h) / 8);
+
+  --rows-cap: 12;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-fg);
+  font-family: var(--font-base);
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(26, 107, 58, 0.4) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px);
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--c-bg);
+}
+
+.app__title {
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ---------- Card rendering (DOM background, SVG via class) ---------- */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  background-color: var(--c-panel-2);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  border-radius: var(--radius);
+  flex: none;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.card--back {
+  background-color: var(--c-panel);
+}
+
+.card.is-hidden {
+  visibility: hidden;
+}
+
+.card.is-selectable {
+  cursor: pointer;
+}
+
+.card.is-target {
+  outline: 2px dashed var(--c-accent);
+  outline-offset: 1px;
+}
+
+.card.is-selected {
+  outline: none;
+}
+
+/* ---------- Board layout ---------- */
+.board {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.sidebar {
+  overflow-y: auto;
+  padding: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.playfield {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: visible;
+  padding: var(--sp-2);
+  gap: var(--sp-2);
+  background: var(--c-felt);
+}
+
+/* ---------- Hand zones (AI top, Human bottom) ---------- */
+.hand-zone {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  min-height: 0;
+  overflow: visible;
+}
+
+.hand-zone__label {
+  color: var(--c-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.hand-zone__cards {
+  display: flex;
+  justify-content: center;
+  flex: 1 1 0;
+}
+
+.hand-zone--ai .hand__slot--ai {
+  margin-left: calc(-1 * var(--overlap-h));
+}
+
+.hand-zone--ai .hand__slot--ai:first-child {
+  margin-left: 0;
+}
+
+.hand-zone--ai .card {
+  height: var(--card-h);
+  width: var(--card-w);
+}
+
+/* ---------- Caravans row (3 columns) ---------- */
+.caravans-row {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+  min-height: 0;
+}
+
+.caravan-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-height: 0;
+}
+
+.caravan-col__stack {
+  flex: 1 1 0;
+  min-height: 0;
+  width: var(--card-w);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: default;
+}
+
+.caravan-col__stack--human {
+  cursor: pointer;
+  --sign: 1;
+}
+
+.caravan-col__stack--ai {
+  --sign: -1;
+}
+
+.caravan-col__score {
+  color: var(--c-dim);
+  font-size: 16px;
+  font-weight: bold;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 40px;
+}
+
+.caravan-col__score.is-valid {
+  color: var(--c-accent);
+  font-weight: bold;
+}
+
+.caravan-col__divider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.caravan-col__divider {
+  color: var(--c-dim);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-top: 1px solid var(--c-line);
+  border-bottom: 1px solid var(--c-line);
+  padding: 0 var(--sp-1);
+}
+
+.caravan-divider__slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+}
+
+.caravan-divider__label {
+  color: var(--c-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+}
+
+.caravan-divider__total {
+  color: var(--c-fg);
+  font-size: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.caravan-divider__total.is-valid {
+  color: var(--c-accent);
+}
+
+/* ---------- Caravan stacking ---------- */
+.caravan__row {
+  position: absolute;
+  left: 0;
+  width: var(--card-w);
+}
+
+.placed-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.placed-face {
+  position: absolute;
+  top: 0;
+}
+
+.caravan__placeholder {
+  position: absolute;
+  left: 50%;
+  width: var(--card-w);
+  height: var(--card-h);
+  border: 3px dashed var(--c-dim);
+  border-radius: var(--radius);
+  opacity: 1;
+  transition: border-color 0.15s ease, border-width 0.15s ease;
+}
+
+.caravan-col__stack--ai .caravan__placeholder {
+  top: auto;
+  bottom: var(--card-offset);
+  transform: translate(-50%, 0);
+}
+
+.caravan-col__stack--human .caravan__placeholder {
+  top: var(--card-offset);
+  transform: translate(-50%, 0);
+}
+
+.caravan-col__stack--human .caravan__placeholder.is-selectable {
+  opacity: 1;
+}
+
+/* When card is selected, placeholders highlight only on hover */
+.board:has(.hand__slot.is-selected) .caravan-col__stack--human .caravan__placeholder:hover {
+  border-color: var(--c-accent);
+  border-width: 3px;
+  transition: border-color 0.15s ease, border-width 0.15s ease;
+  opacity: 0.9;
+}
+
+.board:has(.hand__slot.is-selected) .caravan-col__stack--ai .caravan__placeholder:hover {
+  border-color: var(--c-bad);
+  border-width: 3px;
+  transition: border-color 0.15s ease, border-width 0.15s ease;
+  opacity: 0.9;
+}
+
+/* Row positioning: same rule for AI and human, --sign flips direction */
+.caravan__row {
+  z-index: var(--i, 0);
+}
+
+.caravan-col__stack--human .caravan__row {
+  top: calc(var(--card-offset) + var(--i, 0) * var(--cu));
+}
+
+.caravan-col__stack--ai .caravan__row {
+  bottom: calc(var(--card-offset) + var(--i, 0) * var(--cu));
+}
+
+.caravan-col__stack--ai .placed-wrap {
+  top: auto;
+  bottom: 0;
+}
+
+.placed-face {
+  left: calc(var(--c, 0) * var(--cu-x));
+}
+
+/* ---------- Hand slots (human) ---------- */
+.hand__slot:not(:first-child) {
+  margin-left: calc(-1 * var(--overlap-h));
+}
+
+.hand__slot {
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hand__slot.is-selectable {
+}
+
+.hand__slot.is-selected {
+  transform: translateY(-20%);
+  z-index: 3;
+}
+
+.card.is-selected {
+  outline: none;
+}
+
+/* ---------- Placed card + badges ---------- */
+.placed {
+  position: relative;
+  display: inline-block;
+}
+
+.placed-wrap.is-target {
+  outline: 2px dashed var(--c-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+  z-index: 4;
+}
+
+.card__badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--c-accent);
+  color: #1a160c;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid #1a160c;
+}
+
+.card__badge--king {
+  background: var(--c-suit-diamonds);
+}
+
+.card__badge--face {
+  background: var(--c-suit-spades);
+  color: var(--c-fg);
+}
+
+/* ---------- Controls / log ---------- */
+.controls {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--c-accent);
+  color: #1a160c;
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius);
+  padding: var(--sp-2) var(--sp-4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #e6c34d;
+  border-color: #e6c34d;
+  color: #1a160c;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.log {
+  flex: 1 1 0;
+  min-height: 0;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: var(--sp-2);
+  overflow-y: auto;
+  color: #000000;
+  font-size: 11px;
+}
+
+.log__line {
+  white-space: pre-wrap;
+}
+
+.log__line.is-key {
+  color: var(--c-fg);
+}
+
+/* ---------- Start screen ---------- */
+.start {
+  max-width: 520px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--c-panel) 0%, var(--c-panel-2) 100%);
+  padding: var(--sp-5);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  overflow: auto;
+}
+
+.start__intro {
+  color: var(--c-dim);
+  margin-top: 0;
+}
+
+/* ---------- Controls hint (hidden) ---------- */
+.controls__hint {
+  display: none;
+}
+
+/* ---------- Card selection hover effects via CSS :has() ---------- */
+.board:has(.hand__slot.is-selected) .placed-wrap.is-target:hover {
+  border: 2px solid var(--c-accent);
+  transition: border-color 0.15s ease;
+}
+
+.board:has(.hand__slot.is-selected) .placed-wrap:not(.is-target):hover {
+  border: 2px solid var(--c-bad);
+  transition: border-color 0.15s ease;
+}
+
+/* ---------- WCAG: Focus visible styles ---------- */
+.hand__slot:focus-visible,
+.btn:focus-visible,
+.placed-wrap:focus-visible {
+  outline: 3px solid var(--c-fg);
+  outline-offset: 2px;
+}
+
+.caravan-col__stack:focus-visible {
+  outline: 3px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- WCAG: Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .hand__slot,
+  .card,
+  .btn {
+    transition: none;
+  }
+}
+
+/* ---------- WCAG: High contrast mode ---------- */
+@media (forced-colors: active) {
+  .card {
+    border: 2px solid ButtonText;
+  }
+  .hand__slot.is-selectable {
+    border-color: Highlight;
+  }
+  .hand__slot.is-selected {
+    outline: 3px solid Highlight;
+  }
+}
+
+/* ---------- Modal ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  z-index: 10;
+}
+
+.modal__panel {
+  max-width: 560px;
+  width: 100%;
+  border: 1px solid var(--c-accent);
+  border-radius: var(--radius);
+  background: var(--c-panel);
+  padding: var(--sp-5);
+  box-shadow: 0 0 24px rgba(201, 162, 75, 0.2);
+}
+
+.modal__title {
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 0;
+}
+
+.rules {
+  color: var(--c-dim);
+  line-height: 1.5;
+}
+
+.rules b {
+  color: var(--c-fg);
+}
+
+/* CARDS:START */
+.card--spades.card--ace{background-image:url("/cards/spade_ace.svg")}
+.card--spades.card--2{background-image:url("/cards/spade_2.svg")}
+.card--spades.card--3{background-image:url("/cards/spade_3.svg")}
+.card--spades.card--4{background-image:url("/cards/spade_4.svg")}
+.card--spades.card--5{background-image:url("/cards/spade_5.svg")}
+.card--spades.card--6{background-image:url("/cards/spade_6.svg")}
+.card--spades.card--7{background-image:url("/cards/spade_7.svg")}
+.card--spades.card--8{background-image:url("/cards/spade_8.svg")}
+.card--spades.card--9{background-image:url("/cards/spade_9.svg")}
+.card--spades.card--10{background-image:url("/cards/spade_10.svg")}
+.card--spades.card--jack{background-image:url("/cards/spade_jack.svg")}
+.card--spades.card--queen{background-image:url("/cards/spade_queen.svg")}
+.card--spades.card--king{background-image:url("/cards/spade_king.svg")}
+.card--hearts.card--ace{background-image:url("/cards/heart_ace.svg")}
+.card--hearts.card--2{background-image:url("/cards/heart_2.svg")}
+.card--hearts.card--3{background-image:url("/cards/heart_3.svg")}
+.card--hearts.card--4{background-image:url("/cards/heart_4.svg")}
+.card--hearts.card--5{background-image:url("/cards/heart_5.svg")}
+.card--hearts.card--6{background-image:url("/cards/heart_6.svg")}
+.card--hearts.card--7{background-image:url("/cards/heart_7.svg")}
+.card--hearts.card--8{background-image:url("/cards/heart_8.svg")}
+.card--hearts.card--9{background-image:url("/cards/heart_9.svg")}
+.card--hearts.card--10{background-image:url("/cards/heart_10.svg")}
+.card--hearts.card--jack{background-image:url("/cards/heart_jack.svg")}
+.card--hearts.card--queen{background-image:url("/cards/heart_queen.svg")}
+.card--hearts.card--king{background-image:url("/cards/heart_king.svg")}
+.card--diamonds.card--ace{background-image:url("/cards/diamond_ace.svg")}
+.card--diamonds.card--2{background-image:url("/cards/diamond_2.svg")}
+.card--diamonds.card--3{background-image:url("/cards/diamond_3.svg")}
+.card--diamonds.card--4{background-image:url("/cards/diamond_4.svg")}
+.card--diamonds.card--5{background-image:url("/cards/diamond_5.svg")}
+.card--diamonds.card--6{background-image:url("/cards/diamond_6.svg")}
+.card--diamonds.card--7{background-image:url("/cards/diamond_7.svg")}
+.card--diamonds.card--8{background-image:url("/cards/diamond_8.svg")}
+.card--diamonds.card--9{background-image:url("/cards/diamond_9.svg")}
+.card--diamonds.card--10{background-image:url("/cards/diamond_10.svg")}
+.card--diamonds.card--jack{background-image:url("/cards/diamond_jack.svg")}
+.card--diamonds.card--queen{background-image:url("/cards/diamond_queen.svg")}
+.card--diamonds.card--king{background-image:url("/cards/diamond_king.svg")}
+.card--clubs.card--ace{background-image:url("/cards/club_ace.svg")}
+.card--clubs.card--2{background-image:url("/cards/club_2.svg")}
+.card--clubs.card--3{background-image:url("/cards/club_3.svg")}
+.card--clubs.card--4{background-image:url("/cards/club_4.svg")}
+.card--clubs.card--5{background-image:url("/cards/club_5.svg")}
+.card--clubs.card--6{background-image:url("/cards/club_6.svg")}
+.card--clubs.card--7{background-image:url("/cards/club_7.svg")}
+.card--clubs.card--8{background-image:url("/cards/club_8.svg")}
+.card--clubs.card--9{background-image:url("/cards/club_9.svg")}
+.card--clubs.card--10{background-image:url("/cards/club_10.svg")}
+.card--clubs.card--jack{background-image:url("/cards/club_jack.svg")}
+.card--clubs.card--queen{background-image:url("/cards/club_queen.svg")}
+.card--clubs.card--king{background-image:url("/cards/club_king.svg")}
+.card--joker.card--black{background-image:url('/cards/joker_black.svg')}
+.card--joker.card--red{background-image:url('/cards/joker_red.svg')}
+.card--back{background-image:url('/cards/back.svg')}
+/* CARDS:END */
