@@ -14,11 +14,9 @@ export function CardView({ card, className = "", style }: { card: Card; classNam
 }
 
 export function PlacedCardView({ placed, className = "" }: { placed: PlacedCard; className?: string }) {
-  const kingBadge = placed.kingCount > 0 ? `×${Math.pow(2, placed.kingCount)}` : "";
   return (
     <div className={`placed ${className}`.trim()}>
       <CardView card={placed.card} />
-      {kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
     </div>
   );
 }

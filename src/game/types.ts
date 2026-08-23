@@ -41,6 +41,7 @@ export interface GameState {
   phase: "play" | "over";
   winner: PlayerId | null;
   log: LogEntry[];
+  started: boolean;
 }
 
 export interface TargetRef {

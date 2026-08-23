@@ -6,9 +6,10 @@
   --c-sidebar: #1c1c1e;
   --c-fg: #f5f5dc;
   --c-accent: #d4af37;
-  --c-dim: #8a9a7a;
+  --c-dim: #c8d8c0;
   --c-line: #1a4a2a;
   --c-bad: #c0392b;
+  --c-good: #2ecc71;
 
   --c-suit-spades: #8ab4f8;
   --c-suit-hearts: #ff6b6b;
@@ -34,11 +35,11 @@
 
   /* shared card-overlap offset used by both the hand and the caravans */
   --overlap-h: calc(var(--card-w) * 0.55);
-  --overlap-v: calc(var(--card-h) * 0.22);
+  --overlap-v: calc(var(--card-h) * 0.28);
 
   /* card-unit system (vh-derived) for caravan slot positioning */
   --cu: var(--overlap-v);
-  --cu-x: var(--overlap-h);
+  --cu-x: calc(var(--overlap-h) * 0.5);
   --card-offset: calc(var(--card-h) / 8);
 
   --card-border: 3px dashed var(--c-dim);
@@ -190,10 +191,32 @@ body {
 
 .caravan-col {
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--sp-2);
+  min-height: 0;
+}
+
+.caravan-col__scores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+  min-width: 32px;
+  align-self: center;
+  transform: translateX(50%);
+}
+
+.caravan-col__main {
+  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
   min-height: 0;
+  flex: 1;
+  align-self: stretch;
 }
 
 .caravan-col__stack {
@@ -201,7 +224,7 @@ body {
   min-height: 0;
   width: var(--card-w);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   isolation: isolate;
   border: none;
   background: none;
@@ -225,13 +248,15 @@ body {
   height: 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   flex-shrink: 0;
-  min-width: 40px;
+  min-width: 32px;
+  width: 100%;
+  text-align: right;
 }
 
 .caravan-col__score.is-valid {
-  color: var(--c-accent);
+  color: #f0d060;
 }
 
 .caravan-col__divider-row {
@@ -254,8 +279,6 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-top: 1px solid var(--c-line);
-  border-bottom: 1px solid var(--c-line);
   padding: 0 var(--sp-1);
 }
 
@@ -282,7 +305,7 @@ body {
 }
 
 .caravan-divider__total.is-valid {
-  color: var(--c-accent);
+  color: #f0d060;
 }
 
 /* ---------- Caravan stacking ---------- */
@@ -301,9 +324,8 @@ body {
   padding: 0;
   cursor: pointer;
   border-radius: var(--radius);
-  transition: border-color var(--transition-fast);
   outline: none;
-  border: var(--card-border);
+  border: none;
   width: var(--card-w);
   height: var(--card-h);
 }
@@ -312,13 +334,21 @@ body {
   position: absolute;
   top: 0;
   left: calc(var(--c, 0) * var(--cu-x));
+  width: var(--card-w);
+  height: var(--card-h);
+  z-index: 2;
+}
+
+.placed-face .card {
+  width: 100%;
+  height: 100%;
 }
 
 .caravan__placeholder {
   position: absolute;
   left: 50%;
-  width: var(--card-w);
-  height: var(--card-h);
+  width: calc(var(--card-w) * 1.1);
+  height: calc(var(--card-h) * 1.1);
   border: var(--card-border);
   border-radius: var(--radius);
   transition: border-color var(--transition-fast);
@@ -337,7 +367,12 @@ body {
 
 /* When card is selected, placeholders highlight only on hover */
 .board:has(.hand__slot.is-selected) .caravan-col__stack--human .caravan__placeholder:hover {
-  border-color: var(--c-accent);
+  border-color: var(--c-bad);
+  opacity: 0.9;
+}
+
+.board:has(.hand__slot.is-selected) .caravan-col__stack--human .caravan__placeholder.is-selectable:hover {
+  border-color: var(--c-good);
   opacity: 0.9;
 }
 
@@ -356,6 +391,11 @@ body {
 }
 
 .caravan-col__stack--ai .placed-wrap {
+  top: auto;
+  bottom: 0;
+}
+
+.caravan-col__stack--ai .placed-face {
   top: auto;
   bottom: 0;
 }
@@ -381,15 +421,14 @@ body {
 
 .hand__slot.is-selected {
   transform: translateY(-20%);
-  z-index: 3;
 }
 
 /* ---------- Placed card + badges ---------- */
 .placed {
   position: relative;
   display: inline-block;
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
+  width: 100%;
+  height: 100%;
 }
 
 .placed .card {
@@ -419,6 +458,7 @@ body {
   font-weight: 700;
   text-align: center;
   border: 1px solid #1a160c;
+  z-index: 3;
 }
 
 .card__badge--king {
@@ -487,13 +527,25 @@ body {
   display: none;
 }
 
-/* ---------- Card selection hover effects via CSS :has() ---------- */
-.board:has(.hand__slot.is-selected) .placed-wrap.is-target:hover {
-  border-color: var(--c-accent);
+/* ---------- Card selection hover: temporary legal/illegal placeholder ----------
+   The legality is already encoded by React as persistent classes:
+     - a human caravan that accepts the selected value card -> .caravan-col__stack--human.is-selectable
+     - a specific card that is a valid face-card target       -> .placed-wrap.is-target
+   The :hover pseudo-class (not React state) drives the visual. */
+.board:has(.hand__slot.is-selected) .placed-wrap:hover {
+  outline: 3px solid var(--c-bad);
+  outline-offset: 2px;
 }
 
-.board:has(.hand__slot.is-selected) .placed-wrap:not(.is-target):hover {
-  border-color: var(--c-bad);
+.board:has(.hand__slot.is-selected) .caravan-col__stack--human.is-selectable .caravan__row:last-child .placed-wrap:hover {
+  outline: 3px solid var(--c-good);
+  outline-offset: 2px;
+}
+
+.board:has(.hand__slot.is-selected) .placed-wrap.is-target:hover {
+  border-color: var(--c-good);
+  outline: 3px solid var(--c-good);
+  outline-offset: 2px;
 }
 
 /* ---------- WCAG: Focus visible styles ---------- */

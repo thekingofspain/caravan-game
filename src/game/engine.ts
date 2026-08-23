@@ -68,6 +68,7 @@ export function setupGame(opts: SetupOptions): GameState {
     phase: "play",
     winner: null,
     log: [log("Caravan begun. Place your starting cards.")],
+    started: false,
   };
 }
 
@@ -137,6 +138,13 @@ export function applyAction(state: GameState, action: Action): GameState {
 
   const next: GameState = structuredClone(state);
   const player = next.players[action.player];
+
+  if (
+    !next.started &&
+    next.players.every((p) => p.caravans.every((c) => c.cards.length > 0))
+  ) {
+    next.started = true;
+  }
 
   if (action.type === "playValue") {
     const car = player.caravans[action.caravan];

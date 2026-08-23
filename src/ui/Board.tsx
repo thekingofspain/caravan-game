@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
-import { Action, PlayerId, TargetRef } from "../game/types";
+import { Action, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
 import { caravanTotal, isInRange } from "../game/rules";
+import { isValueCard } from "../game/types";
 import { CardView, PlacedCardView } from "./CardView";
 
 function targetKey(t: TargetRef): string {
@@ -37,10 +38,33 @@ export function Board({ store }: { store: GameStore }) {
     setSel(sel === i ? null : i);
   }
 
-  function onPlacedClick(_e: React.MouseEvent, pid: PlayerId, ci: number, idx: number) {
+  function onAiPlacedClick(_e: React.MouseEvent, ci: number, idx: number) {
     if (sel === null) return;
-    if (targetSet.has(targetKey({ player: pid, caravan: ci as 0 | 1 | 2, cardIndex: idx }))) {
-      act({ type: "playFace", player: 0, target: { player: pid, caravan: ci as 0 | 1 | 2, cardIndex: idx }, handIndex: sel });
+    const card = humanPlayer.hand[sel];
+    if (isValueCard(card)) return;
+    if (targetSet.has(targetKey({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: idx }))) {
+      act({ type: "playFace", player: 0, target: { player: 1, caravan: ci as 0 | 1 | 2, cardIndex: idx }, handIndex: sel });
+      setSel(null);
+    }
+  }
+
+  function handleHumanStackClick(_e: React.MouseEvent, ci: number, idx: number | null) {
+    if (sel === null) return;
+    const card = humanPlayer.hand[sel];
+    if (isValueCard(card)) {
+      const caravanLen = humanPlayer.caravans[ci].cards.length;
+      const isTop = idx === null || idx === caravanLen - 1;
+      if (legalCaravans.includes(ci as 0 | 1 | 2) && isTop) {
+        act({ type: "playValue", player: 0, caravan: ci as 0 | 1 | 2, handIndex: sel });
+        setSel(null);
+      }
+      return;
+    }
+    if (
+      idx !== null &&
+      targetSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: idx }))
+    ) {
+      act({ type: "playFace", player: 0, target: { player: 0, caravan: ci as 0 | 1 | 2, cardIndex: idx }, handIndex: sel });
       setSel(null);
     }
   }
@@ -85,79 +109,91 @@ export function Board({ store }: { store: GameStore }) {
 
             return (
               <div className="caravan-col" key={ci}>
-                <div className="caravan-col__stack caravan-col__stack--ai">
-                  {aiCar.cards.map((pc, k) => {
-                    const reversedK = aiCar.cards.length - 1 - k;
-                    return (
-                      <div className="caravan__row" key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
-                        <button
-                          type="button"
-                          className="placed-wrap"
-                          data-placed=""
-                          data-player={1}
-                          data-caravan={ci}
-                          data-index={k}
-                          onClick={(e) => onPlacedClick(e, 1, ci, k)}
-                        >
-                          <PlacedCardView placed={pc} />
-                        </button>
-                        {pc.attachments.map((a, j) => (
-                          <CardView key={a.id} card={a} className="placed-face" style={{ "--c": j + 1 } as CSSProperties} />
-                        ))}
-                      </div>
-                    );
-                  })}
-                  {aiCar.cards.length === 0 && <div className="caravan__placeholder" />}
-                </div>
-
-                <div className="caravan-col__divider-row">
+                <div className="caravan-col__scores">
                   <div className={`caravan-col__score ${aiInRange && aiWinner ? "is-valid" : ""}`}>
                     {aiTotal}
                   </div>
-                  <div className="caravan-col__divider">Caravan {ci + 1}</div>
                   <div className={`caravan-col__score ${huInRange && huWinner ? "is-valid" : ""}`}>
                     {huTotal}
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  className={`caravan-col__stack caravan-col__stack--human ${huSelectable ? "is-selectable" : ""}`}
-                  onClick={() => {
-                    if (huSelectable && sel !== null) {
-                      act({ type: "playValue", player: 0, caravan: ci as 0 | 1 | 2, handIndex: sel });
-                      setSel(null);
-                    }
-                  }}
-                >
-                  {huCar.cards.map((pc, k) => {
-                    const isTarget = human && targetSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }));
-                    return (
-                      <div className="caravan__row" key={pc.card.id} style={{ "--i": k } as CSSProperties}>
-                        <button
-                          type="button"
-                          className={`placed-wrap ${isTarget ? "is-target" : ""}`}
-                          data-placed=""
-                          data-player={0}
-                          data-caravan={ci}
-                          data-index={k}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPlacedClick(e, 0, ci, k);
-                          }}
-                        >
-                          <PlacedCardView placed={pc} />
-                        </button>
-                        {pc.attachments.map((a, j) => (
-                          <CardView key={a.id} card={a} className="placed-face" style={{ "--c": j + 1 } as CSSProperties} />
-                        ))}
+                <div className="caravan-col__main">
+                  <div className="caravan-col__stack caravan-col__stack--ai" style={{ "--count": aiCar.cards.length } as CSSProperties}>
+                    {aiCar.cards.map((pc, k) => {
+                      const reversedK = aiCar.cards.length - 1 - k;
+                      return (
+                        <div className="caravan__row" key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
+                          <button
+                            type="button"
+                            className="placed-wrap"
+                            data-placed=""
+                            data-player={1}
+                            data-caravan={ci}
+                            data-index={k}
+                            onClick={(e) => onAiPlacedClick(e, ci, k)}
+                          >
+                            <PlacedCardView placed={pc} />
+                          </button>
+                        {(() => {
+                          const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
+                          const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
+                          return pc.attachments.map((a, j) => (
+                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
+                              <CardView card={a} />
+                              {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                            </div>
+                          ));
+                        })()}
                       </div>
                     );
                   })}
-                  {huCar.cards.length === 0 && (
-                    <div className={`caravan__placeholder ${huSelectable ? "is-selectable" : ""}`} />
-                  )}
-                </button>
+                  {!state.started && aiCar.cards.length === 0 && <div className="caravan__placeholder" />}
+                </div>
+
+                <div className="caravan-col__divider">Caravan {ci + 1}</div>
+
+                  <button
+                  type="button"
+                  className={`caravan-col__stack caravan-col__stack--human ${huSelectable ? "is-selectable" : ""}`}
+                  style={{ "--count": huCar.cards.length } as CSSProperties}
+                    aria-label={`Your caravan ${ci + 1}`}
+                    onClick={(e) => {
+                      const wrap = (e.target as HTMLElement).closest(".placed-wrap");
+                      const idx = wrap ? Number(wrap.getAttribute("data-index")) : null;
+                      handleHumanStackClick(e, ci, idx);
+                    }}
+                  >
+                    {huCar.cards.map((pc, k) => {
+                      const isTarget = human && targetSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }));
+                      return (
+                        <div className="caravan__row" key={pc.card.id} style={{ "--i": k } as CSSProperties}>
+                          <div
+                            className={`placed-wrap ${isTarget ? "is-target" : ""}`}
+                            data-placed=""
+                            data-player={0}
+                            data-caravan={ci}
+                            data-index={k}
+                          >
+                            <PlacedCardView placed={pc} />
+                          </div>
+                        {(() => {
+                          const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
+                          const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
+                          return pc.attachments.map((a, j) => (
+                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
+                              <CardView card={a} />
+                              {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    );
+                  })}
+                  {!state.started && huCar.cards.length === 0 && (
+                      <div className={`caravan__placeholder ${huSelectable ? "is-selectable" : ""}`} />
+                    )}
+                  </button>
+                </div>
               </div>
             );
           })}

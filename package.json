@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "gen:cards": "node scripts/fetch-cards.mjs",
-    "test:e2e": "node e2e/cards.e2e.mjs && node e2e/hand-cards.e2e.mjs && node e2e/opponent-stacking.e2e.mjs && node e2e/win-game.e2e.mjs"
+    "test:e2e": "node e2e/cards.e2e.mjs && node e2e/hand-cards.e2e.mjs && node e2e/opponent-stacking.e2e.mjs && node e2e/win-game.e2e.mjs && node e2e/place-on-filled-caravan.e2e.mjs && node e2e/placeholder-visibility.e2e.mjs && node e2e/hover-placeholder.e2e.mjs && node e2e/face-card-placement.e2e.mjs && node e2e/card-visibility-after-placement.e2e.mjs && node e2e/placeholder-after-start.e2e.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
