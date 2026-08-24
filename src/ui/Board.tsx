@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { Action, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
@@ -9,6 +9,27 @@ import { CardView, PlacedCardView } from "./CardView";
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
+}
+
+function decorateLog(text: string): ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const re = /AI's caravan|your caravan|\bYou\b|\bAI\b|AI's|\byour\b/g;
+  let last = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  while (m !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const t = m[0];
+    if (t === "You") nodes.push(<span key={m.index} className="log__who log__who--human">You</span>);
+    else if (t === "AI") nodes.push(<span key={m.index} className="log__who log__who--ai">AI</span>);
+    else if (t === "your caravan") nodes.push(<span key={m.index} className="log__caravan log__caravan--human">your caravan</span>);
+    else if (t === "AI's caravan") nodes.push(<span key={m.index} className="log__caravan log__caravan--ai">AI's caravan</span>);
+    else if (t === "your") nodes.push(<span key={m.index} className="log__caravan log__caravan--human">your</span>);
+    else if (t === "AI's") nodes.push(<span key={m.index} className="log__caravan log__caravan--ai">AI's</span>);
+    last = re.lastIndex;
+    m = re.exec(text);
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
 }
 
 export function Board({ store }: { store: GameStore }) {
@@ -110,10 +131,10 @@ export function Board({ store }: { store: GameStore }) {
             return (
               <div className="caravan-col" key={ci}>
                 <div className="caravan-col__scores">
-                  <div className={`caravan-col__score ${aiInRange && aiWinner ? "is-valid" : ""}`}>
+                  <div className={`caravan-col__score caravan-col__score--ai ${aiInRange && aiWinner ? "is-valid" : ""}`}>
                     {aiTotal}
                   </div>
-                  <div className={`caravan-col__score ${huInRange && huWinner ? "is-valid" : ""}`}>
+                  <div className={`caravan-col__score caravan-col__score--human ${huInRange && huWinner ? "is-valid" : ""}`}>
                     {huTotal}
                   </div>
                 </div>
@@ -234,7 +255,7 @@ export function Board({ store }: { store: GameStore }) {
         <div className="log">
           {state.log.slice(-12).map((entry) => (
             <div className="log__line" key={entry.id}>
-              {entry.text}
+              {decorateLog(entry.text)}
             </div>
           ))}
         </div>

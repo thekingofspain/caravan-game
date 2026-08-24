@@ -114,22 +114,47 @@ function applyJoker(state: GameState, target: TargetRef): void {
   }
 }
 
+function fmt(card: Card): string {
+  return `${card.rank}${card.suit === "joker" ? "" : card.suit[0].toUpperCase()}`;
+}
+
+function ownerLabel(p: PlayerId): string {
+  return p === 0 ? "your" : "AI's";
+}
+
 function describe(action: Action, state: GameState): string {
-  const names = ["You", "AI"];
+  const names = ["You", "AI"] as const;
+  const actor = names[action.player];
+
   if (action.type === "playValue") {
     const c = state.players[action.player].hand[action.handIndex];
-    return `${names[action.player]} played ${c.rank}${c.suit === "joker" ? "" : c.suit[0].toUpperCase()} to caravan ${action.caravan + 1}.`;
+    const row = state.players[action.player].caravans[action.caravan].cards.length + 1;
+    return `${actor} placed ${fmt(c)} at row ${row} of ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
   }
+
   if (action.type === "playFace") {
     const c = state.players[action.player].hand[action.handIndex];
-    const t = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
-    return `${names[action.player]} used ${c.rank} on ${t.card.rank}${t.card.suit === "joker" ? "" : t.card.suit[0].toUpperCase()}.`;
+    const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
+    const row = action.target.cardIndex + 1;
+    const caravan = action.target.caravan + 1;
+    const owner = ownerLabel(action.target.player);
+    let effect = "";
+    if (c.rank === "J") effect = ` — removed ${fmt(tgt.card)}`;
+    else if (c.rank === "Q") effect = ` — reversed direction, set suit to ${c.suit[0].toUpperCase()}`;
+    else if (c.rank === "K") effect = ` — doubled ${fmt(tgt.card)} (×${Math.pow(2, tgt.kingCount + 1)})`;
+    else if (isJoker(c)) {
+      if (tgt.card.rank === "A") effect = ` — cleared all ${tgt.card.suit} cards`;
+      else effect = ` — cleared all ${baseValue(tgt.card)}s`;
+    }
+    return `${actor} placed ${fmt(c)} on ${fmt(tgt.card)} at row ${row} of ${owner} caravan ${caravan}${effect}.`;
   }
+
   if (action.type === "discard") {
     const c = state.players[action.player].hand[action.handIndex];
-    return `${names[action.player]} discarded ${c.rank}${c.suit === "joker" ? "" : c.suit[0].toUpperCase()}.`;
+    return `${actor} discarded ${fmt(c)}.`;
   }
-  return `${names[action.player]} disbanded caravan ${action.caravan + 1}.`;
+
+  return `${actor} disbanded ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
 }
 
 export function applyAction(state: GameState, action: Action): GameState {
@@ -164,6 +189,16 @@ export function applyAction(state: GameState, action: Action): GameState {
     const card = player.hand[action.handIndex];
     if (!card || (!isFaceCard(card) && !isJoker(card))) return state;
     if (!isValidTarget(next, action.target)) return state;
+    // over condition for King: doubling must not bust the caravan
+    if (card.rank === "K") {
+      const car = next.players[action.target.player].caravans[action.target.caravan];
+      const tgt = car.cards[action.target.cardIndex];
+      if (tgt) {
+        const total = car.cards.reduce((s, p) => s + baseValue(p.card) * Math.pow(2, p.kingCount), 0);
+        const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
+        if (total + add > 26) return state;
+      }
+    }
     player.hand.splice(action.handIndex, 1);
     const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     if (card.rank === "J") {
@@ -246,6 +281,13 @@ export function legalActions(state: GameState): Action[] {
         for (let ci = 0; ci < opp.caravans.length; ci++) {
           const car = opp.caravans[ci];
           for (let cidx = 0; cidx < car.cards.length; cidx++) {
+            // over condition for King: doubling must not bust
+            if (card.rank === "K") {
+              const tgt = car.cards[cidx];
+              const total = car.cards.reduce((s, pl) => s + baseValue(pl.card) * Math.pow(2, pl.kingCount), 0);
+              const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
+              if (total + add > 26) continue;
+            }
             actions.push({ type: "playFace", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx }, handIndex: hi });
           }
         }
