@@ -166,7 +166,8 @@ body {
 
 /* shared overlapping — both AI and human hands */
 .hand__slot + .hand__slot { margin-left: calc(-1 * var(--overlap-h)); }
-.hand-zone__cards .hand__slot:not(:last-child) { pointer-events: none; }
+.hand-zone__cards .hand__slot { position: relative; z-index: 1; }
+.hand-zone__cards .hand__slot:last-child { z-index: 2; }
 
 /* ---------- Caravans ---------- */
 .caravans-row {
@@ -174,6 +175,7 @@ body {
   display: flex;
   gap: var(--sp-2);
   min-height: 0;
+  padding-left: 48px;
 }
 
 .caravan-col {
@@ -183,6 +185,19 @@ body {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+.caravan-col__divider {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-dim);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
 }
 
 /* ---------- Caravan ---------- */
@@ -196,7 +211,7 @@ body {
   isolation: isolate;
 }
 
-.player-ai .caravan {
+.caravan--ai .caravan {
   flex-direction: column-reverse;
 }
 
@@ -231,7 +246,7 @@ body {
   z-index: 5;
 }
 
-.player-ai .caravan .card > .card {
+.caravan--ai .caravan .card > .card {
   top: auto;
   bottom: 0;
 }
@@ -248,8 +263,8 @@ body {
   transform: translate(-50%, 0);
 }
 
-.player-human .caravan__empty { top: var(--card-offset); }
-.player-ai .caravan__empty { top: auto; bottom: var(--card-offset); }
+.caravan--human .caravan__empty { top: var(--card-offset); }
+.caravan--ai .caravan__empty { top: auto; bottom: var(--card-offset); }
 
 /* hover — selected card drives placeholder outline */
 .board:has(.hand__slot.is-selected) .caravan__empty.is-selectable:hover {
@@ -259,25 +274,36 @@ body {
 
 /* ---------- Scores ---------- */
 .caravan-col__score {
+  position: absolute;
+  width: 32px;
   height: 24px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 32px;
-  width: 100%;
   font-size: 16px;
   font-weight: 700;
   text-align: right;
   gap: 4px;
   flex-shrink: 0;
+  z-index: 30;
+}
+
+.caravan--human .caravan-col__score {
+  top: var(--card-offset);
+  left: -48px;
+}
+
+.caravan--ai .caravan-col__score {
+  bottom: var(--card-offset);
+  left: -48px;
 }
 
 .caravan-col__score.is-valid { color: var(--c-good); text-shadow: 0 0 6px rgba(46, 204, 113, 0.6); }
 
-.player-human .caravan-col__score { color: var(--c-human); }
-.player-ai .caravan-col__score { color: var(--c-ai); }
-.player-human .caravan-col__score.is-valid { color: var(--c-human-valid); text-shadow: 0 0 6px rgba(138, 180, 248, 0.6); }
-.player-ai .caravan-col__score.is-valid { color: var(--c-ai-valid); text-shadow: 0 0 6px rgba(255, 138, 138, 0.6); }
+.caravan--human .caravan-col__score { color: var(--c-human); }
+.caravan--ai .caravan-col__score { color: var(--c-ai); }
+.caravan--human .caravan-col__score.is-valid { color: var(--c-human-valid); text-shadow: 0 0 6px rgba(138, 180, 248, 0.6); }
+.caravan--ai .caravan-col__score.is-valid { color: var(--c-ai-valid); text-shadow: 0 0 6px rgba(255, 138, 138, 0.6); }
 
 .caravan-col__dir {
   min-width: 12px;

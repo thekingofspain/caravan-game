@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
-import { isJacked, isJokered } from "../game/rules";
+import { caravanTotal, isInRange, isJacked, isJokered } from "../game/rules";
 import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef } from "../game/types";
 
 interface CaravanProps {
@@ -13,6 +13,7 @@ interface CaravanProps {
   onCardClick: (target: TargetRef) => void;
   onPlaceholderClick: (caravanIndex: number) => void;
   onHoverTarget: (target: TargetRef | null) => void;
+  children?: ReactNode;
 }
 
 function targetKey(t: TargetRef): string {
@@ -28,11 +29,20 @@ export function Caravan({
   onCardClick,
   onPlaceholderClick,
   onHoverTarget,
+  children,
 }: CaravanProps) {
   const isHuman = playerType === "human";
   const selectedCard = selection.selectedHandIndex !== null;
 
   const caravanIdx = caravanIndex as 0 | 1 | 2;
+  const total = caravanTotal(caravan);
+  const inRange = isInRange(total);
+
+  function dirArrow(dir: "asc" | "desc" | null): string {
+    if (dir === "asc") return "▲";
+    if (dir === "desc") return "▼";
+    return "";
+  }
 
   function handleCardClick(e: React.MouseEvent) {
     const wrap = (e.target as HTMLElement).closest("[data-index]");
@@ -78,6 +88,15 @@ export function Caravan({
 
   return (
     <div className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"}`}>
+      <div className={`caravan-col__score ${inRange ? "is-valid" : ""}`}>
+        {total}
+        {caravan.direction ? (
+          <span className="caravan-col__dir" aria-hidden="true">
+            {dirArrow(caravan.direction)}
+          </span>
+        ) : null}
+      </div>
+      {children}
       {caravan.cards.map((pc, k) => {
         const isHoverable = isCardHoverable(k);
         return (

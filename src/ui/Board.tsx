@@ -2,16 +2,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { Action, TargetRef } from "../game/types";
-import { pairWinner } from "../game/scoring";
-import { caravanTotal, isInRange } from "../game/rules";
 import { Caravan } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
-
-function dirArrow(dir: "asc" | "desc" | null): string {
-  if (dir === "asc") return "▲";
-  if (dir === "desc") return "▼";
-  return "";
-}
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
@@ -136,103 +128,70 @@ export function Board({ store }: { store: GameStore }) {
   return (
     <div className="board" onMouseLeave={() => setHoverTarget(null)}>
       <div className="playfield">
-        <div className="player-ai">
-          <PlayerHand
-            playerType="ai"
-            player={aiPlayer}
-            selectedHandIndex={null}
-            selectableIndices={new Set()}
-            onCardClick={() => {}}
-          />
+        <PlayerHand
+          playerType="ai"
+          player={aiPlayer}
+          selectedHandIndex={null}
+          selectableIndices={new Set()}
+          onCardClick={() => {}}
+        />
 
-          <div className="caravans-row">
-            {[0, 1, 2].map((ci) => {
-              const aiCar = aiPlayer.caravans[ci];
-              const aiTotal = caravanTotal(aiCar);
-              const aiInRange = isInRange(aiTotal);
-              const aiWinner = pairWinner(state, ci as 0 | 1 | 2) === 1;
+        <div className="caravans-row">
+          {[0, 1, 2].map((ci) => {
+            const aiCar = aiPlayer.caravans[ci];
+            const huCar = humanPlayer.caravans[ci];
 
-              return (
-                <div className="caravan-col" key={ci}>
-                  <div className={`caravan-col__score ${aiInRange && aiWinner ? "is-valid" : ""}`}>
-                    {aiTotal}
-                    {aiCar.direction ? (
-                      <span className="caravan-col__dir" aria-hidden="true">
-                        {dirArrow(aiCar.direction)}
-                      </span>
-                    ) : null}
-                  </div>
-                  <Caravan
-                    playerType="ai"
-                    caravan={aiCar}
-                    caravanIndex={ci}
-                    playerId={1}
-                    selection={{
-                      selectedHandIndex: null,
-                      legalCaravans: [],
-                      targetSet,
-                      jackRemovableSet,
-                      canDiscard: false,
-                    }}
-                    hoverTarget={hoverTarget}
-                    onCardClick={onCardClick}
-                    onPlaceholderClick={() => {}}
-                    onHoverTarget={setHoverTarget}
-                  />
-                </div>
-              );
-            })}
-          </div>
+            return (
+              <div className="caravan-col" key={ci}>
+                <Caravan
+                  playerType="ai"
+                  caravan={aiCar}
+                  caravanIndex={ci}
+                  playerId={1}
+                  selection={{
+                    selectedHandIndex: null,
+                    legalCaravans: [],
+                    targetSet,
+                    jackRemovableSet,
+                    canDiscard: false,
+                  }}
+                  hoverTarget={hoverTarget}
+                  onCardClick={onCardClick}
+                  onPlaceholderClick={() => {}}
+                  onHoverTarget={setHoverTarget}
+                />
+
+                <div className="caravan-col__divider">Caravan {ci + 1}</div>
+
+                <Caravan
+                  playerType="human"
+                  caravan={huCar}
+                  caravanIndex={ci}
+                  playerId={0}
+                  selection={{
+                    selectedHandIndex: sel,
+                    legalCaravans,
+                    targetSet,
+                    jackRemovableSet,
+                    canDiscard,
+                  }}
+                  hoverTarget={hoverTarget}
+                  onCardClick={onCardClick}
+                  onPlaceholderClick={onPlaceholderClick}
+                  onHoverTarget={setHoverTarget}
+                />
+              </div>
+            );
+          })}
         </div>
 
-        <div className="player-human">
-          <div className="caravans-row">
-            {[0, 1, 2].map((ci) => {
-              const huCar = humanPlayer.caravans[ci];
-              const huTotal = caravanTotal(huCar);
-              const huInRange = isInRange(huTotal);
-              const huWinner = pairWinner(state, ci as 0 | 1 | 2) === 0;
-
-              return (
-                <div className="caravan-col" key={ci}>
-                  <Caravan
-                    playerType="human"
-                    caravan={huCar}
-                    caravanIndex={ci}
-                    playerId={0}
-                    selection={{
-                      selectedHandIndex: sel,
-                      legalCaravans,
-                      targetSet,
-                      jackRemovableSet,
-                      canDiscard,
-                    }}
-                    hoverTarget={hoverTarget}
-                    onCardClick={onCardClick}
-                    onPlaceholderClick={onPlaceholderClick}
-                    onHoverTarget={setHoverTarget}
-                  />
-                  <div className={`caravan-col__score ${huInRange && huWinner ? "is-valid" : ""}`}>
-                    {huTotal}
-                    {huCar.direction ? (
-                      <span className="caravan-col__dir" aria-hidden="true">
-                        {dirArrow(huCar.direction)}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <PlayerHand
-            playerType="human"
-            player={humanPlayer}
-            selectedHandIndex={sel}
-            selectableIndices={selectableIndices}
-            onCardClick={onHandClick}
-          />
-        </div>
+        <PlayerHand
+          playerType="human"
+          player={humanPlayer}
+          selectedHandIndex={sel}
+          selectableIndices={selectableIndices}
+          onCardClick={onHandClick}
+        />
       </div>
 
       <div className="sidebar">
