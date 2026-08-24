@@ -1,5 +1,5 @@
 import { getPreset } from "./cards";
-import { canPlayValue, isJacked, isValidTarget } from "./rules";
+import { canPlayValue, isJacked, isJokered, isValidTarget } from "./rules";
 import { gameWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
@@ -201,7 +201,8 @@ export function applyAction(state: GameState, action: Action): GameState {
       const car = next.players[action.target.player].caravans[action.target.caravan];
       const tgt = car.cards[action.target.cardIndex];
       if (tgt) {
-        const total = car.cards.reduce((s, p) => s + baseValue(p.card) * Math.pow(2, p.kingCount), 0);
+        if (isJacked(tgt) || isJokered(tgt)) return state;
+        const total = car.cards.reduce((s, p) => s + (isJacked(p) || isJokered(p) ? 0 : baseValue(p.card) * Math.pow(2, p.kingCount)), 0);
         const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
         if (total + add > 26) return state;
       }
@@ -318,8 +319,8 @@ export function legalActions(state: GameState): Action[] {
             if (card.rank === "J" && isJacked(tgt)) continue;
             // over condition for King: doubling must not bust
             if (card.rank === "K") {
-              if (isJacked(tgt)) continue;
-              const total = car.cards.reduce((s, pl) => s + (isJacked(pl) ? 0 : baseValue(pl.card) * Math.pow(2, pl.kingCount)), 0);
+              if (isJacked(tgt) || isJokered(tgt)) continue;
+              const total = car.cards.reduce((s, pl) => s + (isJacked(pl) || isJokered(pl) ? 0 : baseValue(pl.card) * Math.pow(2, pl.kingCount)), 0);
               const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
               if (total + add > 26) continue;
             }
