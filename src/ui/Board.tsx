@@ -164,22 +164,14 @@ export function Board({ store }: { store: GameStore }) {
 
             return (
               <div className="caravan-col" key={ci}>
-                <div className="caravan-col__scores">
-                  <div className={`caravan-col__score caravan-col__score--ai ${aiInRange && aiWinner ? "is-valid" : ""}`}>
-                    {aiTotal}
-                    <span className="caravan-col__dir" aria-hidden="true">
-                      {dirArrow(aiCar.direction)}
-                    </span>
-                  </div>
-                  <div className={`caravan-col__score caravan-col__score--human ${huInRange && huWinner ? "is-valid" : ""}`}>
-                    {huTotal}
-                    <span className="caravan-col__dir" aria-hidden="true">
-                      {dirArrow(huCar.direction)}
-                    </span>
-                  </div>
-                </div>
                 <div className="caravan-col__main">
                   <div className="caravan-col__stack caravan-col__stack--ai" style={{ "--count": aiCar.cards.length } as CSSProperties}>
+                    <div className={`caravan-col__score caravan-col__score--ai caravan-col__score--in-stack ${aiInRange && aiWinner ? "is-valid" : ""}`}>
+                      {aiTotal}
+                      <span className="caravan-col__dir" aria-hidden="true">
+                        {dirArrow(aiCar.direction)}
+                      </span>
+                    </div>
                     {aiCar.cards.map((pc, k) => {
                       const reversedK = aiCar.cards.length - 1 - k;
                       const jacked = isJacked(pc);
@@ -269,6 +261,12 @@ export function Board({ store }: { store: GameStore }) {
                       }
                     }}
                   >
+                    <div className={`caravan-col__score caravan-col__score--human caravan-col__score--in-stack ${huInRange && huWinner ? "is-valid" : ""}`}>
+                      {huTotal}
+                      <span className="caravan-col__dir" aria-hidden="true">
+                        {dirArrow(huCar.direction)}
+                      </span>
+                    </div>
                     {huCar.cards.map((pc, k) => {
                       const isTarget = human && targetSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }));
                       const jacked = isJacked(pc);

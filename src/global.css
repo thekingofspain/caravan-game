@@ -173,12 +173,38 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--sp-1);
   flex-shrink: 0;
   min-width: 32px;
-  align-self: center;
-  transform: translateX(25%);
+  align-self: flex-start;
+  margin-top: var(--card-offset);
+  transform: none;
+}
+
+.caravan-col__score--in-stack {
+  position: absolute;
+  min-width: 32px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  z-index: 3;
+}
+
+.caravan-col__stack--ai .caravan-col__score--in-stack {
+  top: calc(100% - var(--card-h) * 1.1 - var(--card-offset));
+  left: calc(50% - var(--card-w) * 1.1 / 2 - var(--sp-2) - 32px);
+  right: auto;
+}
+
+.caravan-col__stack--human .caravan-col__score--in-stack {
+  top: var(--card-offset);
+  left: calc(50% - var(--card-w) * 1.1 / 2 - var(--sp-2) - 32px);
+  right: auto;
 }
 
 .caravan-col__main {
@@ -188,6 +214,7 @@ body {
   flex: 1;
   min-height: 0;
   align-self: stretch;
+  gap: var(--sp-2);
 }
 
 .caravan-col__stack {
