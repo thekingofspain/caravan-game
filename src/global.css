@@ -196,7 +196,8 @@ body {
 }
 
 .caravan-col__stack--ai .caravan-col__score--in-stack {
-  top: calc(100% - var(--card-h) * 1.1 - var(--card-offset));
+  bottom: var(--card-offset);
+  top: auto;
   left: calc(50% - var(--card-w) * 1.1 / 2 - var(--sp-2) - 32px);
   right: auto;
 }
