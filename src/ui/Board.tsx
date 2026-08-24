@@ -182,6 +182,7 @@ export function Board({ store }: { store: GameStore }) {
                       const removable = human && jackRemovableSet.has(key);
                       const isImpacted = hoverImpactedSet.has(key);
                       const isTarget = human && targetSet.has(key);
+                      const isTopForValueHover = selectedCard ? !isValueCard(selectedCard) || k === 0 : true;
                       return (
                         <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
                           <div
@@ -192,8 +193,9 @@ export function Board({ store }: { store: GameStore }) {
                             data-player={1}
                             data-caravan={ci}
                             data-index={k}
-                            onMouseEnter={() => setHoverTarget({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k })}
+                            onMouseEnter={() => { if (isTopForValueHover) setHoverTarget({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k }); }}
                             onMouseLeave={() => setHoverTarget(null)}
+                            style={isTopForValueHover ? undefined : ({ pointerEvents: "none" } as CSSProperties)}
                             onClick={(e) => {
                               if (removable && sel === null) {
                                 onRemoveJacked(e as unknown as React.MouseEvent, 1, ci, k);
@@ -278,6 +280,7 @@ export function Board({ store }: { store: GameStore }) {
                       const key = targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k });
                       const removable = human && jackRemovableSet.has(key);
                       const isImpacted = hoverImpactedSet.has(key);
+                      const isTopForValueHover = selectedCard ? !isValueCard(selectedCard) || k === huCar.cards.length - 1 : true;
                       return (
                         <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": k } as CSSProperties}>
                           <div
@@ -286,8 +289,9 @@ export function Board({ store }: { store: GameStore }) {
                             data-player={0}
                             data-caravan={ci}
                             data-index={k}
-                            onMouseEnter={() => setHoverTarget({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k })}
+                            onMouseEnter={() => { if (isTopForValueHover) setHoverTarget({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }); }}
                             onMouseLeave={() => setHoverTarget(null)}
+                            style={isTopForValueHover ? undefined : ({ pointerEvents: "none" } as CSSProperties)}
                           >
                             <PlacedCardView placed={pc} />
                           </div>
