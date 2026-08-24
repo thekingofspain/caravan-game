@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makeCard, getPreset } from "../src/game/cards";
 import { setupGame, applyAction, legalActions } from "../src/game/engine";
-import { caravanTotal } from "../src/game/rules";
+import { caravanTotal, isJacked } from "../src/game/rules";
 import { Card, Caravan, GameState, PlacedCard, PlayerState } from "../src/game/types";
 
 function pcard(rank: any, suit: any = "spades", kingCount = 0): PlacedCard {
@@ -64,12 +64,23 @@ describe("initial round (must-start constraint)", () => {
 });
 
 describe("face card effects", () => {
-  it("Jack removes the targeted card", () => {
+  it("Jack jacks the targeted card (kept on board, value 0, removable)", () => {
     const p0 = mkPlayer(EMPTY, [makeCard("spades", "J")]);
     const p1 = mkPlayer([caravanOf([]), caravanOf([]), caravanOf(["10"])], []);
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 2, cardIndex: 0 }, handIndex: 0 });
-    expect(next.players[1].caravans[2].cards.length).toBe(0);
+    // Jack now attaches instead of splicing: card stays, marked jacked, value 0
+    expect(next.players[1].caravans[2].cards.length).toBe(1);
+    expect(isJacked(next.players[1].caravans[2].cards[0])).toBe(true);
+    expect(caravanTotal(next.players[1].caravans[2])).toBe(0);
+    expect(next.players[1].caravans[2].cards[0].attachments.some((c) => c.rank === "J")).toBe(true);
+    // removal is a separate action on the jacked card's owner turn (next is AI's turn, but we force player 1's perspective)
+    // verify legalActions includes removeJacked for the jacked card
+    const acts = legalActions({ ...next, current: 1 as 0 | 1 });
+    expect(acts.some((a) => a.type === "removeJacked" && a.target.player === 1 && a.target.caravan === 2 && a.target.cardIndex === 0)).toBe(true);
+    // exercising removal cleans the card
+    const afterRemove = applyAction({ ...next, current: 1 as 0 | 1 }, { type: "removeJacked", player: 1, target: { player: 1, caravan: 2, cardIndex: 0 } });
+    expect(afterRemove.players[1].caravans[2].cards.length).toBe(0);
   });
 
   it("Queen reverses direction and changes suit", () => {

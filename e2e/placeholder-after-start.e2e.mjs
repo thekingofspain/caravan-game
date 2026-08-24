@@ -83,17 +83,35 @@ if (jackIdx < 0) {
   await page.waitForTimeout(120);
   const humanTargets = page.locator(".caravan-col__stack--human .placed-wrap.is-target");
   assert.ok((await humanTargets.count()) > 0, "expected at least one human caravan card to be a Jack target");
-  // Each human caravan currently holds exactly 1 card, so removing one empties that caravan.
+  // Jack now jacks (attaches, sets value 0, removable) instead of splicing — wraps stay, row becomes is-jacked with X
   const wrapsBefore = await page.locator(".caravan-col__stack--human .placed-wrap").count();
+  const facesBefore = await page.locator(".placed-face").count();
   await humanTargets.first().click({ force: true });
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(350);
 
   const wrapsAfter = await page.locator(".caravan-col__stack--human .placed-wrap").count();
-  assert.equal(wrapsAfter, wrapsBefore - 1, `Jack should remove exactly one card (${wrapsBefore} -> ${wrapsAfter})`);
+  assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked) (${wrapsBefore} -> ${wrapsAfter})`);
+  const facesAfter = await page.locator(".placed-face").count();
+  assert.equal(facesAfter, facesBefore + 1, `Jack should render as attachment (${facesBefore} -> ${facesAfter})`);
+  const isJacked = await page.locator(".caravan__row.is-jacked").count();
+  assert.ok(isJacked > 0, "jacked row should have is-jacked class");
 
   const phAfter = await page.locator(".caravan__placeholder").count();
-  assert.equal(phAfter, 0, `an emptied caravan must NOT show a default placeholder, got ${phAfter}`);
-  console.log("  PASS: a caravan emptied mid-game shows no placeholder");
+  assert.equal(phAfter, 0, `a jacked caravan must NOT show a default placeholder, got ${phAfter}`);
+  console.log("  PASS: a caravan jacked mid-game shows no placeholder and renders Jack");
+
+  // Now test actual emptying via the X (removeJacked) — jacked Ace/face can be removed, still no placeholder when game has started
+  const removeBtn = page.locator(".jack-remove").first();
+  if ((await removeBtn.count()) > 0) {
+    const wrapsBefore2 = await page.locator(".caravan-col__stack--human .placed-wrap").count();
+    await removeBtn.click({ force: true });
+    await page.waitForTimeout(350);
+    const wrapsAfter2 = await page.locator(".caravan-col__stack--human .placed-wrap").count();
+    assert.equal(wrapsAfter2, wrapsBefore2 - 1, `removeJacked should remove exactly one card (${wrapsBefore2} -> ${wrapsAfter2})`);
+    const phAfter2 = await page.locator(".caravan__placeholder").count();
+    assert.equal(phAfter2, 0, `an emptied caravan mid-game must NOT show a default placeholder after removeJacked, got ${phAfter2}`);
+    console.log("  PASS: a caravan emptied via X (removeJacked) shows no placeholder");
+  }
 }
 
 assert.equal(consoleErrors.length, 0, `console errors: ${consoleErrors.join(" | ")}`);

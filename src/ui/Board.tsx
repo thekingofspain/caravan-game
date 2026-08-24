@@ -3,9 +3,15 @@ import type { CSSProperties, ReactNode } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { Action, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
-import { caravanTotal, isInRange } from "../game/rules";
+import { caravanTotal, isInRange, isJacked, isJokered } from "../game/rules";
 import { isValueCard } from "../game/types";
 import { CardView, PlacedCardView } from "./CardView";
+
+function dirArrow(dir: "asc" | "desc" | null): string {
+  if (dir === "asc") return "↑";
+  if (dir === "desc") return "↓";
+  return "";
+}
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
@@ -49,6 +55,9 @@ export function Board({ store }: { store: GameStore }) {
       : [];
   const targetSet = new Set(legalTargets.map((a) => targetKey(a.target)));
   const canDiscard = sel !== null && legal.some((a) => a.type === "discard" && a.handIndex === sel);
+  const jackRemovableSet = new Set(
+    legal.filter((a): a is Extract<Action, { type: "removeJacked" }> => a.type === "removeJacked").map((a) => targetKey(a.target)),
+  );
 
   function selectable(i: number): boolean {
     return human && handSelectable(state, legal, i);
@@ -69,8 +78,14 @@ export function Board({ store }: { store: GameStore }) {
     }
   }
 
-  function handleHumanStackClick(_e: React.MouseEvent, ci: number, idx: number | null) {
-    if (sel === null) return;
+  function handleHumanStackClick(e: React.MouseEvent, ci: number, idx: number | null) {
+    if (sel === null) {
+      if (idx !== null && human && jackRemovableSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: idx }))) {
+        e.stopPropagation();
+        act({ type: "removeJacked", player: 0, target: { player: 0, caravan: ci as 0 | 1 | 2, cardIndex: idx } });
+      }
+      return;
+    }
     const card = humanPlayer.hand[sel];
     if (isValueCard(card)) {
       const caravanLen = humanPlayer.caravans[ci].cards.length;
@@ -99,11 +114,30 @@ export function Board({ store }: { store: GameStore }) {
     }
   }
 
+  function onRemoveJacked(e: React.MouseEvent, player: 0 | 1, ci: number, idx: number) {
+    e.stopPropagation();
+    e.preventDefault();
+    const key = targetKey({ player, caravan: ci as 0 | 1 | 2, cardIndex: idx });
+    if (human && jackRemovableSet.has(key)) {
+      act({ type: "removeJacked", player: 0, target: { player, caravan: ci as 0 | 1 | 2, cardIndex: idx } });
+    }
+  }
+
   const humanPlayer = state.players[0];
   const aiPlayer = state.players[1];
 
+  const [hoverTarget, setHoverTarget] = useState<TargetRef | null>(null);
+  const selectedCard = sel !== null ? humanPlayer.hand[sel] : null;
+  const hoverImpactedSet = (() => {
+    if (sel === null || !selectedCard || !hoverTarget) return new Set<string>();
+    const key = targetKey(hoverTarget);
+    if (!targetSet.has(key)) return new Set<string>();
+    // Jack / Joker / King / Queen hover same as King: single target only (no multi-highlight)
+    return new Set<string>([key]);
+  })();
+
   return (
-    <div className="board">
+    <div className="board" onMouseLeave={() => setHoverTarget(null)}>
       <div className="playfield">
         <section className="hand-zone hand-zone--ai" aria-label={`AI hand, ${aiPlayer.hand.length} cards`}>
           <span className="hand-zone__label" aria-hidden="true">AI — {aiPlayer.deck.length} cards</span>
@@ -133,48 +167,91 @@ export function Board({ store }: { store: GameStore }) {
                 <div className="caravan-col__scores">
                   <div className={`caravan-col__score caravan-col__score--ai ${aiInRange && aiWinner ? "is-valid" : ""}`}>
                     {aiTotal}
+                    <span className="caravan-col__dir" aria-hidden="true">
+                      {dirArrow(aiCar.direction)}
+                    </span>
                   </div>
                   <div className={`caravan-col__score caravan-col__score--human ${huInRange && huWinner ? "is-valid" : ""}`}>
                     {huTotal}
+                    <span className="caravan-col__dir" aria-hidden="true">
+                      {dirArrow(huCar.direction)}
+                    </span>
                   </div>
                 </div>
                 <div className="caravan-col__main">
                   <div className="caravan-col__stack caravan-col__stack--ai" style={{ "--count": aiCar.cards.length } as CSSProperties}>
                     {aiCar.cards.map((pc, k) => {
                       const reversedK = aiCar.cards.length - 1 - k;
+                      const jacked = isJacked(pc);
+                      const jokered = isJokered(pc);
+                      const key = targetKey({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k });
+                      const removable = human && jackRemovableSet.has(key);
+                      const isImpacted = hoverImpactedSet.has(key);
+                      const isTarget = human && targetSet.has(key);
                       return (
-                        <div className="caravan__row" key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
-                          <button
-                            type="button"
-                            className="placed-wrap"
+                        <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            className={`placed-wrap ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`}
                             data-placed=""
                             data-player={1}
                             data-caravan={ci}
                             data-index={k}
-                            onClick={(e) => onAiPlacedClick(e, ci, k)}
+                            onMouseEnter={() => setHoverTarget({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k })}
+                            onMouseLeave={() => setHoverTarget(null)}
+                            onClick={(e) => {
+                              if (removable && sel === null) {
+                                onRemoveJacked(e as unknown as React.MouseEvent, 1, ci, k);
+                                return;
+                              }
+                              onAiPlacedClick(e as unknown as React.MouseEvent, ci, k);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                if (removable && sel === null) {
+                                  onRemoveJacked(e as unknown as React.MouseEvent, 1, ci, k);
+                                  return;
+                                }
+                                onAiPlacedClick(e as unknown as React.MouseEvent, ci, k);
+                              }
+                            }}
                           >
                             <PlacedCardView placed={pc} />
-                          </button>
+                          </div>
                         {(() => {
                           const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
+                          const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
                           const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
                           return pc.attachments.map((a, j) => (
                             <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
                               <CardView card={a} />
                               {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                              {jacked && j === jackIdx && removable && (
+                                <button type="button" className="jack-remove" aria-label={`Remove jacked card ${pc.card.rank} of ${pc.card.suit}`} onClick={(e) => onRemoveJacked(e, 1, ci, k)}>
+                                  ×
+                                </button>
+                              )}
+                              {a.rank === "JOKER" && (
+                                <button type="button" className="jack-remove" aria-label={`Remove joker ${a.rank}`} onClick={(e) => onRemoveJacked(e, 1, ci, k)}>
+                                  ×
+                                </button>
+                              )}
                             </div>
                           ));
                         })()}
                       </div>
                     );
                   })}
-                  {!state.started && aiCar.cards.length === 0 && <div className="caravan__placeholder" />}
+                  {aiCar.cards.length === 0 && <div className="caravan__placeholder" />}
                 </div>
 
                 <div className="caravan-col__divider">Caravan {ci + 1}</div>
 
-                  <button
-                  type="button"
+                  <div
+                  role="button"
+                  tabIndex={0}
                   className={`caravan-col__stack caravan-col__stack--human ${huSelectable ? "is-selectable" : ""}`}
                   style={{ "--count": huCar.cards.length } as CSSProperties}
                     aria-label={`Your caravan ${ci + 1}`}
@@ -183,37 +260,63 @@ export function Board({ store }: { store: GameStore }) {
                       const idx = wrap ? Number(wrap.getAttribute("data-index")) : null;
                       handleHumanStackClick(e, ci, idx);
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        const wrap = (e.target as HTMLElement).closest(".placed-wrap");
+                        const idx = wrap ? Number(wrap.getAttribute("data-index")) : null;
+                        handleHumanStackClick(e as unknown as React.MouseEvent, ci, idx);
+                      }
+                    }}
                   >
                     {huCar.cards.map((pc, k) => {
                       const isTarget = human && targetSet.has(targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }));
+                      const jacked = isJacked(pc);
+                      const jokered = isJokered(pc);
+                      const key = targetKey({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k });
+                      const removable = human && jackRemovableSet.has(key);
+                      const isImpacted = hoverImpactedSet.has(key);
                       return (
-                        <div className="caravan__row" key={pc.card.id} style={{ "--i": k } as CSSProperties}>
+                        <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": k } as CSSProperties}>
                           <div
-                            className={`placed-wrap ${isTarget ? "is-target" : ""}`}
+                            className={`placed-wrap ${isTarget ? "is-target" : ""} ${jacked ? "is-jacked" : ""} ${isImpacted ? "is-impacted" : ""}`}
                             data-placed=""
                             data-player={0}
                             data-caravan={ci}
                             data-index={k}
+                            onMouseEnter={() => setHoverTarget({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k })}
+                            onMouseLeave={() => setHoverTarget(null)}
                           >
                             <PlacedCardView placed={pc} />
                           </div>
                         {(() => {
                           const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
+                          const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
                           const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
                           return pc.attachments.map((a, j) => (
                             <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
                               <CardView card={a} />
                               {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                              {jacked && j === jackIdx && removable && (
+                                <button type="button" className="jack-remove" aria-label={`Remove jacked card ${pc.card.rank} of ${pc.card.suit}`} onClick={(e) => onRemoveJacked(e, 0, ci, k)}>
+                                  ×
+                                </button>
+                              )}
+                              {a.rank === "JOKER" && (
+                                <button type="button" className="jack-remove" aria-label={`Remove joker ${a.rank}`} onClick={(e) => onRemoveJacked(e, 0, ci, k)}>
+                                  ×
+                                </button>
+                              )}
                             </div>
                           ));
                         })()}
                       </div>
                     );
                   })}
-                  {!state.started && huCar.cards.length === 0 && (
+                  {huCar.cards.length === 0 && (
                       <div className={`caravan__placeholder ${huSelectable ? "is-selectable" : ""}`} />
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             );

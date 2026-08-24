@@ -178,7 +178,7 @@ body {
   flex-shrink: 0;
   min-width: 32px;
   align-self: center;
-  transform: translateX(50%);
+  transform: translateX(25%);
 }
 
 .caravan-col__main {
@@ -208,7 +208,7 @@ body {
   padding: 0;
 }
 
-.caravan-col__stack--human { cursor: pointer; }
+.caravan-col__stack--human.is-selectable { cursor: pointer; }
 
 /* scores — shared height/alignment, color via inheritance */
 .caravan-col__score,
@@ -226,6 +226,12 @@ body {
   min-width: 32px;
   width: 100%;
   text-align: right;
+  gap: 4px;
+}
+
+.caravan-col__dir {
+  min-width: 12px;
+  text-align: left;
 }
 
 .caravan-col__score--human { color: var(--c-human); }
@@ -353,6 +359,48 @@ body {
 }
 
 .card__badge--king { background: var(--c-suit-diamonds); }
+
+/* jacked / jokered cards: dimmed, keep attachment visible, show remove option */
+.caravan__row.is-jacked .placed,
+.caravan__row.is-jokered .placed { opacity: 0.45; filter: grayscale(0.3); }
+.caravan__row.is-jacked .placed-wrap.is-jacked { outline: 2px dashed var(--c-bad); outline-offset: 2px; }
+.caravan__row.is-jacked,
+.caravan__row.is-jokered {
+  z-index: calc(var(--i, 0) + 10);
+}
+.caravan__row.is-jacked:has(.jack-remove),
+.caravan__row.is-jokered:has(.jack-remove) {
+  z-index: 20;
+}
+/* hover impact: when a hand card is selected, hovering a target highlights all cards that would be affected (Joker suit/value, J/Q/K single) */
+.caravan__row.is-impacted .placed-wrap,
+.placed-wrap.is-impacted {
+  outline: 3px solid var(--c-good);
+  outline-offset: 2px;
+  z-index: 4;
+}
+.caravan__row.is-impacted { z-index: 4; }
+.jack-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #1a160c;
+  background: var(--c-bad);
+  color: #fff;
+  font: 700 14px/20px var(--font-base);
+  text-align: center;
+  cursor: pointer;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.jack-remove:hover { background: #a93226; }
 
 /* ---------- Controls / log ---------- */
 .controls {

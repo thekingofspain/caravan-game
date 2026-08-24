@@ -13,6 +13,7 @@ export interface PlacedCard {
   card: Card;
   kingCount: number;
   attachments: Card[];
+  jokered?: boolean;
 }
 
 export interface Caravan {
@@ -54,7 +55,8 @@ export type Action =
   | { type: "playValue"; player: PlayerId; caravan: 0 | 1 | 2; handIndex: number }
   | { type: "playFace"; player: PlayerId; target: TargetRef; handIndex: number }
   | { type: "discard"; player: PlayerId; handIndex: number }
-  | { type: "disband"; player: PlayerId; caravan: 0 | 1 | 2 };
+  | { type: "disband"; player: PlayerId; caravan: 0 | 1 | 2 }
+  | { type: "removeJacked"; player: PlayerId; target: TargetRef };
 
 export function isValueCard(card: Card): boolean {
   return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";

@@ -19,6 +19,13 @@ function sameAction(a: Action, b: Action): boolean {
   if (a.type === "discard" && b.type === "discard")
     return a.player === b.player && a.handIndex === b.handIndex;
   if (a.type === "disband" && b.type === "disband") return a.player === b.player && a.caravan === b.caravan;
+  if (a.type === "removeJacked" && b.type === "removeJacked")
+    return (
+      a.player === b.player &&
+      a.target.player === b.target.player &&
+      a.target.caravan === b.target.caravan &&
+      a.target.cardIndex === b.target.cardIndex
+    );
   return false;
 }
 

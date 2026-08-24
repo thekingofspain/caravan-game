@@ -1,5 +1,5 @@
 import { getPreset } from "./cards";
-import { canPlayValue, isValidTarget } from "./rules";
+import { canPlayValue, isJacked, isValidTarget } from "./rules";
 import { gameWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
@@ -95,20 +95,14 @@ function applyJoker(state: GameState, target: TargetRef): void {
   const tgt = state.players[target.player].caravans[target.caravan].cards[target.cardIndex];
   const suit = tgt.card.suit;
   const value = baseValue(tgt.card);
+  const isAceTarget = tgt.card.rank === "A";
   for (const p of state.players) {
     for (const car of p.caravans) {
-      car.cards = car.cards.filter((pc) => {
-        if (pc === tgt) return true;
-        if (suit === "joker") return true;
-        if (tgt.card.rank === "A") return pc.card.suit !== suit;
-        return baseValue(pc.card) !== value;
-      });
-      if (car.cards.length === 0) {
-        car.direction = null;
-        car.suit = null;
-      } else if (car.cards.length === 1) {
-        car.direction = null;
-        car.suit = car.cards[0].card.suit as Caravan["suit"];
+      for (const pc of car.cards) {
+        const match = isAceTarget ? pc.card.suit === suit : baseValue(pc.card) === value;
+        if (match) {
+          pc.jokered = true;
+        }
       }
     }
   }
@@ -139,7 +133,7 @@ function describe(action: Action, state: GameState): string {
     const caravan = action.target.caravan + 1;
     const owner = ownerLabel(action.target.player);
     let effect = "";
-    if (c.rank === "J") effect = ` — removed ${fmt(tgt.card)}`;
+    if (c.rank === "J") effect = ` — jacked ${fmt(tgt.card)} (0, removable)`;
     else if (c.rank === "Q") effect = ` — reversed direction, set suit to ${c.suit[0].toUpperCase()}`;
     else if (c.rank === "K") effect = ` — doubled ${fmt(tgt.card)} (×${Math.pow(2, tgt.kingCount + 1)})`;
     else if (isJoker(c)) {
@@ -154,7 +148,20 @@ function describe(action: Action, state: GameState): string {
     return `${actor} discarded ${fmt(c)}.`;
   }
 
-  return `${actor} disbanded ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
+  if (action.type === "disband") {
+    return `${actor} disbanded ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
+  }
+
+  if (action.type === "removeJacked") {
+    const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
+    const row = action.target.cardIndex + 1;
+    const caravan = action.target.caravan + 1;
+    const owner = ownerLabel(action.target.player);
+    const cardDesc = tgt ? fmt(tgt.card) : "card";
+    return `${actor} removed jacked ${cardDesc} at row ${row} of ${owner} caravan ${caravan}.`;
+  }
+
+  return `${actor} acted.`;
 }
 
 export function applyAction(state: GameState, action: Action): GameState {
@@ -199,10 +206,13 @@ export function applyAction(state: GameState, action: Action): GameState {
         if (total + add > 26) return state;
       }
     }
+    const tgtPre = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
+    // Jack cannot be played on an already-jacked card
+    if (card.rank === "J" && tgtPre && isJacked(tgtPre)) return state;
     player.hand.splice(action.handIndex, 1);
     const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     if (card.rank === "J") {
-      removeValueCard(next, action.target);
+      if (tgt) tgt.attachments.push(card);
     } else if (card.rank === "Q") {
       if (tgt) tgt.attachments.push(card);
       const car = next.players[action.target.player].caravans[action.target.caravan];
@@ -224,6 +234,13 @@ export function applyAction(state: GameState, action: Action): GameState {
   } else if (action.type === "disband") {
     if (player.caravans.some((c) => c.cards.length === 0)) return state;
     player.caravans[action.caravan] = emptyCaravan();
+  } else if (action.type === "removeJacked") {
+    if (!isValidTarget(next, action.target)) return state;
+    const car = next.players[action.target.player].caravans[action.target.caravan];
+    const tgt = car.cards[action.target.cardIndex];
+    if (!tgt || !isJacked(tgt)) return state;
+    removeValueCard(next, action.target);
+    draw(player);
   }
 
   next.log = [...next.log, log(describe(action, state))].slice(-50);
@@ -256,6 +273,21 @@ export function legalActions(state: GameState): Action[] {
   const actions: Action[] = [];
   const hasEmpty = player.caravans.some((c) => c.cards.length === 0);
 
+  // remove jacked cards are always available (even during must-start, to clean board)
+  const jackRemovals: Action[] = [];
+  for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
+    const owner = state.players[p];
+    for (let ci = 0; ci < owner.caravans.length; ci++) {
+      const car = owner.caravans[ci];
+      for (let cidx = 0; cidx < car.cards.length; cidx++) {
+        const pc = car.cards[cidx];
+        if (isJacked(pc)) {
+          jackRemovals.push({ type: "removeJacked", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx } });
+        }
+      }
+    }
+  }
+
   if (hasEmpty) {
     for (let ci = 0; ci < player.caravans.length; ci++) {
       const car = player.caravans[ci];
@@ -265,6 +297,7 @@ export function legalActions(state: GameState): Action[] {
         if (isValueCard(card)) actions.push({ type: "playValue", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
       }
     }
+    actions.push(...jackRemovals);
     return actions;
   }
 
@@ -281,10 +314,12 @@ export function legalActions(state: GameState): Action[] {
         for (let ci = 0; ci < opp.caravans.length; ci++) {
           const car = opp.caravans[ci];
           for (let cidx = 0; cidx < car.cards.length; cidx++) {
+            const tgt = car.cards[cidx];
+            if (card.rank === "J" && isJacked(tgt)) continue;
             // over condition for King: doubling must not bust
             if (card.rank === "K") {
-              const tgt = car.cards[cidx];
-              const total = car.cards.reduce((s, pl) => s + baseValue(pl.card) * Math.pow(2, pl.kingCount), 0);
+              if (isJacked(tgt)) continue;
+              const total = car.cards.reduce((s, pl) => s + (isJacked(pl) ? 0 : baseValue(pl.card) * Math.pow(2, pl.kingCount)), 0);
               const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
               if (total + add > 26) continue;
             }
@@ -294,6 +329,8 @@ export function legalActions(state: GameState): Action[] {
       }
     }
   }
+
+  actions.push(...jackRemovals);
 
   if (player.deck.length > 0) {
     for (let hi = 0; hi < player.hand.length; hi++) actions.push({ type: "discard", player: pid, handIndex: hi });

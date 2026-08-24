@@ -95,9 +95,14 @@ const wrapsAfter = await page.locator(".placed-wrap").count();
 const facesAfter = await page.locator(".placed-face").count();
 
 if (chosenType === "jack") {
-  // Jack removes the targeted value card -> one fewer placed card
-  assert.equal(wrapsAfter, wrapsBefore - 1, `Jack should remove 1 card (${wrapsBefore} -> ${wrapsAfter})`);
-  console.log("  PASS: Jack removed the targeted card from the caravan");
+  // Jack jacks the targeted value card -> wraps unchanged, one more attachment, row becomes is-jacked with removable X
+  assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked, not removed) (${wrapsBefore} -> ${wrapsAfter})`);
+  assert.equal(facesAfter, facesBefore + 1, `Jack should render as 1 attachment (${facesBefore} -> ${facesAfter})`);
+  const jackedRows = await page.locator(".caravan__row.is-jacked").count();
+  assert.ok(jackedRows > 0, "jacked row should have is-jacked class");
+  const jackedFace = await page.locator(".caravan__row.is-jacked .placed-face .card--jack").count();
+  assert.ok(jackedFace > 0, "jacked attachment should render as Jack face");
+  console.log("  PASS: Jack jacked the targeted card (removable, dimmed, with X)");
 } else {
   // Queen / King / Joker attach -> one more rendered face card, card count unchanged
   assert.equal(wrapsAfter, wrapsBefore, `face card should not change value-card count (${wrapsBefore} -> ${wrapsAfter})`);
