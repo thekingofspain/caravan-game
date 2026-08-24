@@ -184,7 +184,13 @@ export function Board({ store }: { store: GameStore }) {
                       const isTarget = human && targetSet.has(key);
                       const isTopForValueHover = selectedCard ? !isValueCard(selectedCard) || k === 0 : true;
                       return (
-                        <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": reversedK } as CSSProperties}>
+                        <div
+                          className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`}
+                          key={pc.card.id}
+                          style={{ "--i": reversedK } as CSSProperties}
+                          onMouseEnter={() => { if (isTopForValueHover) setHoverTarget({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k }); }}
+                          onMouseLeave={() => setHoverTarget(null)}
+                        >
                           <div
                             role="button"
                             tabIndex={0}
@@ -221,7 +227,7 @@ export function Board({ store }: { store: GameStore }) {
                           const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
                           const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
                           return pc.attachments.map((a, j) => (
-                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
+                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties} onMouseEnter={() => setHoverTarget({ player: 1, caravan: ci as 0 | 1 | 2, cardIndex: k })} onMouseLeave={() => setHoverTarget(null)}>
                               <CardView card={a} />
                               {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
                               {jacked && j === jackIdx && removable && (
@@ -282,7 +288,13 @@ export function Board({ store }: { store: GameStore }) {
                       const isImpacted = hoverImpactedSet.has(key);
                       const isTopForValueHover = selectedCard ? !isValueCard(selectedCard) || k === huCar.cards.length - 1 : true;
                       return (
-                        <div className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`} key={pc.card.id} style={{ "--i": k } as CSSProperties}>
+                        <div
+                          className={`caravan__row ${jacked ? "is-jacked" : ""} ${jokered ? "is-jokered" : ""} ${isImpacted ? "is-impacted" : ""} ${isTarget ? "is-target" : ""}`}
+                          key={pc.card.id}
+                          style={{ "--i": k } as CSSProperties}
+                          onMouseEnter={() => { if (isTopForValueHover) setHoverTarget({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k }); }}
+                          onMouseLeave={() => setHoverTarget(null)}
+                        >
                           <div
                             className={`placed-wrap ${isTarget ? "is-target" : ""} ${jacked ? "is-jacked" : ""} ${isImpacted ? "is-impacted" : ""}`}
                             data-placed=""
@@ -300,7 +312,7 @@ export function Board({ store }: { store: GameStore }) {
                           const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
                           const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
                           return pc.attachments.map((a, j) => (
-                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties}>
+                            <div key={a.id} className="placed-face" style={{ "--c": j + 1 } as CSSProperties} onMouseEnter={() => setHoverTarget({ player: 0, caravan: ci as 0 | 1 | 2, cardIndex: k })} onMouseLeave={() => setHoverTarget(null)}>
                               <CardView card={a} />
                               {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
                               {jacked && j === jackIdx && removable && (

@@ -286,7 +286,7 @@ body {
 .caravan__row {
   position: absolute;
   left: 0;
-  width: var(--card-w);
+  width: calc(var(--card-w) + var(--cu-x));
   z-index: var(--i, 0);
 }
 
@@ -325,6 +325,17 @@ body {
 .caravan-col__stack--ai .placed-face {
   top: auto;
   bottom: 0;
+}
+
+/* allow hovering over facecard offset area to count as hovering the underlying value card */
+
+.board:has(.hand__slot.is-selected) .placed-face {
+  pointer-events: none;
+}
+
+.board:has(.hand__slot.is-selected) .placed-face .jack-remove,
+.board:has(.hand__slot.is-selected) .placed-face .card__badge {
+  pointer-events: auto;
 }
 
 .placed-face .card,
