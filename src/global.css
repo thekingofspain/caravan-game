@@ -184,7 +184,7 @@ body {
 
 .caravan-col__score--in-stack {
   position: absolute;
-  min-width: 32px;
+  width: 32px !important;
   height: 24px;
   display: flex;
   align-items: center;
@@ -192,19 +192,20 @@ body {
   gap: 4px;
   font-size: 16px;
   font-weight: 700;
-  z-index: 3;
+  z-index: 30;
+  right: auto !important;
 }
 
 .caravan-col__stack--ai .caravan-col__score--in-stack {
   bottom: var(--card-offset);
   top: auto;
-  left: calc(50% - var(--card-w) * 1.1 / 2 - var(--sp-2) - 32px);
+  left: -48px;
   right: auto;
 }
 
 .caravan-col__stack--human .caravan-col__score--in-stack {
   top: var(--card-offset);
-  left: calc(50% - var(--card-w) * 1.1 / 2 - var(--sp-2) - 32px);
+  left: -48px;
   right: auto;
 }
 
