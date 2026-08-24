@@ -12,21 +12,21 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".hand-zone--human .hand__slot.is-selectable", { timeout: 4000 });
+  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 4000 });
 }
 
 async function doHumanAction() {
-  const slot = page.locator(".hand-zone--human .hand__slot.is-selectable").first();
+  const slot = page.locator(".player-human .hand-zone .hand__slot.is-selectable").first();
   await slot.click({ force: true });
   await page.waitForTimeout(100);
-  const tgt = page.locator(".placed-wrap.is-target").first();
+  const tgt = page.locator(".card.is-target").first();
   if (await tgt.count() > 0) {
     await tgt.click({ force: true });
   } else {
-    const ownCount = await page.locator(".caravan-col__stack--human.is-selectable").count();
+    const ownCount = await page.locator(".player-human .caravan.is-selectable").count();
     if (ownCount > 0) {
       await page.evaluate(() => {
-        const btn = document.querySelector(".caravan-col__stack--human.is-selectable");
+        const btn = document.querySelector(".player-human .caravan.is-selectable");
         if (btn) btn.click();
       });
     } else {
@@ -51,33 +51,33 @@ async function backCards() {
 
 // 1) Card height ~ vh / 8.
 const vh = 900;
-const cardH = await page.locator(".hand-zone--human .card").first().evaluate((el) => el.getBoundingClientRect().height);
+const cardH = await page.locator(".player-human .hand-zone .card").first().evaluate((el) => el.getBoundingClientRect().height);
 assert.ok(Math.abs(cardH - vh / 8) < vh / 8 * 0.2, `card height ${cardH} not ~vh/8`);
 console.log("card height OK:", Math.round(cardH));
 
 // 2) Playing on own caravan must work.
 await waitHumanTurn();
-const humanBefore = await page.locator(".caravan-col__stack--human .placed-wrap").count();
-const slot = page.locator(".hand-zone--human .hand__slot.is-selectable").first();
+const humanBefore = await page.locator(".player-human .caravan .card").count();
+const slot = page.locator(".player-human .hand-zone .hand__slot.is-selectable").first();
 await slot.click({ force: true, position: { x: 3, y: 3 } });
 await page.waitForTimeout(100);
-const ownCount = await page.locator(".caravan-col__stack--human.is-selectable").count();
-const targetCount = await page.locator(".placed-wrap.is-target").count();
+const ownCount = await page.locator(".player-human .caravan.is-selectable").count();
+const targetCount = await page.locator(".card.is-target").count();
 if (targetCount > 0) {
-  await page.locator(".placed-wrap.is-target").first().click({ force: true });
+  await page.locator(".card.is-target").first().click({ force: true });
 } else if (ownCount > 0) {
   await page.evaluate(() => {
-    const btn = document.querySelector(".caravan-col__stack--human.is-selectable");
+    const btn = document.querySelector(".player-human .caravan.is-selectable");
     if (btn) btn.click();
   });
 }
 await page.waitForTimeout(150);
-const totalHumanWraps = await page.locator(".caravan-col__stack--human .placed-wrap").count();
+const totalHumanWraps = await page.locator(".player-human .caravan .card").count();
 assert.ok(totalHumanWraps > humanBefore, "playing on own caravan should add a card");
 console.log("own caravan play OK");
 
 // 3) Vertical-only stacking: a placed card has NO horizontal offset (left: 0).
-const placed = page.locator(".caravan-col__stack--human .placed-wrap").first();
+const placed = page.locator(".player-human .caravan .card").first();
 const leftCss = await placed.evaluate((el) => getComputedStyle(el).left);
 assert.equal(leftCss, "0px", `placed card must have no horizontal offset, got ${leftCss}`);
 console.log("vertical-only stacking OK (left:", leftCss, ")");

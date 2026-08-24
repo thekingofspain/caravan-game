@@ -13,7 +13,7 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".hand-zone--human .hand__slot.is-selectable", { timeout: 8000 });
+  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 8000 });
 }
 
 function faceType(cls) {
@@ -25,7 +25,7 @@ function faceType(cls) {
 }
 
 async function valueSlots() {
-  const slots = page.locator(".hand-zone--human .hand__slot.is-selectable");
+  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
   const n = await slots.count();
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -36,12 +36,12 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".caravan-col__stack--human").nth(ci);
-  const ph = stack.locator(".caravan__placeholder");
+  const stack = page.locator(".player-human .caravan").nth(ci);
+  const ph = stack.locator(".caravan__empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
   } else {
-    const wraps = stack.locator(".placed-wrap");
+    const wraps = stack.locator(".card");
     await wraps.last().click({ force: true });
   }
   await page.waitForTimeout(200);
@@ -61,7 +61,7 @@ await waitHumanTurn();
 
 // ── Find a face card with at least one valid target ──
 console.log("TEST: face card placement and rendering");
-const handSlots = page.locator(".hand-zone--human .hand__slot.is-selectable");
+const handSlots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
 const handCount = await handSlots.count();
 let chosen = -1;
 let chosenType = null;
@@ -71,7 +71,7 @@ for (let i = 0; i < handCount; i++) {
   if (!t) continue;
   await handSlots.nth(i).click({ force: true, position: { x: 3, y: 3 } });
   await page.waitForTimeout(100);
-  const targets = await page.locator(".placed-wrap.is-target").count();
+  const targets = await page.locator(".card.is-target").count();
   if (targets > 0) {
     chosen = i;
     chosenType = t;
@@ -84,23 +84,23 @@ for (let i = 0; i < handCount; i++) {
 assert.ok(chosen >= 0, "no face card in hand has a valid target to play");
 console.log(`  selected a ${chosenType} with valid targets`);
 
-const wrapsBefore = await page.locator(".placed-wrap").count();
+const wrapsBefore = await page.locator(".card").count();
 const facesBefore = await page.locator(".placed-face").count();
 
-const target = page.locator(".placed-wrap.is-target").first();
+const target = page.locator(".card.is-target").first();
 await target.click({ force: true });
 await page.waitForTimeout(250);
 
-const wrapsAfter = await page.locator(".placed-wrap").count();
+const wrapsAfter = await page.locator(".card").count();
 const facesAfter = await page.locator(".placed-face").count();
 
 if (chosenType === "jack") {
   // Jack jacks the targeted value card -> wraps unchanged, one more attachment, row becomes is-jacked with removable X
   assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked, not removed) (${wrapsBefore} -> ${wrapsAfter})`);
   assert.equal(facesAfter, facesBefore + 1, `Jack should render as 1 attachment (${facesBefore} -> ${facesAfter})`);
-  const jackedRows = await page.locator(".caravan__row.is-jacked").count();
+  const jackedRows = await page.locator(".card.is-jacked").count();
   assert.ok(jackedRows > 0, "jacked row should have is-jacked class");
-  const jackedFace = await page.locator(".caravan__row.is-jacked .placed-face .card--jack").count();
+  const jackedFace = await page.locator(".card.is-jacked .placed-face .card--jack").count();
   assert.ok(jackedFace > 0, "jacked attachment should render as Jack face");
   console.log("  PASS: Jack jacked the targeted card (removable, dimmed, with X)");
 } else {
@@ -113,7 +113,7 @@ if (chosenType === "jack") {
 // No card rendered as a back/blank after the play.
 const backs = await page.evaluate(() => {
   const out = [];
-  for (const el of document.querySelectorAll(".caravan-col__stack .card")) {
+  for (const el of document.querySelectorAll(".caravan .card")) {
     const bg = getComputedStyle(el).backgroundImage;
     if (el.className.includes("card--back") || bg.includes("back.svg")) out.push(el.className);
   }

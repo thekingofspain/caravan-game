@@ -13,7 +13,7 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 // Cards in the human player's hand must be displayed.
-const handCards = page.locator(".hand-zone--human .card");
+const handCards = page.locator(".player-human .hand-zone .card");
 const handCount = await handCards.count();
 assert.ok(handCount > 0, `expected hand cards, found ${handCount}`);
 

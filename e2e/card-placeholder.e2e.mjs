@@ -10,14 +10,14 @@ await page.waitForSelector(".board");
 
 // ── Test 1: Empty placeholder size consistency ─────────────────
 console.log("TEST 1: Empty placeholder size consistency");
-const ph = page.locator(".caravan-col__stack--human .caravan__placeholder").first();
+const ph = page.locator(".player-human .caravan__empty").first();
 const phBox = await ph.boundingBox();
 console.log(`  size: ${phBox.width.toFixed(1)} x ${phBox.height.toFixed(1)}`);
 
-const stacks = page.locator(".caravan-col__stack--human");
+const stacks = page.locator(".player-human .caravan");
 const stackCount = await stacks.count();
 for (let i = 0; i < stackCount; i++) {
-  const ph2 = stacks.nth(i).locator(".caravan__placeholder");
+  const ph2 = stacks.nth(i).locator(".caravan__empty");
   if ((await ph2.count()) === 0) continue;
   const b = await ph2.boundingBox();
   assert.ok(Math.abs(b.width - phBox.width) < 1, `placeholder ${i} width matches`);
@@ -28,14 +28,14 @@ console.log("  PASS");
 // ── Test 2: Placed card gap symmetry ───────────────────────────
 console.log("\nTEST 2: Placed card green padding symmetry");
 
-const selectableCard = page.locator(".hand-zone--human .hand__slot.is-selectable").first();
+const selectableCard = page.locator(".player-human .hand-zone .hand__slot.is-selectable").first();
 await selectableCard.click({ force: true, position: { x: 3, y: 3 } });
-const target = page.locator(".caravan-col__stack--human .caravan__placeholder").first();
+const target = page.locator(".player-human .caravan__empty").first();
 await target.waitFor({ state: "attached", timeout: 3000 });
 await target.click({ force: true });
 await page.waitForTimeout(500);
 
-const wrap = page.locator(".caravan-col__stack--human .placed-wrap").first();
+const wrap = page.locator(".player-human .caravan .card").first();
 await wrap.waitFor({ state: "visible", timeout: 5000 });
 const card = wrap.locator(".card").first();
 await wrap.waitFor({ state: "visible", timeout: 3000 });

@@ -13,7 +13,7 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".hand-zone--human .hand__slot.is-selectable", { timeout: 8000 });
+  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 8000 });
 }
 
 function isFaceClass(cls) {
@@ -21,7 +21,7 @@ function isFaceClass(cls) {
 }
 
 async function valueSlots() {
-  const slots = page.locator(".hand-zone--human .hand__slot.is-selectable");
+  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
   const n = await slots.count();
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -32,7 +32,7 @@ async function valueSlots() {
 }
 
 async function stackSelectable(ci) {
-  const stack = page.locator(".caravan-col__stack--human").nth(ci);
+  const stack = page.locator(".player-human .caravan").nth(ci);
   const cls = await stack.getAttribute("class");
   return /is-selectable/.test(cls || "");
 }
@@ -45,10 +45,10 @@ async function addValueCardTo(ci) {
     await slot.click({ force: true, position: { x: 3, y: 3 } });
     await page.waitForTimeout(100);
     if (await stackSelectable(ci)) {
-      const stack = page.locator(".caravan-col__stack--human").nth(ci);
-      const ph = stack.locator(".caravan__placeholder");
+      const stack = page.locator(".player-human .caravan").nth(ci);
+      const ph = stack.locator(".caravan__empty");
       if (await ph.count() > 0) await ph.first().click({ force: true });
-      else await stack.locator(".placed-wrap").last().click({ force: true });
+      else await stack.locator(".card").last().click({ force: true });
       await page.waitForTimeout(200);
       return true;
     }
@@ -67,34 +67,34 @@ for (let ci = 0; ci < 3; ci++) {
 await waitHumanTurn();
 
 // ── Caravans holding a card must never show the default placeholder ──
-const phWithCards = await page.locator(".caravan__placeholder").count();
+const phWithCards = await page.locator(".caravan__empty").count();
 assert.equal(phWithCards, 0, `caravans holding 1 card must show no placeholder, got ${phWithCards}`);
 console.log("  PASS: no default placeholder on caravans holding 1 card");
 
 // ── Place additional cards on caravan 1 and verify none disappear ──
 console.log("TEST: every placed card remains visible after further placements");
 const ci = 1;
-const before = await page.locator(".caravan-col__stack--human").nth(ci).locator(".placed-wrap").count();
+const before = await page.locator(".player-human .caravan").nth(ci).locator(".card").count();
 assert.equal(before, 1, `caravan ${ci + 1} should start with 1 card, got ${before}`);
 
 let added = 0;
 for (let step = 0; step < 2; step++) {
   if (await addValueCardTo(ci)) {
     added++;
-    const stack = page.locator(".caravan-col__stack--human").nth(ci);
-    const cardsNow = await stack.locator(".placed-wrap").count();
-    const phNow = await stack.locator(".caravan__placeholder").count();
+    const stack = page.locator(".player-human .caravan").nth(ci);
+    const cardsNow = await stack.locator(".card").count();
+    const phNow = await stack.locator(".caravan__empty").count();
     assert.equal(phNow, 0, `caravan holding ${cardsNow} cards must show no placeholder, got ${phNow}`);
   }
   else break;
 }
 console.log("  PASS: no default placeholder on caravans holding multiple cards");
-const after = await page.locator(".caravan-col__stack--human").nth(ci).locator(".placed-wrap").count();
+const after = await page.locator(".player-human .caravan").nth(ci).locator(".card").count();
 assert.equal(after, before + added, `expected ${before + added} visible cards, got ${after}`);
 console.log(`  placed ${added} more card(s); caravan now shows ${after} cards`);
 
 // Every placed card in this caravan must be visible (non-zero box) and not a back/blank.
-const wraps = page.locator(".caravan-col__stack--human").nth(ci).locator(".placed-wrap");
+const wraps = page.locator(".player-human .caravan").nth(ci).locator(".card");
 const n = await wraps.count();
 for (let i = 0; i < n; i++) {
   const box = await wraps.nth(i).boundingBox();
