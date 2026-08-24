@@ -11,6 +11,7 @@ interface CaravanProps {
   selection: SelectionState;
   hoverTarget: TargetRef | null;
   onCardClick: (target: TargetRef) => void;
+  onPlaceholderClick: (caravanIndex: number) => void;
   onHoverTarget: (target: TargetRef | null) => void;
 }
 
@@ -25,6 +26,7 @@ export function Caravan({
   playerId,
   selection,
   onCardClick,
+  onPlaceholderClick,
   onHoverTarget,
 }: CaravanProps) {
   const isHuman = playerType === "human";
@@ -105,7 +107,11 @@ export function Caravan({
         );
       })}
       {caravan.cards.length === 0 && (
-        <div className={`caravan__empty ${selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`} />
+        <button
+          type="button"
+          className={`caravan__empty ${selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
+          onClick={() => onPlaceholderClick(caravanIndex)}
+        />
       )}
     </div>
   );

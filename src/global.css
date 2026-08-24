@@ -161,10 +161,12 @@ body {
   display: flex;
   justify-content: center;
   flex: 1;
+  position: relative;
 }
 
 /* shared overlapping — both AI and human hands */
 .hand__slot + .hand__slot { margin-left: calc(-1 * var(--overlap-h)); }
+.hand-zone__cards .hand__slot:not(:last-child) { pointer-events: none; }
 
 /* ---------- Caravans ---------- */
 .caravans-row {

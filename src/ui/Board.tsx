@@ -112,6 +112,18 @@ export function Board({ store }: { store: GameStore }) {
     }
   }
 
+  function onPlaceholderClick(caravanIndex: number) {
+    if (sel === null) return;
+    const card = humanPlayer.hand[sel];
+    if (!card) return;
+    const isValue = card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";
+    const ci = caravanIndex as 0 | 1 | 2;
+    if (isValue && legalCaravans.includes(ci)) {
+      act({ type: "playValue", player: 0, caravan: ci, handIndex: sel });
+      setSel(null);
+    }
+  }
+
   function onDiscard() {
     if (sel === null) return;
     const d = legal.find((a) => a.type === "discard" && a.handIndex === sel);
@@ -164,6 +176,7 @@ export function Board({ store }: { store: GameStore }) {
                     }}
                     hoverTarget={hoverTarget}
                     onCardClick={onCardClick}
+                    onPlaceholderClick={() => {}}
                     onHoverTarget={setHoverTarget}
                   />
                 </div>
@@ -196,6 +209,7 @@ export function Board({ store }: { store: GameStore }) {
                     }}
                     hoverTarget={hoverTarget}
                     onCardClick={onCardClick}
+                    onPlaceholderClick={onPlaceholderClick}
                     onHoverTarget={setHoverTarget}
                   />
                   <div className={`caravan-col__score ${huInRange && huWinner ? "is-valid" : ""}`}>
