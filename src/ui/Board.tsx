@@ -8,8 +8,8 @@ import { isValueCard } from "../game/types";
 import { CardView, PlacedCardView } from "./CardView";
 
 function dirArrow(dir: "asc" | "desc" | null): string {
-  if (dir === "asc") return "↑";
-  if (dir === "desc") return "↓";
+  if (dir === "asc") return "▲";
+  if (dir === "desc") return "▼";
   return "";
 }
 
