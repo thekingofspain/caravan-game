@@ -76,3 +76,13 @@ export function baseValue(card: Card): number {
   const n = Number(card.rank);
   return Number.isNaN(n) ? 0 : n;
 }
+
+export type PlayerType = "human" | "ai";
+
+export interface SelectionState {
+  selectedHandIndex: number | null;
+  legalCaravans: number[];
+  targetSet: Set<string>;
+  jackRemovableSet: Set<string>;
+  canDiscard: boolean;
+}
