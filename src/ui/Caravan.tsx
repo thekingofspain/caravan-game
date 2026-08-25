@@ -73,9 +73,10 @@ export function Caravan({
     return classes.join(" ");
   }
 
-  function getCardStyle(isHoverable: boolean): CSSProperties {
+  function getCardStyle(index: number, isHoverable: boolean): CSSProperties {
     return {
       pointerEvents: isHoverable ? "auto" : "none",
+      zIndex: index + 1,
     } as CSSProperties;
   }
 
@@ -105,7 +106,7 @@ export function Caravan({
             type="button"
             className={getCardClasses(pc, k)}
             data-index={k}
-            style={getCardStyle(isHoverable)}
+            style={getCardStyle(k, isHoverable)}
             onMouseEnter={() => {
               if (isHoverable) {
                 onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: k });
