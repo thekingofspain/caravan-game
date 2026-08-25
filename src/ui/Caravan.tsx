@@ -8,6 +8,7 @@ interface CaravanProps {
   caravan: CaravanType;
   caravanIndex: number;
   playerId: PlayerId;
+  highestSold: boolean;
   selection: SelectionState;
   hoverTarget: TargetRef | null;
   onCardClick: (target: TargetRef) => void;
@@ -25,6 +26,7 @@ export function Caravan({
   caravan,
   caravanIndex,
   playerId,
+  highestSold,
   selection,
   onCardClick,
   onPlaceholderClick,
@@ -82,7 +84,8 @@ export function Caravan({
     <div
       className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
     >
-      <div className={`caravan-col__score ${inRange ? "is-valid" : ""}`}>
+      <div className="caravan-col__score">
+        {inRange && <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span>}
         {total}
         {caravan.direction ? (
           <span className="caravan-col__dir" aria-hidden="true">

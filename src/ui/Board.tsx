@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { Action, TargetRef } from "../game/types";
+import { pairWinner } from "../game/scoring";
 import { Caravan } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
 
@@ -9,24 +10,44 @@ function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
 }
 
-function decorateLog(text: string): ReactNode[] {
+function decorateWho(text: string, keyBase: number): ReactNode[] {
   const nodes: React.ReactNode[] = [];
   const re = /AI's caravan|your caravan|\bYou\b|\bAI\b|AI's|\byour\b/g;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
+  let k = 0;
   while (m !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const t = m[0];
-    if (t === "You") nodes.push(<span key={m.index} className="log__who log__who--human">You</span>);
-    else if (t === "AI") nodes.push(<span key={m.index} className="log__who log__who--ai">AI</span>);
-    else if (t === "your caravan") nodes.push(<span key={m.index} className="log__caravan log__caravan--human">your caravan</span>);
-    else if (t === "AI's caravan") nodes.push(<span key={m.index} className="log__caravan log__caravan--ai">AI's caravan</span>);
-    else if (t === "your") nodes.push(<span key={m.index} className="log__caravan log__caravan--human">your</span>);
-    else if (t === "AI's") nodes.push(<span key={m.index} className="log__caravan log__caravan--ai">AI's</span>);
+    const key = `${keyBase}-${k++}`;
+    if (t === "You") nodes.push(<span key={key} className="log__who log__who--human">You</span>);
+    else if (t === "AI") nodes.push(<span key={key} className="log__who log__who--ai">AI</span>);
+    else if (t === "your caravan") nodes.push(<span key={key} className="log__caravan log__caravan--human">your caravan</span>);
+    else if (t === "AI's caravan") nodes.push(<span key={key} className="log__caravan log__caravan--ai">AI's caravan</span>);
+    else if (t === "your") nodes.push(<span key={key} className="log__caravan log__caravan--human">your</span>);
+    else if (t === "AI's") nodes.push(<span key={key} className="log__caravan log__caravan--ai">AI's</span>);
     last = re.lastIndex;
     m = re.exec(text);
   }
   if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
+function decorateLog(text: string): ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  let k = 0;
+  while (m !== null) {
+    if (m.index > last) nodes.push(...decorateWho(text.slice(last, m.index), k));
+    if (m[1] !== undefined) nodes.push(<span key={`s${k}`} className="log__sold">{m[1]}</span>);
+    else nodes.push(<span key={`s${k}`} className="log__sellable">{m[2]}</span>);
+    k += 1;
+    last = re.lastIndex;
+    m = re.exec(text);
+  }
+  if (last < text.length) nodes.push(...decorateWho(text.slice(last), k));
   return nodes;
 }
 
@@ -142,6 +163,7 @@ export function Board({ store }: { store: GameStore }) {
           {[0, 1, 2].map((ci) => {
             const aiCar = aiPlayer.caravans[ci];
             const huCar = humanPlayer.caravans[ci];
+            const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
 
             return (
               <div className="caravan-col" key={ci}>
@@ -150,6 +172,7 @@ export function Board({ store }: { store: GameStore }) {
                   caravan={aiCar}
                   caravanIndex={ci}
                   playerId={1}
+                  highestSold={pairWinnerPlayer === 1}
                   selection={{
                     selectedHandIndex: null,
                     selectedCard: null,
@@ -171,6 +194,7 @@ export function Board({ store }: { store: GameStore }) {
                   caravan={huCar}
                   caravanIndex={ci}
                   playerId={0}
+                  highestSold={pairWinnerPlayer === 0}
                   selection={{
                     selectedHandIndex: sel,
                     selectedCard: sel !== null ? humanPlayer.hand[sel] ?? null : null,
@@ -211,13 +235,13 @@ export function Board({ store }: { store: GameStore }) {
             New game
           </button>
         </div>
-        <div className="log">
+        <ol className="log">
           {state.log.slice(-12).map((entry) => (
-            <div className="log__line" key={entry.id}>
-              {decorateLog(entry.text)}
-            </div>
+            <li className="log__line" key={entry.id}>
+              <span className="log__text">{decorateLog(entry.text)}</span>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </div>
   );

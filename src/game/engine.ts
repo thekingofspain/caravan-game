@@ -1,6 +1,6 @@
 import { getPreset } from "./cards";
-import { canPlayValue, isJacked, isJokered, isValidTarget } from "./rules";
-import { gameWinner } from "./scoring";
+import { canPlayValue, caravanTotal, isInRange, isJacked, isJokered, isValidTarget } from "./rules";
+import { gameWinner, pairWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
   Action,
@@ -67,7 +67,7 @@ export function setupGame(opts: SetupOptions): GameState {
     current: opts.first ?? 0,
     phase: "play",
     winner: null,
-    log: [log("Caravan begun. Place your starting cards.")],
+    log: [],
     started: false,
   };
 }
@@ -114,6 +114,19 @@ function fmt(card: Card): string {
 
 function ownerLabel(p: PlayerId): string {
   return p === 0 ? "your" : "AI's";
+}
+
+function caravanAnalysis(state: GameState): string {
+  const side = (p: PlayerId) =>
+    state.players[p].caravans
+      .map((c, i) => {
+        const t = caravanTotal(c);
+        if (pairWinner(state, i as 0 | 1 | 2) === p) return `**${t}**`;
+        if (isInRange(t)) return `*${t}*`;
+        return `${t}`;
+      })
+      .join("/");
+  return `Final caravans — you ${side(0)}, AI ${side(1)}.`;
 }
 
 function describe(action: Action, state: GameState): string {
@@ -196,20 +209,11 @@ export function applyAction(state: GameState, action: Action): GameState {
     const card = player.hand[action.handIndex];
     if (!card || (!isFaceCard(card) && !isJoker(card))) return state;
     if (!isValidTarget(next, action.target)) return state;
-    // over condition for King: doubling must not bust the caravan
-    if (card.rank === "K") {
-      const car = next.players[action.target.player].caravans[action.target.caravan];
-      const tgt = car.cards[action.target.cardIndex];
-      if (tgt) {
-        if (isJacked(tgt) || isJokered(tgt)) return state;
-        const total = car.cards.reduce((s, p) => s + (isJacked(p) || isJokered(p) ? 0 : baseValue(p.card) * Math.pow(2, p.kingCount)), 0);
-        const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
-        if (total + add > 26) return state;
-      }
-    }
     const tgtPre = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     // Jack cannot be played on an already-jacked card
     if (card.rank === "J" && tgtPre && isJacked(tgtPre)) return state;
+    // King cannot be played on a jacked/jokered card; stacking Kings (even to bust) is legal
+    if (card.rank === "K" && tgtPre && (isJacked(tgtPre) || isJokered(tgtPre))) return state;
     player.hand.splice(action.handIndex, 1);
     const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     if (card.rank === "J") {
@@ -250,7 +254,10 @@ export function applyAction(state: GameState, action: Action): GameState {
   if (winner !== null) {
     next.phase = "over";
     next.winner = winner;
-    next.log = [...next.log, log(winner === 0 ? "You win the caravan!" : "AI wins the caravan.")];
+    next.log = [
+      ...next.log,
+      log(`${winner === 0 ? "You win the caravan!" : "AI wins the caravan."} ${caravanAnalysis(next)}`),
+    ];
   } else if (legalActions(next).length === 0) {
     // A player who cannot make any move (out of cards / no legal play) loses;
     // the opponent wins automatically — matches the in-game coded behavior.
@@ -259,7 +266,9 @@ export function applyAction(state: GameState, action: Action): GameState {
     next.winner = loser === 0 ? 1 : 0;
     next.log = [
       ...next.log,
-      log(loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"),
+      log(
+        `${loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
+      ),
     ];
   } else {
     next.current = next.current === 0 ? 1 : 0;
@@ -317,13 +326,8 @@ export function legalActions(state: GameState): Action[] {
           for (let cidx = 0; cidx < car.cards.length; cidx++) {
             const tgt = car.cards[cidx];
             if (card.rank === "J" && isJacked(tgt)) continue;
-            // over condition for King: doubling must not bust
-            if (card.rank === "K") {
-              if (isJacked(tgt) || isJokered(tgt)) continue;
-              const total = car.cards.reduce((s, pl) => s + (isJacked(pl) || isJokered(pl) ? 0 : baseValue(pl.card) * Math.pow(2, pl.kingCount)), 0);
-              const add = baseValue(tgt.card) * Math.pow(2, tgt.kingCount);
-              if (total + add > 26) continue;
-            }
+            // King stacking is legal even when it busts; only jacked/jokered targets are invalid
+            if (card.rank === "K" && (isJacked(tgt) || isJokered(tgt))) continue;
             actions.push({ type: "playFace", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx }, handIndex: hi });
           }
         }

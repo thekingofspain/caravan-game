@@ -102,6 +102,28 @@ describe("face card effects", () => {
     expect(caravanTotal(next.players[1].caravans[2])).toBe(20);
   });
 
+  it("King can be stacked on an already-kinged card, even if it busts the caravan", () => {
+    const kinged: PlacedCard = { card: makeCard("spades", "10"), kingCount: 1, attachments: [makeCard("spades", "K")] };
+    const car: Caravan = { cards: [kinged], direction: null, suit: "spades" };
+    const p0 = mkPlayer(EMPTY, [makeCard("hearts", "K"), makeCard("clubs", "5")]);
+    const p1 = mkPlayer([car, caravanOf([]), caravanOf([])], [makeCard("spades", "5")]);
+    const s = mkGame(p0, p1);
+    const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
+    expect(next.players[1].caravans[0].cards[0].kingCount).toBe(2);
+    expect(caravanTotal(next.players[1].caravans[0])).toBe(40);
+    expect(next.phase).toBe("play");
+  });
+
+  it("legalActions offers King stacking on a kinged card even when it busts", () => {
+    const kinged: PlacedCard = { card: makeCard("spades", "10"), kingCount: 1, attachments: [makeCard("spades", "K")] };
+    const car: Caravan = { cards: [kinged], direction: null, suit: "spades" };
+    const p0 = mkPlayer([caravanOf(["5"]), caravanOf(["5"]), caravanOf(["5"])], [makeCard("hearts", "K")]);
+    const p1 = mkPlayer([car, caravanOf(["6"]), caravanOf(["7"])], []);
+    const s = mkGame(p0, p1);
+    const acts = legalActions(s).filter((a) => a.type === "playFace" && a.handIndex === 0);
+    expect(acts.some((a) => a.type === "playFace" && a.target.player === 1 && a.target.caravan === 0 && a.target.cardIndex === 0)).toBe(true);
+  });
+
   it("Joker on a 10 removes all other 10s from the table", () => {
     const p0 = mkPlayer(EMPTY, [makeCard("spades", "JOKER")]);
     const p1 = mkPlayer([caravanOf(["10", "5"]), caravanOf([]), caravanOf(["10"])], []);
