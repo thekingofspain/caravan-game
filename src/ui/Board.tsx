@@ -150,6 +150,7 @@ export function Board({ store }: { store: GameStore }) {
                   playerId={1}
                   selection={{
                     selectedHandIndex: null,
+                    selectedCard: null,
                     legalCaravans: [],
                     targetSet,
                     jackRemovableSet,
@@ -170,6 +171,7 @@ export function Board({ store }: { store: GameStore }) {
                   playerId={0}
                   selection={{
                     selectedHandIndex: sel,
+                    selectedCard: sel !== null ? humanPlayer.hand[sel] ?? null : null,
                     legalCaravans,
                     targetSet,
                     jackRemovableSet,

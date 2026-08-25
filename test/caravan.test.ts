@@ -17,6 +17,7 @@ function createCaravan(cards: Array<{ rank: string; suit: string }>): CaravanTyp
 function createSelection(overrides: Partial<SelectionState> = {}): SelectionState {
   return {
     selectedHandIndex: null,
+    selectedCard: null,
     legalCaravans: [],
     targetSet: new Set(),
     jackRemovableSet: new Set(),

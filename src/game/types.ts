@@ -81,6 +81,7 @@ export type PlayerType = "human" | "ai";
 
 export interface SelectionState {
   selectedHandIndex: number | null;
+  selectedCard: Card | null;
   legalCaravans: number[];
   targetSet: Set<string>;
   jackRemovableSet: Set<string>;

@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
 import { caravanTotal, isInRange, isJacked, isJokered } from "../game/rules";
-import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef } from "../game/types";
+import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef, isValueCard } from "../game/types";
 
 interface CaravanProps {
   playerType: PlayerType;
@@ -32,7 +32,7 @@ export function Caravan({
   children,
 }: CaravanProps) {
   const isHuman = playerType === "human";
-  const selectedCard = selection.selectedHandIndex !== null;
+  const selectedCard = selection.selectedCard;
 
   const caravanIdx = caravanIndex as 0 | 1 | 2;
   const total = caravanTotal(caravan);
@@ -82,9 +82,18 @@ export function Caravan({
 
   function isCardHoverable(index: number): boolean {
     if (!selectedCard) return true;
-    const firstCardIndex = caravan.cards.findIndex((pc) => !isJacked(pc) && !isJokered(pc));
-    if (firstCardIndex === -1) return false;
-    return index === firstCardIndex;
+    // face cards can target any card
+    if (!isValueCard(selectedCard)) return true;
+    // value cards: only the topmost active card is a placement spot
+    let lastActive = -1;
+    for (let i = caravan.cards.length - 1; i >= 0; i--) {
+      const pc = caravan.cards[i];
+      if (!isJacked(pc) && !isJokered(pc)) {
+        lastActive = i;
+        break;
+      }
+    }
+    return index === lastActive;
   }
 
   return (
