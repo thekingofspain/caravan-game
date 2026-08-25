@@ -261,6 +261,9 @@ body {
   border-radius: var(--radius);
   transition: border-color var(--transition-fast);
   transform: translate(-50%, 0);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
 }
 
 .caravan--human .caravan__empty { top: var(--card-offset); }
