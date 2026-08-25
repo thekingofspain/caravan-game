@@ -88,7 +88,9 @@ export function Caravan({
   }
 
   return (
-    <div className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"}`}>
+    <div
+      className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
+    >
       <div className={`caravan-col__score ${inRange ? "is-valid" : ""}`}>
         {total}
         {caravan.direction ? (

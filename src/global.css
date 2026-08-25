@@ -240,10 +240,7 @@ body {
 }
 
 /* ---------- Card states ---------- */
-.caravan .card.is-target {
-  outline: 3px solid var(--c-good);
-  outline-offset: 2px;
-}
+/* is-target has no persistent outline — hover rules below show green/red */
 
 .caravan .card.is-jacked {
   opacity: 0.45;
@@ -257,14 +254,10 @@ body {
   filter: grayscale(0.3);
 }
 
-/* Placed cards: no outline, no button styling */
+/* Placed cards: no button styling */
 .caravan button.card {
   cursor: default;
   background-color: transparent;
-}
-
-.caravan button.card:hover {
-  outline: none;
 }
 
 /* ---------- Face cards ---------- */
@@ -460,11 +453,15 @@ body {
 .log .log__caravan--ai { color: #8a2a2a; }
 
 /* ---------- Selection hover outlines ---------- */
-.board:has(.hand__slot.is-selected) .caravan .card:not(.is-target):hover {
+/* red: hover any card while a hand card is selected */
+.board:has(.hand__slot.is-selected) .caravan .card:hover {
   outline: 3px solid var(--c-bad);
   outline-offset: 2px;
 }
 
+/* green: valid placements — top card of a selectable caravan (value cards),
+   or any is-target card (face cards) */
+.board:has(.hand__slot.is-selected) .caravan.is-selectable .card:last-child:hover,
 .board:has(.hand__slot.is-selected) .caravan .card.is-target:hover {
   outline-color: var(--c-good);
 }
