@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
 import { caravanTotal, isInRange, isJacked, isJokered } from "../game/rules";
-import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef, isValueCard } from "../game/types";
+import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef } from "../game/types";
 
 interface CaravanProps {
   playerType: PlayerType;
@@ -32,7 +32,6 @@ export function Caravan({
   children,
 }: CaravanProps) {
   const isHuman = playerType === "human";
-  const selectedCard = selection.selectedCard;
 
   const caravanIdx = caravanIndex as 0 | 1 | 2;
   const total = caravanTotal(caravan);
@@ -73,27 +72,10 @@ export function Caravan({
     return classes.join(" ");
   }
 
-  function getCardStyle(index: number, isHoverable: boolean): CSSProperties {
+  function getCardStyle(index: number): CSSProperties {
     return {
-      pointerEvents: isHoverable ? "auto" : "none",
       zIndex: index + 1,
     } as CSSProperties;
-  }
-
-  function isCardHoverable(index: number): boolean {
-    if (!selectedCard) return true;
-    // face cards can target any card
-    if (!isValueCard(selectedCard)) return true;
-    // value cards: only the topmost active card is a placement spot
-    let lastActive = -1;
-    for (let i = caravan.cards.length - 1; i >= 0; i--) {
-      const pc = caravan.cards[i];
-      if (!isJacked(pc) && !isJokered(pc)) {
-        lastActive = i;
-        break;
-      }
-    }
-    return index === lastActive;
   }
 
   return (
@@ -110,7 +92,6 @@ export function Caravan({
       </div>
       {children}
       {caravan.cards.map((pc, k) => {
-        const isHoverable = isCardHoverable(k);
         const jackedCard = isJacked(pc);
         const removable = selection.jackRemovableSet.has(targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k }));
         const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
@@ -122,12 +103,8 @@ export function Caravan({
             type="button"
             className={getCardClasses(pc, k)}
             data-index={k}
-            style={getCardStyle(k, isHoverable)}
-            onMouseEnter={() => {
-              if (isHoverable) {
-                onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: k });
-              }
-            }}
+            style={getCardStyle(k)}
+            onMouseEnter={() => onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: k })}
             onMouseLeave={() => onHoverTarget(null)}
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}

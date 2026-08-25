@@ -90,7 +90,9 @@ export function Board({ store }: { store: GameStore }) {
 
       const isValueCard = card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";
       if (isValueCard) {
-        if (legalCaravans.includes(target.caravan)) {
+        const caravanLen = humanPlayer.caravans[target.caravan].cards.length;
+        const isTop = target.cardIndex === caravanLen - 1;
+        if (legalCaravans.includes(target.caravan) && isTop) {
           act({ type: "playValue", player: 0, caravan: target.caravan, handIndex: sel });
           setSel(null);
         }
