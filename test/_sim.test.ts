@@ -4,7 +4,7 @@ import { chooseAction } from "../src/game/ai";
 import { Action, GameState, PlayerId } from "../src/game/types";
 
 function playOut(seed: number) {
-  let s: GameState = setupGame({ humanDeck: "default", aiDeck: "default", first: 0, seed });
+  let s: GameState = setupGame({ first: 0, seed });
   let steps = 0;
   while (s.phase === "play" && steps < 2000) {
     const a: Action = chooseAction(s, s.current as PlayerId);

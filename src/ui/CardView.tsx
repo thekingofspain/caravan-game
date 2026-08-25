@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { Card, PlacedCard } from "../game/types";
-import { cardClassName } from "../game/cards";
+import { cardClassName, cardLabel } from "../game/cards";
 
 export function CardView({ card, className = "", style }: { card: Card; className?: string; style?: CSSProperties }) {
   return (
@@ -8,7 +8,7 @@ export function CardView({ card, className = "", style }: { card: Card; classNam
       className={`${cardClassName(card)} ${className}`.trim()}
       style={style}
       role="img"
-      aria-label={`${card.rank}${card.suit === "joker" ? "" : " of " + card.suit}`}
+      aria-label={cardLabel(card)}
     />
   );
 }

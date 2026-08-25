@@ -10,6 +10,7 @@
   --c-suit-diamonds: #ffd166;
   --c-human: #8ab4f8;
   --c-ai: #ff8a8a;
+  --c-brown: #8b4513;
 
   --sp-1: 4px;
   --sp-2: 8px;
@@ -246,11 +247,6 @@ body {
   outline-offset: 2px;
 }
 
-.caravan .card.is-jokered {
-  opacity: 0.45;
-  filter: grayscale(0.3);
-}
-
 /* Placed cards: no button styling */
 .caravan button.card {
   cursor: default;
@@ -452,6 +448,7 @@ body {
 .log__line {
   counter-increment: log-line;
   display: flex;
+  align-items: baseline;
 }
 
 .log__line::before {
@@ -471,15 +468,44 @@ body {
 .log__sellable { color: var(--c-accent); }
 .log__sold { color: var(--c-accent); font-weight: 700; }
 
-.log__who--human { color: var(--c-human); font-weight: 700; }
-.log__who--ai { color: var(--c-ai); font-weight: 700; }
-.log__caravan--human { color: var(--c-human); }
-.log__caravan--ai { color: var(--c-ai); }
-/* light background variant for white log panel */
-.log .log__who--human { color: #3a5a8a; }
-.log .log__who--ai { color: #8a2a2a; }
-.log .log__caravan--human { color: #3a5a8a; }
-.log .log__caravan--ai { color: #8a2a2a; }
+/* player identity via icons, not colored text */
+.log__who {
+  white-space: nowrap;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* tighten gap after the player icon and after the horse icon */
+.log__caravan {
+  margin-left: -0.25em;
+}
+
+/* caravan reference: @caravan#[-row#] */
+.log__who-ref {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-brown);
+  margin-left: -0.25em;
+}
+
+/* card names colored by suit on the white log panel */
+.log .log__card--red { color: #b3261e; font-weight: 700; }
+.log .log__card--black { color: #1a1a1a; font-weight: 700; }
+
+/* diamonds/clubs match their card art color, slightly larger */
+.log .log__card--diamonds { color: blue; font-size: 14px; font-weight: 700; }
+.log .log__card--clubs { color: green; font-size: 14px; font-weight: 700; }
+
+/* sub-lines under a log entry (e.g. cards removed by a Joker) */
+.log__bullets {
+  margin: 2px 0 4px;
+  padding-left: 1.4em;
+  list-style: disc;
+}
+
+.log__bullets li {
+  margin: 0;
+}
 
 /* ---------- Selection hover outlines ---------- */
 /* red: hover any card while a hand card is selected */

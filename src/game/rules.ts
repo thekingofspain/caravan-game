@@ -4,12 +4,8 @@ export function isJacked(p: PlacedCard): boolean {
   return p.attachments.some((c) => c.rank === "J");
 }
 
-export function isJokered(p: PlacedCard): boolean {
-  return !!p.jokered;
-}
-
 export function placedValue(p: PlacedCard): number {
-  if (isJacked(p) || isJokered(p)) return 0;
+  if (isJacked(p)) return 0;
   return baseValue(p.card) * Math.pow(2, p.kingCount);
 }
 
@@ -18,7 +14,7 @@ export function caravanTotal(c: Caravan): number {
 }
 
 export function activeCards(c: Caravan): PlacedCard[] {
-  return c.cards.filter((p) => !isJacked(p) && !isJokered(p));
+  return c.cards.filter((p) => !isJacked(p));
 }
 
 export function isInRange(total: number): boolean {

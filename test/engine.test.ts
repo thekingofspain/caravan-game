@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { makeCard, getPreset } from "../src/game/cards";
+import { makeCard, buildDeck, jokerColor } from "../src/game/cards";
 import { setupGame, applyAction, legalActions } from "../src/game/engine";
 import { caravanTotal, isJacked } from "../src/game/rules";
 import { Card, Caravan, GameState, PlacedCard, PlayerState } from "../src/game/types";
@@ -23,7 +23,7 @@ function mkGame(p0: PlayerState, p1: PlayerState, current: 0 | 1 = 0): GameState
 
 describe("setup", () => {
   it("deals 8-card hands from a 30-card deck", () => {
-    const s = setupGame({ humanDeck: "default", aiDeck: "default", seed: 7 });
+    const s = setupGame({ seed: 7 });
     expect(s.players[0].hand.length).toBe(8);
     expect(s.players[0].deck.length).toBe(22);
     expect(s.players[1].hand.length).toBe(8);
@@ -33,7 +33,7 @@ describe("setup", () => {
 
 describe("initial round (must-start constraint)", () => {
   it("only allows playing value cards to empty caravans", () => {
-    const s = setupGame({ humanDeck: "default", aiDeck: "default", seed: 7 });
+    const s = setupGame({ seed: 7 });
     const acts = legalActions(s);
     expect(acts.length).toBeGreaterThan(0);
     for (const a of acts) {
@@ -42,12 +42,12 @@ describe("initial round (must-start constraint)", () => {
     }
   });
   it("disallows discard while a caravan is empty", () => {
-    const s = setupGame({ humanDeck: "default", aiDeck: "default", seed: 7 });
+    const s = setupGame({ seed: 7 });
     const discards = legalActions(s).filter((a) => a.type === "discard");
     expect(discards.length).toBe(0);
   });
   it("starts a caravan when a value card is played", () => {
-    const s = setupGame({ humanDeck: "default", aiDeck: "default", seed: 7 });
+    const s = setupGame({ seed: 7 });
     const act = legalActions(s)[0];
     const card = s.players[0].hand[act.handIndex];
     const next = applyAction(s, act);
@@ -56,7 +56,7 @@ describe("initial round (must-start constraint)", () => {
     expect(next.current).toBe(1);
   });
   it("is pure (does not mutate input state)", () => {
-    const s = setupGame({ humanDeck: "default", aiDeck: "default", seed: 7 });
+    const s = setupGame({ seed: 7 });
     const before = JSON.stringify(s);
     applyAction(s, legalActions(s)[0]);
     expect(JSON.stringify(s)).toBe(before);
@@ -131,6 +131,8 @@ describe("face card effects", () => {
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
     expect(next.players[1].caravans[0].cards.length).toBe(2); // target 10 + the 5 stay
     expect(next.players[1].caravans[2].cards.length).toBe(0); // other 10 removed
+    const entry = next.log.find((e) => e.text.includes("Joker"))!;
+    expect(entry.detail).toEqual(["AI's caravan 3: {10♠}"]); // one bullet per affected caravan
   });
 
   it("Joker on an Ace removes all other cards of that suit", () => {
@@ -140,6 +142,8 @@ describe("face card effects", () => {
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
     expect(next.players[1].caravans[0].cards.length).toBe(1); // ace (target) stays
     expect(next.players[1].caravans[1].cards.length).toBe(0); // other spade ace removed
+    const entry = next.log.find((e) => e.text.includes("Joker"))!;
+    expect(entry.detail).toEqual(["AI's caravan 1: {5♠}", "AI's caravan 2: {A♠}"]);
   });
 });
 
@@ -153,10 +157,22 @@ describe("disband", () => {
   });
 });
 
-describe("preset decks", () => {
-  it("every preset deck is exactly 30 cards", () => {
-    for (const d of ["wanderer", "gambler", "default"]) {
-      expect(getPreset(d).build().length).toBe(30);
+describe("deck", () => {
+  it("standard deck has 54 unique cards including a black and a red joker", () => {
+    const d = buildDeck();
+    expect(d.length).toBe(54);
+    const jokers = d.filter((c) => c.rank === "JOKER");
+    expect(jokers.map(jokerColor).sort()).toEqual(["black", "red"]);
+    expect(new Set(d.map((c) => `${c.suit}-${c.rank}`)).size).toBe(54);
+  });
+
+  it("setupGame deals each player 30 cards from a full shuffled deck", () => {
+    const s = setupGame({ seed: 7 });
+    for (const p of s.players) {
+      expect(p.hand.length + p.deck.length).toBe(30);
+      for (const c of [...p.hand, ...p.deck]) {
+        expect(c.rank === "JOKER" || c.suit !== "joker").toBe(true);
+      }
     }
   });
 });

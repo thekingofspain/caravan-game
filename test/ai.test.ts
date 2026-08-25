@@ -31,7 +31,7 @@ function sameAction(a: Action, b: Action): boolean {
 
 describe("AI", () => {
   it("always returns a legal action", () => {
-    let s = setupGame({ humanDeck: "wanderer", aiDeck: "gambler", seed: 3, first: 0 });
+    let s = setupGame({ seed: 3, first: 0 });
     for (let i = 0; i < 200 && s.phase === "play"; i++) {
       const a = chooseAction(s, s.current);
       const legal = legalActions(s).some((l) => sameAction(l, a));
@@ -41,7 +41,7 @@ describe("AI", () => {
   });
 
   it("plays a caravan into the 21-26 winning range", () => {
-    let s = setupGame({ humanDeck: "default", aiDeck: "wanderer", seed: 11, first: 1 });
+    let s = setupGame({ seed: 11, first: 1 });
     for (let i = 0; i < 80 && s.phase === "play"; i++) {
       s = applyAction(s, chooseAction(s, s.current));
       const totals = s.players[1].caravans.map((c) => caravanTotal(c));
@@ -52,7 +52,7 @@ describe("AI", () => {
   });
 
   it("AI vs AI reaches a legal game-over", () => {
-    let s = setupGame({ humanDeck: "wanderer", aiDeck: "gambler", seed: 1, first: 0 });
+    let s = setupGame({ seed: 1, first: 0 });
     let plies = 0;
     const seen = new Set<string>();
     while (s.phase === "play" && plies < 8000) {

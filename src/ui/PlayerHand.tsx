@@ -1,4 +1,4 @@
-import { cardClassName } from "../game/cards";
+import { cardClassName, cardLabel } from "../game/cards";
 import { PlayerType, PlayerState } from "../game/types";
 
 interface PlayerHandProps {
@@ -32,13 +32,13 @@ export function PlayerHand({
               className={`hand__slot ${selectableIndices.has(i) ? "is-selectable" : ""} ${selectedHandIndex === i ? "is-selected" : ""}`}
               key={card.id}
               onClick={() => onCardClick(i)}
-              aria-label={`${card.rank} of ${card.suit}${selectedHandIndex === i ? ", selected" : ""}${selectableIndices.has(i) ? ", playable" : ""}`}
+              aria-label={`${cardLabel(card)}${selectedHandIndex === i ? ", selected" : ""}${selectableIndices.has(i) ? ", playable" : ""}`}
               aria-pressed={selectedHandIndex === i}
             >
               <div
                 className={`${cardClassName(card)} ${selectedHandIndex === i ? "is-selected" : ""}`}
                 role="img"
-                aria-label={`${card.rank}${card.suit === "joker" ? "" : " of " + card.suit}`}
+                aria-label={cardLabel(card)}
               />
             </button>
           ))

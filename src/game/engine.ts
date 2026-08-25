@@ -1,5 +1,5 @@
-import { getPreset } from "./cards";
-import { canPlayValue, caravanTotal, isInRange, isJacked, isJokered, isValidTarget } from "./rules";
+import { buildDeck, jokerColor, SUIT_SYMBOL } from "./cards";
+import { canPlayValue, caravanTotal, isInRange, isJacked, isValidTarget } from "./rules";
 import { gameWinner, pairWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
@@ -9,6 +9,7 @@ import {
   GameState,
   PlayerId,
   PlayerState,
+  Suit,
   TargetRef,
   isFaceCard,
   isJoker,
@@ -59,9 +60,8 @@ function makePlayer(deck: Card[]): PlayerState {
 
 export function setupGame(opts: SetupOptions): GameState {
   const rng = mulberry32(opts.seed ?? 1);
-  const courierDeck = getPreset("default").build();
-  const human = shuffle(courierDeck, rng).slice(0, 30);
-  const ai = shuffle(courierDeck, rng).slice(0, 30);
+  const human = shuffle(buildDeck(), rng).slice(0, 30);
+  const ai = shuffle(buildDeck(), rng).slice(0, 30);
   return {
     players: [makePlayer(human), makePlayer(ai)],
     current: opts.first ?? 0,
@@ -82,6 +82,10 @@ function draw(player: PlayerState): void {
 function removeValueCard(state: GameState, target: TargetRef): void {
   const car = state.players[target.player].caravans[target.caravan];
   car.cards.splice(target.cardIndex, 1);
+  normalizeCaravan(car);
+}
+
+function normalizeCaravan(car: Caravan): void {
   if (car.cards.length === 0) {
     car.direction = null;
     car.suit = null;
@@ -91,25 +95,41 @@ function removeValueCard(state: GameState, target: TargetRef): void {
   }
 }
 
-function applyJoker(state: GameState, target: TargetRef): void {
+// Joker removes all matching cards from play (target excluded): on an Ace all
+// cards of that suit, otherwise all cards of the same value — across every
+// caravan of both players. Attachments travel with their removed value card.
+// Returns one line per affected caravan listing the removed cards.
+function applyJoker(state: GameState, target: TargetRef): string[] {
   const tgt = state.players[target.player].caravans[target.caravan].cards[target.cardIndex];
+  const isAceTarget = tgt.card.rank === "A";
   const suit = tgt.card.suit;
   const value = baseValue(tgt.card);
-  const isAceTarget = tgt.card.rank === "A";
-  for (const p of state.players) {
-    for (const car of p.caravans) {
-      for (const pc of car.cards) {
+  const detail: string[] = [];
+  for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
+    for (let ci = 0; ci < state.players[p].caravans.length; ci++) {
+      const car = state.players[p].caravans[ci];
+      const removed: Card[] = [];
+      for (let i = car.cards.length - 1; i >= 0; i--) {
+        const pc = car.cards[i];
+        if (pc === tgt) continue;
         const match = isAceTarget ? pc.card.suit === suit : baseValue(pc.card) === value;
         if (match) {
-          pc.jokered = true;
+          removed.push(pc.card);
+          car.cards.splice(i, 1);
         }
+      }
+      normalizeCaravan(car);
+      if (removed.length > 0) {
+        detail.push(`${ownerLabel(p)} caravan ${ci + 1}: ${removed.map(fmt).join(", ")}`);
       }
     }
   }
+  return detail;
 }
 
 function fmt(card: Card): string {
-  return `${card.rank}${card.suit === "joker" ? "" : card.suit[0].toUpperCase()}`;
+  if (card.rank === "JOKER") return `{${jokerColor(card) === "red" ? "Red" : "Black"} Joker}`;
+  return `{${card.rank}${SUIT_SYMBOL[card.suit as Suit]}}`;
 }
 
 function ownerLabel(p: PlayerId): string {
@@ -136,7 +156,7 @@ function describe(action: Action, state: GameState): string {
   if (action.type === "playValue") {
     const c = state.players[action.player].hand[action.handIndex];
     const row = state.players[action.player].caravans[action.caravan].cards.length + 1;
-    return `${actor} placed ${fmt(c)} at row ${row} of ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
+    return `${actor} placed ${fmt(c)} on row ${row} of ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
   }
 
   if (action.type === "playFace") {
@@ -147,13 +167,12 @@ function describe(action: Action, state: GameState): string {
     const owner = ownerLabel(action.target.player);
     let effect = "";
     if (c.rank === "J") effect = ` — jacked ${fmt(tgt.card)} (0, removable)`;
-    else if (c.rank === "Q") effect = ` — reversed direction, set suit to ${c.suit[0].toUpperCase()}`;
-    else if (c.rank === "K") effect = ` — doubled ${fmt(tgt.card)} (×${Math.pow(2, tgt.kingCount + 1)})`;
+    else if (c.rank === "Q") effect = ` — reversed direction, set suit to {${SUIT_SYMBOL[c.suit as Suit]}}`;
     else if (isJoker(c)) {
-      if (tgt.card.rank === "A") effect = ` — cleared all ${tgt.card.suit} cards`;
-      else effect = ` — cleared all ${baseValue(tgt.card)}s`;
+      if (tgt.card.rank === "A") effect = ` — removed all {${SUIT_SYMBOL[tgt.card.suit as Suit]}} cards`;
+      else effect = ` — removed all ${baseValue(tgt.card)}s`;
     }
-    return `${actor} placed ${fmt(c)} on ${fmt(tgt.card)} at row ${row} of ${owner} caravan ${caravan}${effect}.`;
+    return `${actor} placed ${fmt(c)} on ${fmt(tgt.card)} on row ${row} of ${owner} caravan ${caravan}${effect}.`;
   }
 
   if (action.type === "discard") {
@@ -171,7 +190,7 @@ function describe(action: Action, state: GameState): string {
     const caravan = action.target.caravan + 1;
     const owner = ownerLabel(action.target.player);
     const cardDesc = tgt ? fmt(tgt.card) : "card";
-    return `${actor} removed jacked ${cardDesc} at row ${row} of ${owner} caravan ${caravan}.`;
+    return `${actor} removed jacked ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;
   }
 
   return `${actor} acted.`;
@@ -183,6 +202,7 @@ export function applyAction(state: GameState, action: Action): GameState {
 
   const next: GameState = structuredClone(state);
   const player = next.players[action.player];
+  let jokerDetail: string[] | null = null;
 
   if (
     !next.started &&
@@ -212,8 +232,8 @@ export function applyAction(state: GameState, action: Action): GameState {
     const tgtPre = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     // Jack cannot be played on an already-jacked card
     if (card.rank === "J" && tgtPre && isJacked(tgtPre)) return state;
-    // King cannot be played on a jacked/jokered card; stacking Kings (even to bust) is legal
-    if (card.rank === "K" && tgtPre && (isJacked(tgtPre) || isJokered(tgtPre))) return state;
+    // King cannot be played on a jacked card; stacking Kings (even to bust) is legal
+    if (card.rank === "K" && tgtPre && isJacked(tgtPre)) return state;
     player.hand.splice(action.handIndex, 1);
     const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     if (card.rank === "J") {
@@ -228,7 +248,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       if (tgt) tgt.attachments.push(card);
     } else if (isJoker(card)) {
       if (tgt) tgt.attachments.push(card);
-      applyJoker(next, action.target);
+      jokerDetail = applyJoker(next, action.target);
     }
     draw(player);
   } else if (action.type === "discard") {
@@ -248,7 +268,9 @@ export function applyAction(state: GameState, action: Action): GameState {
     draw(player);
   }
 
-  next.log = [...next.log, log(describe(action, state))].slice(-50);
+  const entry = log(describe(action, state));
+  if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
+  next.log = [...next.log, entry].slice(-50);
 
   const winner = gameWinner(next);
   if (winner !== null) {
@@ -326,8 +348,8 @@ export function legalActions(state: GameState): Action[] {
           for (let cidx = 0; cidx < car.cards.length; cidx++) {
             const tgt = car.cards[cidx];
             if (card.rank === "J" && isJacked(tgt)) continue;
-            // King stacking is legal even when it busts; only jacked/jokered targets are invalid
-            if (card.rank === "K" && (isJacked(tgt) || isJokered(tgt))) continue;
+            // King stacking is legal even when it busts; only jacked targets are invalid
+            if (card.rank === "K" && isJacked(tgt)) continue;
             actions.push({ type: "playFace", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx }, handIndex: hi });
           }
         }

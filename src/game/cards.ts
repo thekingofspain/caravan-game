@@ -1,11 +1,5 @@
 import { Card, Rank, Suit } from "./types";
 
-interface DeckSpecEntry {
-  suit: Suit;
-  rank: Rank;
-  count: number;
-}
-
 let idCounter = 0;
 function nextId(suit: Suit | "joker", rank: Rank): string {
   idCounter += 1;
@@ -16,73 +10,34 @@ export function makeCard(suit: Suit | "joker", rank: Rank): Card {
   return { id: nextId(suit, rank), suit, rank };
 }
 
-function expand(spec: DeckSpecEntry[]): Card[] {
-  const out: Card[] = [];
-  for (const e of spec) {
-    for (let i = 0; i < e.count; i++) out.push(makeCard(e.suit, e.rank));
-  }
-  return out;
-}
-
 const SUITS: Suit[] = ["spades", "hearts", "diamonds", "clubs"];
+const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
-function fullSuit(rank: Rank, count: number): DeckSpecEntry[] {
-  return SUITS.map((s) => ({ suit: s, rank, count }));
+// Jokers are distinguished by suit proxy: spades = black joker, hearts = red joker.
+export type JokerColor = "black" | "red";
+
+export function jokerColor(card: Card): JokerColor {
+  return card.suit === "hearts" ? "red" : "black";
 }
 
-export interface PresetDeck {
-  id: string;
-  name: string;
-  description: string;
-  build: () => Card[];
+export const SUIT_SYMBOL: Record<Suit, string> = {
+  spades: "♠",
+  hearts: "♥",
+  diamonds: "♦",
+  clubs: "♣",
+};
+
+export function cardLabel(card: Card): string {
+  if (card.rank === "JOKER") return `${jokerColor(card) === "red" ? "Red" : "Black"} Joker`;
+  return `${card.rank} of ${card.suit}`;
 }
 
-export const PRESET_DECKS: PresetDeck[] = [
-  {
-    id: "wanderer",
-    name: "Wanderer",
-    description: "6–10 plus Kings (fast 26s).",
-    build: () =>
-      expand([
-        ...(["6", "7", "8", "9", "10"] as Rank[]).flatMap((r) =>
-          SUITS.map((s) => ({ suit: s, rank: r, count: 1 })),
-        ),
-        ...fullSuit("K", 1),
-        { suit: "spades", rank: "JOKER", count: 1 },
-      ]),
-  },
-  {
-    id: "gambler",
-    name: "Gambler",
-    description: "7–10 plus face disruption.",
-    build: () =>
-      expand([
-        ...(["7", "8", "9", "10"] as Rank[]).flatMap((r) =>
-          SUITS.map((s) => ({ suit: s, rank: r, count: 1 })),
-        ),
-        ...(["J", "Q", "K"] as Rank[]).flatMap((r) =>
-          SUITS.map((s) => ({ suit: s, rank: r, count: 1 })),
-        ),
-        { suit: "spades", rank: "JOKER", count: 1 },
-      ]),
-  },
-  {
-    id: "default",
-    name: "Courier",
-    description: "Full deck, one of every card.",
-    build: () =>
-      expand([
-        ...(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"] as Rank[]).flatMap((r) =>
-          SUITS.map((s) => ({ suit: s, rank: r, count: 1 })),
-        ),
-        { suit: "spades", rank: "JOKER", count: 1 },
-        { suit: "hearts", rank: "JOKER", count: 1 },
-      ]),
-  },
-];
-
-export function getPreset(id: string): PresetDeck {
-  return PRESET_DECKS.find((d) => d.id === id) ?? PRESET_DECKS[0];
+export function buildDeck(): Card[] {
+  const out: Card[] = [];
+  for (const r of RANKS) for (const s of SUITS) out.push(makeCard(s, r));
+  out.push(makeCard("spades", "JOKER"));
+  out.push(makeCard("hearts", "JOKER"));
+  return out;
 }
 
 const RANK_CLASS: Record<Rank, string> = {
@@ -103,6 +58,6 @@ const RANK_CLASS: Record<Rank, string> = {
 };
 
 export function cardClassName(card: Card): string {
-  if (card.rank === "JOKER") return "card card--joker card--red";
+  if (card.rank === "JOKER") return `card card--joker card--${jokerColor(card)}`;
   return `card card--${card.suit} card--${RANK_CLASS[card.rank]}`;
 }

@@ -10,22 +10,44 @@ function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
 }
 
-function decorateWho(text: string, keyBase: number): ReactNode[] {
+const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
+
+function decorateWho(text: string, keyBase: string): ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const re = /AI's caravan|your caravan|\bYou\b|\bAI\b|AI's|\byour\b/g;
+  const re = /(?:row (\d+) of )?(AI's|your) caravan (\d+)|\bYou\b|\bAI\b|AI's|\byour\b/g;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
   while (m !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
-    const t = m[0];
     const key = `${keyBase}-${k++}`;
-    if (t === "You") nodes.push(<span key={key} className="log__who log__who--human">You</span>);
-    else if (t === "AI") nodes.push(<span key={key} className="log__who log__who--ai">AI</span>);
-    else if (t === "your caravan") nodes.push(<span key={key} className="log__caravan log__caravan--human">your caravan</span>);
-    else if (t === "AI's caravan") nodes.push(<span key={key} className="log__caravan log__caravan--ai">AI's caravan</span>);
-    else if (t === "your") nodes.push(<span key={key} className="log__caravan log__caravan--human">your</span>);
-    else if (t === "AI's") nodes.push(<span key={key} className="log__caravan log__caravan--ai">AI's</span>);
+    if (m[2] !== undefined) {
+      const side = m[2] === "AI's" ? "ai" : "human";
+      const ref = `@${m[3]}${m[1] ? `-${m[1]}` : ""}`;
+      nodes.push(
+        <span
+          key={key}
+          className={`log__who log__who--${side}`}
+          title={side === "ai" ? "AI" : "You"}
+        >
+          <span className="log__icon">{SIDE_ICON[side]}</span>
+          <span className="log__caravan">
+            🐎<span className="log__who-ref">{ref}</span>
+          </span>
+        </span>,
+      );
+    } else {
+      const side = m[0].startsWith("AI") ? "ai" : "human";
+      nodes.push(
+        <span
+          key={key}
+          className={`log__who log__who--${side}`}
+          title={side === "ai" ? "AI" : "You"}
+        >
+          {SIDE_ICON[side]}
+        </span>,
+      );
+    }
     last = re.lastIndex;
     m = re.exec(text);
   }
@@ -33,21 +55,47 @@ function decorateWho(text: string, keyBase: number): ReactNode[] {
   return nodes;
 }
 
-function decorateLog(text: string): ReactNode[] {
+function decorateCardTokens(text: string, keyBase: string | number): ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const re = /\{([^{}]+)\}/g;
+  let last = 0;
+  let m: RegExpExecArray | null = re.exec(text);
+  let k = 0;
+  while (m !== null) {
+    if (m.index > last) nodes.push(...decorateLog(text.slice(last, m.index), `${keyBase}-${k++}`));
+    const red = /♥|♦|Red/.test(m[1]);
+    let cls = "log__card--black";
+    if (red && !/♦/.test(m[1])) cls = "log__card--red";
+    else if (/♦/.test(m[1])) cls = "log__card--diamonds";
+    else if (/♣/.test(m[1])) cls = "log__card--clubs";
+    nodes.push(
+      <span key={`c${keyBase}-${k++}`} className={`log__card ${cls}`}>
+        {m[1]}
+      </span>,
+    );
+    last = re.lastIndex;
+    m = re.exec(text);
+  }
+  if (last < text.length) nodes.push(...decorateLog(text.slice(last), `${keyBase}-${k++}`));
+  return nodes;
+}
+
+function decorateLog(text: string, keyBase: string | number = 0): ReactNode[] {
+  if (text.includes("{")) return decorateCardTokens(text, keyBase);
   const nodes: React.ReactNode[] = [];
   const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
   while (m !== null) {
-    if (m.index > last) nodes.push(...decorateWho(text.slice(last, m.index), k));
-    if (m[1] !== undefined) nodes.push(<span key={`s${k}`} className="log__sold">{m[1]}</span>);
-    else nodes.push(<span key={`s${k}`} className="log__sellable">{m[2]}</span>);
+    if (m.index > last) nodes.push(...decorateWho(text.slice(last, m.index), `${keyBase}w${k}`));
+    if (m[1] !== undefined) nodes.push(<span key={`${keyBase}s${k}`} className="log__sold">{m[1]}</span>);
+    else nodes.push(<span key={`${keyBase}s${k}`} className="log__sellable">{m[2]}</span>);
     k += 1;
     last = re.lastIndex;
     m = re.exec(text);
   }
-  if (last < text.length) nodes.push(...decorateWho(text.slice(last), k));
+  if (last < text.length) nodes.push(...decorateWho(text.slice(last), `${keyBase}w${k}`));
   return nodes;
 }
 
@@ -238,7 +286,16 @@ export function Board({ store }: { store: GameStore }) {
         <ol className="log">
           {state.log.slice(-12).map((entry) => (
             <li className="log__line" key={entry.id}>
-              <span className="log__text">{decorateLog(entry.text)}</span>
+              <span className="log__text">
+                {decorateLog(entry.text)}
+                {entry.detail && entry.detail.length > 0 && (
+                  <ul className="log__bullets">
+                    {entry.detail.map((d, i) => (
+                      <li key={`${entry.id}-${i}`}>{decorateLog(d, `${entry.id}-${i}`)}</li>
+                    ))}
+                  </ul>
+                )}
+              </span>
             </li>
           ))}
         </ol>

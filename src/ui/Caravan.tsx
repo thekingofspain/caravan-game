@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
-import { caravanTotal, isInRange, isJacked, isJokered } from "../game/rules";
+import { caravanTotal, isInRange, isJacked } from "../game/rules";
 import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef } from "../game/types";
 
 interface CaravanProps {
@@ -62,15 +62,13 @@ export function Caravan({
     }
   }
 
-  function getCardClasses(pc: { card: Card; kingCount: number; attachments: Card[]; jokered?: boolean }, index: number): string {
+  function getCardClasses(pc: { card: Card; kingCount: number; attachments: Card[] }, index: number): string {
     const key = targetKey({ player: playerId, caravan: caravanIdx, cardIndex: index });
     const isTarget = selection.targetSet.has(key);
     const isJackedCard = isJacked(pc);
-    const isJokeredCard = isJokered(pc);
     const classes = [cardClassName(pc.card)];
     if (isTarget) classes.push("is-target");
     if (isJackedCard) classes.push("is-jacked");
-    if (isJokeredCard) classes.push("is-jokered");
     return classes.join(" ");
   }
 

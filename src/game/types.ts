@@ -13,7 +13,6 @@ export interface PlacedCard {
   card: Card;
   kingCount: number;
   attachments: Card[];
-  jokered?: boolean;
 }
 
 export interface Caravan {
@@ -34,6 +33,8 @@ export type PlayerId = 0 | 1;
 export interface LogEntry {
   id: number;
   text: string;
+  /** Sub-lines shown as bullets under the entry (e.g. cards removed by a Joker). */
+  detail?: string[];
 }
 
 export interface GameState {
