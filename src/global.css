@@ -189,7 +189,6 @@ body {
   min-height: 0;
   position: relative;
   align-items: center;
-  justify-content: space-between;
 }
 
 .caravan-col__divider {
@@ -210,11 +209,24 @@ body {
 .caravan {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: calc(var(--card-h) + var(--card-offset));
   width: var(--card-w);
   position: relative;
   isolation: isolate;
   align-items: center;
+}
+
+/* human: stack grows down from the top, anchored at start */
+.caravan--human {
+  justify-content: flex-start;
+  padding-top: var(--card-offset);
+}
+
+/* ai: stack grows up from the bottom, anchored at end */
+.caravan--ai {
+  flex-direction: column-reverse;
+  padding-bottom: var(--card-offset);
 }
 
 /* ---------- Card stacking ---------- */
@@ -223,7 +235,8 @@ body {
 }
 
 .caravan--ai .card + .card {
-  margin-top: calc(-1 * (var(--card-h) - var(--overlap-v)));
+  margin-top: 0;
+  margin-bottom: calc(-1 * (var(--card-h) - var(--overlap-v)));
 }
 
 /* ---------- Card states ---------- */

@@ -97,19 +97,18 @@ export function Caravan({
         ) : null}
       </div>
       {children}
-      {(isHuman ? caravan.cards : [...caravan.cards].reverse()).map((pc, k) => {
-        const originalIndex = isHuman ? k : caravan.cards.length - 1 - k;
-        const isHoverable = isCardHoverable(originalIndex);
+      {caravan.cards.map((pc, k) => {
+        const isHoverable = isCardHoverable(k);
         return (
           <button
             key={pc.card.id}
             type="button"
-            className={getCardClasses(pc, originalIndex)}
-            data-index={originalIndex}
+            className={getCardClasses(pc, k)}
+            data-index={k}
             style={getCardStyle(isHoverable)}
             onMouseEnter={() => {
               if (isHoverable) {
-                onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: originalIndex });
+                onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: k });
               }
             }}
             onMouseLeave={() => onHoverTarget(null)}
