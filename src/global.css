@@ -94,6 +94,9 @@ body {
   background: no-repeat center / contain;
   flex: none;
   border-radius: var(--radius);
+  border: none;
+  padding: 0;
+  outline: none;
 }
 
 .card.is-hidden { visibility: hidden; }
@@ -181,10 +184,12 @@ body {
 .caravan-col {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  gap: 0;
   flex: 1;
   min-height: 0;
   position: relative;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .caravan-col__divider {
@@ -198,25 +203,26 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   flex-shrink: 0;
+  z-index: 1;
 }
 
 /* ---------- Caravan ---------- */
 .caravan {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  min-height: calc(var(--card-h) + var(--card-offset));
   width: var(--card-w);
   position: relative;
   isolation: isolate;
-}
-
-.caravan--ai .caravan {
-  flex-direction: column-reverse;
+  align-items: center;
 }
 
 /* ---------- Card stacking ---------- */
-.caravan .card + .card {
+.caravan--human .card + .card {
+  margin-top: calc(-1 * (var(--card-h) - var(--overlap-v)));
+}
+
+.caravan--ai .card + .card {
   margin-top: calc(-1 * (var(--card-h) - var(--overlap-v)));
 }
 
@@ -238,6 +244,16 @@ body {
   filter: grayscale(0.3);
 }
 
+/* Placed cards: no outline, no button styling */
+.caravan button.card {
+  cursor: default;
+  background-color: transparent;
+}
+
+.caravan button.card:hover {
+  outline: none;
+}
+
 /* ---------- Face cards ---------- */
 .caravan .card > .card {
   position: absolute;
@@ -246,7 +262,7 @@ body {
   z-index: 5;
 }
 
-.caravan--ai .caravan .card > .card {
+.caravan--ai .card > .card {
   top: auto;
   bottom: 0;
 }
@@ -431,12 +447,11 @@ body {
 .log .log__caravan--ai { color: #8a2a2a; }
 
 /* ---------- Selection hover outlines ---------- */
-.board:has(.hand__slot.is-selected) .caravan .card:hover {
+.board:has(.hand__slot.is-selected) .caravan .card:not(.is-target):hover {
   outline: 3px solid var(--c-bad);
   outline-offset: 2px;
 }
 
-.board:has(.hand__slot.is-selected) .player-human .caravan .card.is-target:hover,
 .board:has(.hand__slot.is-selected) .caravan .card.is-target:hover {
   outline-color: var(--c-good);
 }
