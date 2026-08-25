@@ -63,7 +63,7 @@ export function Caravan({
 
   function getCardClasses(pc: { card: Card; kingCount: number; attachments: Card[]; jokered?: boolean }, index: number): string {
     const key = targetKey({ player: playerId, caravan: caravanIdx, cardIndex: index });
-    const isTarget = isHuman && selection.targetSet.has(key);
+    const isTarget = selection.targetSet.has(key);
     const isJackedCard = isJacked(pc);
     const isJokeredCard = isJokered(pc);
     const classes = [cardClassName(pc.card)];
@@ -111,6 +111,11 @@ export function Caravan({
       {children}
       {caravan.cards.map((pc, k) => {
         const isHoverable = isCardHoverable(k);
+        const jackedCard = isJacked(pc);
+        const removable = selection.jackRemovableSet.has(targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k }));
+        const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
+        const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
+        const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";
         return (
           <button
             key={pc.card.id}
@@ -128,11 +133,51 @@ export function Caravan({
             onKeyDown={handleCardKeyDown}
           >
             {pc.attachments.map((a, j) => (
-              <div
-                key={a.id}
-                className={cardClassName(a)}
-                style={{ "--c": j + 1 } as CSSProperties}
-              />
+              <div key={a.id} className={cardClassName(a)} style={{ "--c": j + 1 } as CSSProperties}>
+                {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                {jackedCard && j === jackIdx && removable && (
+                  <span
+                    role="button"
+                    className="jack-remove"
+                    tabIndex={0}
+                    aria-label={`Remove jacked card ${pc.card.rank} of ${pc.card.suit}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                      }
+                    }}
+                  >
+                    ×
+                  </span>
+                )}
+                {a.rank === "JOKER" && (
+                  <span
+                    role="button"
+                    className="jack-remove"
+                    tabIndex={0}
+                    aria-label={`Remove joker ${a.rank}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                      }
+                    }}
+                  >
+                    ×
+                  </span>
+                )}
+              </div>
             ))}
           </button>
         );
