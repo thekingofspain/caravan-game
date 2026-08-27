@@ -22,7 +22,7 @@
   --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
 
   --card-h: calc(100vh / 8);
-  --card-w: calc(var(--card-h) * 169.075 / 244.64);
+  --card-w: calc(var(--card-h) * 212 / 329);
   --overlap-h: calc(var(--card-w) * 0.55);
   --overlap-v: calc(var(--card-h) * 0.28);
   --cu: var(--overlap-v);
@@ -716,59 +716,61 @@ body {
 }
 
 /* CARDS:START */
-.card--spades.card--ace{background-image:url("/cards/spade_ace.svg")}
-.card--spades.card--2{background-image:url("/cards/spade_2.svg")}
-.card--spades.card--3{background-image:url("/cards/spade_3.svg")}
-.card--spades.card--4{background-image:url("/cards/spade_4.svg")}
-.card--spades.card--5{background-image:url("/cards/spade_5.svg")}
-.card--spades.card--6{background-image:url("/cards/spade_6.svg")}
-.card--spades.card--7{background-image:url("/cards/spade_7.svg")}
-.card--spades.card--8{background-image:url("/cards/spade_8.svg")}
-.card--spades.card--9{background-image:url("/cards/spade_9.svg")}
-.card--spades.card--10{background-image:url("/cards/spade_10.svg")}
-.card--spades.card--jack{background-image:url("/cards/spade_jack.svg")}
-.card--spades.card--queen{background-image:url("/cards/spade_queen.svg")}
-.card--spades.card--king{background-image:url("/cards/spade_king.svg")}
-.card--hearts.card--ace{background-image:url("/cards/heart_ace.svg")}
-.card--hearts.card--2{background-image:url("/cards/heart_2.svg")}
-.card--hearts.card--3{background-image:url("/cards/heart_3.svg")}
-.card--hearts.card--4{background-image:url("/cards/heart_4.svg")}
-.card--hearts.card--5{background-image:url("/cards/heart_5.svg")}
-.card--hearts.card--6{background-image:url("/cards/heart_6.svg")}
-.card--hearts.card--7{background-image:url("/cards/heart_7.svg")}
-.card--hearts.card--8{background-image:url("/cards/heart_8.svg")}
-.card--hearts.card--9{background-image:url("/cards/heart_9.svg")}
-.card--hearts.card--10{background-image:url("/cards/heart_10.svg")}
-.card--hearts.card--jack{background-image:url("/cards/heart_jack.svg")}
-.card--hearts.card--queen{background-image:url("/cards/heart_queen.svg")}
-.card--hearts.card--king{background-image:url("/cards/heart_king.svg")}
-.card--diamonds.card--ace{background-image:url("/cards/diamond_ace.svg")}
-.card--diamonds.card--2{background-image:url("/cards/diamond_2.svg")}
-.card--diamonds.card--3{background-image:url("/cards/diamond_3.svg")}
-.card--diamonds.card--4{background-image:url("/cards/diamond_4.svg")}
-.card--diamonds.card--5{background-image:url("/cards/diamond_5.svg")}
-.card--diamonds.card--6{background-image:url("/cards/diamond_6.svg")}
-.card--diamonds.card--7{background-image:url("/cards/diamond_7.svg")}
-.card--diamonds.card--8{background-image:url("/cards/diamond_8.svg")}
-.card--diamonds.card--9{background-image:url("/cards/diamond_9.svg")}
-.card--diamonds.card--10{background-image:url("/cards/diamond_10.svg")}
-.card--diamonds.card--jack{background-image:url("/cards/diamond_jack.svg")}
-.card--diamonds.card--queen{background-image:url("/cards/diamond_queen.svg")}
-.card--diamonds.card--king{background-image:url("/cards/diamond_king.svg")}
-.card--clubs.card--ace{background-image:url("/cards/club_ace.svg")}
-.card--clubs.card--2{background-image:url("/cards/club_2.svg")}
-.card--clubs.card--3{background-image:url("/cards/club_3.svg")}
-.card--clubs.card--4{background-image:url("/cards/club_4.svg")}
-.card--clubs.card--5{background-image:url("/cards/club_5.svg")}
-.card--clubs.card--6{background-image:url("/cards/club_6.svg")}
-.card--clubs.card--7{background-image:url("/cards/club_7.svg")}
-.card--clubs.card--8{background-image:url("/cards/club_8.svg")}
-.card--clubs.card--9{background-image:url("/cards/club_9.svg")}
-.card--clubs.card--10{background-image:url("/cards/club_10.svg")}
-.card--clubs.card--jack{background-image:url("/cards/club_jack.svg")}
-.card--clubs.card--queen{background-image:url("/cards/club_queen.svg")}
-.card--clubs.card--king{background-image:url("/cards/club_king.svg")}
-.card--joker.card--black{background-image:url('/cards/joker_black.svg')}
-.card--joker.card--red{background-image:url('/cards/joker_red.svg')}
-.card--back{background-image:url('/cards/back.svg')}
+.card--spades.card--ace{background-image:url("/cards/AS.svg")}
+.card--spades.card--2{background-image:url("/cards/2S.svg")}
+.card--spades.card--3{background-image:url("/cards/3S.svg")}
+.card--spades.card--4{background-image:url("/cards/4S.svg")}
+.card--spades.card--5{background-image:url("/cards/5S.svg")}
+.card--spades.card--6{background-image:url("/cards/6S.svg")}
+.card--spades.card--7{background-image:url("/cards/7S.svg")}
+.card--spades.card--8{background-image:url("/cards/8S.svg")}
+.card--spades.card--9{background-image:url("/cards/9S.svg")}
+.card--spades.card--10{background-image:url("/cards/TS.svg")}
+.card--spades.card--jack{background-image:url("/cards/JS.svg")}
+.card--spades.card--queen{background-image:url("/cards/QS.svg")}
+.card--spades.card--king{background-image:url("/cards/KS.svg")}
+.card--hearts.card--ace{background-image:url("/cards/AH.svg")}
+.card--hearts.card--2{background-image:url("/cards/2H.svg")}
+.card--hearts.card--3{background-image:url("/cards/3H.svg")}
+.card--hearts.card--4{background-image:url("/cards/4H.svg")}
+.card--hearts.card--5{background-image:url("/cards/5H.svg")}
+.card--hearts.card--6{background-image:url("/cards/6H.svg")}
+.card--hearts.card--7{background-image:url("/cards/7H.svg")}
+.card--hearts.card--8{background-image:url("/cards/8H.svg")}
+.card--hearts.card--9{background-image:url("/cards/9H.svg")}
+.card--hearts.card--10{background-image:url("/cards/TH.svg")}
+.card--hearts.card--jack{background-image:url("/cards/JH.svg")}
+.card--hearts.card--queen{background-image:url("/cards/QH.svg")}
+.card--hearts.card--king{background-image:url("/cards/KH.svg")}
+.card--diamonds.card--ace{background-image:url("/cards/AD.svg")}
+.card--diamonds.card--2{background-image:url("/cards/2D.svg")}
+.card--diamonds.card--3{background-image:url("/cards/3D.svg")}
+.card--diamonds.card--4{background-image:url("/cards/4D.svg")}
+.card--diamonds.card--5{background-image:url("/cards/5D.svg")}
+.card--diamonds.card--6{background-image:url("/cards/6D.svg")}
+.card--diamonds.card--7{background-image:url("/cards/7D.svg")}
+.card--diamonds.card--8{background-image:url("/cards/8D.svg")}
+.card--diamonds.card--9{background-image:url("/cards/9D.svg")}
+.card--diamonds.card--10{background-image:url("/cards/TD.svg")}
+.card--diamonds.card--jack{background-image:url("/cards/JD.svg")}
+.card--diamonds.card--queen{background-image:url("/cards/QD.svg")}
+.card--diamonds.card--king{background-image:url("/cards/KD.svg")}
+.card--clubs.card--ace{background-image:url("/cards/AC.svg")}
+.card--clubs.card--2{background-image:url("/cards/2C.svg")}
+.card--clubs.card--3{background-image:url("/cards/3C.svg")}
+.card--clubs.card--4{background-image:url("/cards/4C.svg")}
+.card--clubs.card--5{background-image:url("/cards/5C.svg")}
+.card--clubs.card--6{background-image:url("/cards/6C.svg")}
+.card--clubs.card--7{background-image:url("/cards/7C.svg")}
+.card--clubs.card--8{background-image:url("/cards/8C.svg")}
+.card--clubs.card--9{background-image:url("/cards/9C.svg")}
+.card--clubs.card--10{background-image:url("/cards/TC.svg")}
+.card--clubs.card--jack{background-image:url("/cards/JC.svg")}
+.card--clubs.card--queen{background-image:url("/cards/QC.svg")}
+.card--clubs.card--king{background-image:url("/cards/KC.svg")}
+.card--joker.card--black{background-image:url('/cards/2J.svg')}
+.card--joker.card--red{background-image:url('/cards/1J.svg')}
+.card--back.card--deck1{background-image:url('/cards/1B.svg')}
+.card--back.card--deck2{background-image:url('/cards/2B.svg')}
+.card--back{background-image:url('/cards/1B.svg')}
 /* CARDS:END */

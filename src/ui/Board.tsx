@@ -10,6 +10,8 @@ function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
 }
 
+const noop = () => {};
+
 export function Board({ store }: { store: GameStore }) {
   const { state, legal, act } = store;
   const [sel, setSel] = useState<number | null>(null);
@@ -128,7 +130,7 @@ export function Board({ store }: { store: GameStore }) {
           player={aiPlayer}
           selectedHandIndex={null}
           selectableIndices={new Set()}
-          onCardClick={() => {}}
+          onCardClick={noop}
         />
 
         <div className="caravans-row">
@@ -157,7 +159,7 @@ export function Board({ store }: { store: GameStore }) {
                   }}
                   hoverTarget={hoverTarget}
                   onCardClick={onCardClick}
-                  onPlaceholderClick={() => {}}
+                  onPlaceholderClick={noop}
                   onHoverTarget={setHoverTarget}
                   onAcknowledge={onAcknowledge}
                 />

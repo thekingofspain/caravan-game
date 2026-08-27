@@ -45,7 +45,7 @@ export function PlayerHand({
         ) : (
           player.hand.map((card) => (
             <div key={card.id} className="hand__slot hand__slot--ai" aria-hidden="true">
-              <div className="card card--back" />
+              <div className={`card card--back card--deck${isHuman ? 1 : 2}`} />
             </div>
           ))
         )}
