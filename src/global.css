@@ -578,6 +578,8 @@ body {
   counter-increment: log-line;
   display: flex;
   align-items: baseline;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.6em;
 }
 
 .log__line::before {

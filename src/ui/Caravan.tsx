@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
 import { caravanTotal, isInRange, isJacked } from "../game/rules";
@@ -10,10 +11,8 @@ interface CaravanProps {
   playerId: PlayerId;
   highestSold: boolean;
   selection: SelectionState;
-  hoverTarget: TargetRef | null;
   onCardClick: (target: TargetRef) => void;
   onPlaceholderClick: (caravanIndex: number) => void;
-  onHoverTarget: (target: TargetRef | null) => void;
   onAcknowledge: () => void;
   children?: ReactNode;
 }
@@ -24,7 +23,7 @@ function targetKey(t: TargetRef): string {
 
 const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 
-export function Caravan({
+function CaravanImpl({
   playerType,
   caravan,
   caravanIndex,
@@ -33,7 +32,6 @@ export function Caravan({
   selection,
   onCardClick,
   onPlaceholderClick,
-  onHoverTarget,
   onAcknowledge,
   children,
 }: CaravanProps) {
@@ -94,7 +92,7 @@ export function Caravan({
         <span className="caravan-col__icon" aria-hidden="true">
           {SIDE_ICON[playerType]}
         </span>
-        {inRange && <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span>}
+        {inRange ? <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span> : null}
         {total}
         {caravan.direction ? (
           <span className="caravan-col__dir" aria-hidden="true">
@@ -116,8 +114,6 @@ export function Caravan({
             className={getCardClasses(pc, k)}
             data-index={k}
             style={getCardStyle(k)}
-            onMouseEnter={() => onHoverTarget({ player: playerId, caravan: caravanIdx, cardIndex: k })}
-            onMouseLeave={() => onHoverTarget(null)}
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}
           >
@@ -175,13 +171,15 @@ export function Caravan({
           </button>
         );
       })}
-      {caravan.cards.length === 0 && (
+      {caravan.cards.length === 0 ? (
         <button
           type="button"
           className={`caravan__empty ${selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
           onClick={() => onPlaceholderClick(caravanIndex)}
         />
-      )}
+      ) : null}
     </div>
   );
 }
+
+export const Caravan = memo(CaravanImpl);

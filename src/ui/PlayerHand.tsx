@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cardClassName, cardLabel } from "../game/cards";
 import { PlayerType, PlayerState } from "../game/types";
 
@@ -9,7 +10,7 @@ interface PlayerHandProps {
   onCardClick: (handIndex: number) => void;
 }
 
-export function PlayerHand({
+function PlayerHandImpl({
   playerType,
   player,
   selectedHandIndex,
@@ -53,3 +54,5 @@ export function PlayerHand({
     </section>
   );
 }
+
+export const PlayerHand = memo(PlayerHandImpl);

@@ -1,11 +1,17 @@
+import { memo } from "react";
 import type { ReactNode } from "react";
 import { LogEntry } from "../game/types";
+
+const RE_WHO = /(?:row (\d+) of )?(AI's|your) caravan (\d+)|\bYou\b|\bAI\b|AI's|\byour\b/g;
+const RE_CARD = /\{([^{}]+)\}/g;
+const RE_STYLE = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
 
 const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 
 function decorateWho(text: string, keyBase: string): ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const re = /(?:row (\d+) of )?(AI's|your) caravan (\d+)|\bYou\b|\bAI\b|AI's|\byour\b/g;
+  const re = RE_WHO;
+  re.lastIndex = 0;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
@@ -48,7 +54,8 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
 
 function decorateCardTokens(text: string, keyBase: string | number): ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const re = /\{([^{}]+)\}/g;
+  const re = RE_CARD;
+  re.lastIndex = 0;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
@@ -74,7 +81,8 @@ function decorateCardTokens(text: string, keyBase: string | number): ReactNode[]
 function decorateLog(text: string, keyBase: string | number = 0): ReactNode[] {
   if (text.includes("{")) return decorateCardTokens(text, keyBase);
   const nodes: React.ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+  const re = RE_STYLE;
+  re.lastIndex = 0;
   let last = 0;
   let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
@@ -97,7 +105,7 @@ interface SidebarProps {
   onNewGame: () => void;
 }
 
-export function Sidebar({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
+function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
   return (
     <div className="sidebar">
       <div className="controls">
@@ -109,7 +117,7 @@ export function Sidebar({ log, canDiscard, onDiscard, onNewGame }: SidebarProps)
         </button>
       </div>
       <ol className="log">
-        {log.slice(-12).map((entry) => (
+        {log.map((entry) => (
           <li className="log__line" key={entry.id}>
             <span className="log__text">
               {decorateLog(entry.text)}
@@ -127,3 +135,5 @@ export function Sidebar({ log, canDiscard, onDiscard, onNewGame }: SidebarProps)
     </div>
   );
 }
+
+export const Sidebar = memo(SidebarImpl);

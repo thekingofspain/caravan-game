@@ -306,7 +306,7 @@ export function applyAction(state: GameState, action: Action): GameState {
 
   const entry = log(describe(action, state));
   if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
-  next.log = [...next.log, entry].slice(-50);
+  next.log = [...next.log, entry];
 
   const winner = gameWinner(next);
   if (winner !== null) {
@@ -316,20 +316,23 @@ export function applyAction(state: GameState, action: Action): GameState {
       ...next.log,
       log(`${winner === 0 ? "You win the caravan!" : "AI wins the caravan."} ${caravanAnalysis(next)}`),
     ];
-  } else if (legalActions(next).length === 0) {
-    // A player who cannot make any move (out of cards / no legal play) loses;
-    // the opponent wins automatically — matches the in-game coded behavior.
-    const loser = next.current;
-    next.phase = "over";
-    next.winner = loser === 0 ? 1 : 0;
-    next.log = [
-      ...next.log,
-      log(
-        `${loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
-      ),
-    ];
-  } else if (action.type !== "acknowledge") {
-    next.current = next.current === 0 ? 1 : 0;
+  } else {
+    if (action.type !== "acknowledge") {
+      next.current = next.current === 0 ? 1 : 0;
+    }
+    if (legalActions(next).length === 0) {
+      // The player whose turn is next cannot make any move (out of cards /
+      // no legal play) and loses; the opponent wins automatically.
+      const loser = next.current;
+      next.phase = "over";
+      next.winner = loser === 0 ? 1 : 0;
+      next.log = [
+        ...next.log,
+        log(
+          `${loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
+        ),
+      ];
+    }
   }
   return next;
 }
