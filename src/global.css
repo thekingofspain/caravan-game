@@ -21,7 +21,7 @@
   --radius: 6px;
   --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
 
-  --card-h: calc(100vh / 8);
+  --card-h: calc(100vh / 7);
   --card-w: calc(var(--card-h) * 212 / 329);
   --overlap-h: calc(var(--card-w) * 0.55);
   --overlap-v: calc(var(--card-h) * 0.28);
@@ -311,8 +311,8 @@ body {
 .caravan__empty {
   position: absolute;
   left: 50%;
-  width: calc(var(--card-w) * 1.1);
-  height: calc(var(--card-h) * 1.1);
+  width: var(--card-w);
+  height: var(--card-h);
   border: var(--card-border);
   border-radius: var(--radius);
   transition: border-color var(--transition-fast);
