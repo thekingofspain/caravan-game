@@ -1,102 +1,13 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { Action, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
 import { Caravan } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
+import { Sidebar } from "./Sidebar";
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
-}
-
-const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
-
-function decorateWho(text: string, keyBase: string): ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  const re = /(?:row (\d+) of )?(AI's|your) caravan (\d+)|\bYou\b|\bAI\b|AI's|\byour\b/g;
-  let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index));
-    const key = `${keyBase}-${k++}`;
-    if (m[2] !== undefined) {
-      const side = m[2] === "AI's" ? "ai" : "human";
-      const ref = `@${m[3]}${m[1] ? `-${m[1]}` : ""}`;
-      nodes.push(
-        <span
-          key={key}
-          className={`log__who log__who--${side}`}
-          title={side === "ai" ? "AI" : "You"}
-        >
-          <span className="log__icon">{SIDE_ICON[side]}</span>
-          <span className="log__caravan">
-            🐎<span className="log__who-ref">{ref}</span>
-          </span>
-        </span>,
-      );
-    } else {
-      const side = m[0].startsWith("AI") ? "ai" : "human";
-      nodes.push(
-        <span
-          key={key}
-          className={`log__who log__who--${side}`}
-          title={side === "ai" ? "AI" : "You"}
-        >
-          {SIDE_ICON[side]}
-        </span>,
-      );
-    }
-    last = re.lastIndex;
-    m = re.exec(text);
-  }
-  if (last < text.length) nodes.push(text.slice(last));
-  return nodes;
-}
-
-function decorateCardTokens(text: string, keyBase: string | number): ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  const re = /\{([^{}]+)\}/g;
-  let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(...decorateLog(text.slice(last, m.index), `${keyBase}-${k++}`));
-    const red = /♥|♦|Red/.test(m[1]);
-    let cls = "log__card--black";
-    if (red && !/♦/.test(m[1])) cls = "log__card--red";
-    else if (/♦/.test(m[1])) cls = "log__card--diamonds";
-    else if (/♣/.test(m[1])) cls = "log__card--clubs";
-    nodes.push(
-      <span key={`c${keyBase}-${k++}`} className={`log__card ${cls}`}>
-        {m[1]}
-      </span>,
-    );
-    last = re.lastIndex;
-    m = re.exec(text);
-  }
-  if (last < text.length) nodes.push(...decorateLog(text.slice(last), `${keyBase}-${k++}`));
-  return nodes;
-}
-
-function decorateLog(text: string, keyBase: string | number = 0): ReactNode[] {
-  if (text.includes("{")) return decorateCardTokens(text, keyBase);
-  const nodes: React.ReactNode[] = [];
-  const re = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
-  let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
-  let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(...decorateWho(text.slice(last, m.index), `${keyBase}w${k}`));
-    if (m[1] !== undefined) nodes.push(<span key={`${keyBase}s${k}`} className="log__sold">{m[1]}</span>);
-    else nodes.push(<span key={`${keyBase}s${k}`} className="log__sellable">{m[2]}</span>);
-    k += 1;
-    last = re.lastIndex;
-    m = re.exec(text);
-  }
-  if (last < text.length) nodes.push(...decorateWho(text.slice(last), `${keyBase}w${k}`));
-  return nodes;
 }
 
 export function Board({ store }: { store: GameStore }) {
@@ -116,29 +27,42 @@ export function Board({ store }: { store: GameStore }) {
       : [];
   const targetSet = new Set(legalTargets.map((a) => targetKey(a.target)));
   const canDiscard = sel !== null && legal.some((a) => a.type === "discard" && a.handIndex === sel);
-  const jackRemovableSet = new Set(
-    legal.filter((a): a is Extract<Action, { type: "removeJacked" }> => a.type === "removeJacked").map((a) => targetKey(a.target)),
-  );
+  // Cards awaiting acknowledgment (an opponent's removal); the red X is shown on
+  // each of them, and the human may not play until they acknowledge.
+  const pendingKeys = new Set(state.pending.map(targetKey));
+  const blocked = state.pending.length > 0;
+  const jackRemovableSet = pendingKeys;
 
   const humanPlayer = state.players[0];
   const aiPlayer = state.players[1];
 
   const selectableIndices = new Set<number>();
-  if (human) {
+  if (human && !blocked) {
     for (let i = 0; i < humanPlayer.hand.length; i++) {
       if (handSelectable(state, legal, i)) selectableIndices.add(i);
     }
   }
 
   const [hoverTarget, setHoverTarget] = useState<TargetRef | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
 
   function onHandClick(i: number) {
-    if (!selectableIndices.has(i)) return;
+    if (blocked || !selectableIndices.has(i)) return;
     setSel(sel === i ? null : i);
   }
 
+  function onAcknowledge() {
+    if (state.pending.length === 0) return;
+    setPendingRemove(new Set(state.pending.map(targetKey)));
+    window.setTimeout(() => {
+      setPendingRemove(new Set());
+      act({ type: "acknowledge", player: 0 });
+      setSel(null);
+    }, 320);
+  }
+
   function onCardClick(target: TargetRef) {
-    if (sel === null) return;
+    if (sel === null || blocked) return;
     const card = humanPlayer.hand[sel];
     if (!card) return;
 
@@ -227,12 +151,15 @@ export function Board({ store }: { store: GameStore }) {
                     legalCaravans: [],
                     targetSet,
                     jackRemovableSet,
+                    pendingSet: pendingKeys,
+                    pendingRemoveSet: pendingRemove,
                     canDiscard: false,
                   }}
                   hoverTarget={hoverTarget}
                   onCardClick={onCardClick}
                   onPlaceholderClick={() => {}}
                   onHoverTarget={setHoverTarget}
+                  onAcknowledge={onAcknowledge}
                 />
 
                 <div className="caravan-col__divider">Caravan {ci + 1}</div>
@@ -249,12 +176,15 @@ export function Board({ store }: { store: GameStore }) {
                     legalCaravans,
                     targetSet,
                     jackRemovableSet,
+                    pendingSet: pendingKeys,
+                    pendingRemoveSet: pendingRemove,
                     canDiscard,
                   }}
                   hoverTarget={hoverTarget}
                   onCardClick={onCardClick}
                   onPlaceholderClick={onPlaceholderClick}
                   onHoverTarget={setHoverTarget}
+                  onAcknowledge={onAcknowledge}
                 />
               </div>
             );
@@ -270,36 +200,12 @@ export function Board({ store }: { store: GameStore }) {
         />
       </div>
 
-      <div className="sidebar">
-        <div className="controls">
-          <button type="button" className="btn" disabled={!canDiscard} onClick={onDiscard}>
-            Discard
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => store.reset({ seed: Math.floor(Math.random() * 1e9) })}
-          >
-            New game
-          </button>
-        </div>
-        <ol className="log">
-          {state.log.slice(-12).map((entry) => (
-            <li className="log__line" key={entry.id}>
-              <span className="log__text">
-                {decorateLog(entry.text)}
-                {entry.detail && entry.detail.length > 0 && (
-                  <ul className="log__bullets">
-                    {entry.detail.map((d, i) => (
-                      <li key={`${entry.id}-${i}`}>{decorateLog(d, `${entry.id}-${i}`)}</li>
-                    ))}
-                  </ul>
-                )}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
+      <Sidebar
+        log={state.log}
+        canDiscard={canDiscard}
+        onDiscard={onDiscard}
+        onNewGame={() => store.reset({ seed: Math.floor(Math.random() * 1e9) })}
+      />
     </div>
   );
 }

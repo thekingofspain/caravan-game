@@ -33,6 +33,10 @@ export function evaluateState(state: GameState, me: PlayerId): number {
 export type Rng = () => number;
 
 export function chooseAction(state: GameState, me: PlayerId, rng: Rng = Math.random): Action {
+  // While cards are pending removal (awaiting acknowledgment), the only legal
+  // move is to acknowledge it.
+  if (state.pending.length > 0) return { type: "acknowledge", player: state.current };
+
   const acts = legalActions(state);
   if (acts.length === 0) throw new Error("chooseAction: no legal actions");
 

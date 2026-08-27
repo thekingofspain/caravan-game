@@ -83,7 +83,8 @@ body {
   line-height: 1.5;
 }
 
-.start__intro b { color: var(--c-fg); }
+.start__intro b,
+.rules b { color: var(--c-fg); }
 
 /* ---------- Card ---------- */
 .card {
@@ -177,6 +178,7 @@ body {
   gap: var(--sp-2);
   min-height: 0;
   padding-left: 48px;
+  padding-right: 48px;
 }
 
 .caravan-col {
@@ -228,11 +230,15 @@ body {
 }
 
 /* ---------- Card stacking ---------- */
-.caravan--human .card + .card {
+/* use child combinators so this only stacks the top-level value cards in a
+   caravan, not the face-card attachments (which also carry the .card class
+   and would otherwise get pulled up by the negative margin when there is more
+   than one attachment on a single value card) */
+.caravan--human > .card + .card {
   margin-top: calc(-1 * (var(--card-h) - var(--overlap-v)));
 }
 
-.caravan--ai .card + .card {
+.caravan--ai > .card + .card {
   margin-top: 0;
   margin-bottom: calc(-1 * (var(--card-h) - var(--overlap-v)));
 }
@@ -241,10 +247,19 @@ body {
 /* is-target has no persistent outline — hover rules below show green/red */
 
 .caravan .card.is-jacked {
-  opacity: 0.45;
   filter: grayscale(0.3);
-  outline: 2px dashed var(--c-bad);
-  outline-offset: 2px;
+}
+
+/* dim the jacked card without dimming its remove-X (a descendant), since
+   parent opacity would also fade the X. Use a transparent overlay instead. */
+.caravan .card.is-jacked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: inherit;
+  z-index: 4;
+  pointer-events: none;
 }
 
 /* Placed cards: no button styling */
@@ -267,8 +282,29 @@ body {
   pointer-events: none;
 }
 
+/* The Jack/Joker attachment carries the acknowledge ×; lift it above the grey
+   overlay so the × stays bright and clickable (the rest of the card greys). */
+.caravan .card > .card.is-remove-src {
+  z-index: 7;
+}
+
 .caravan .card > .card .jack-remove {
   pointer-events: auto;
+}
+
+/* ai side only: attach face cards to the left of the value card (mirroring the
+   human side where they sit to the right); overlap amount and z-order unchanged */
+.caravan--ai .card > .card {
+  left: auto;
+  right: calc(var(--c, 0) * var(--cu-x));
+}
+
+/* on the ai side the face card sits to the left of the value card, so the
+   remove-X belongs on the left edge of the face card (mirroring the human
+   side's top-right X) rather than the right */
+.caravan--ai .jack-remove {
+  right: auto;
+  left: -11px;
 }
 
 /* ---------- Caravan empty ---------- */
@@ -298,6 +334,7 @@ body {
 /* ---------- Scores ---------- */
 .caravan-col__score {
   position: absolute;
+  left: -88px;
   width: 72px;
   height: 24px;
   display: flex;
@@ -313,12 +350,20 @@ body {
 
 .caravan--human .caravan-col__score {
   top: var(--card-offset);
-  left: -88px;
+  color: var(--c-human);
 }
 
+/* ai score sits on the opposite side of the caravan from the human score */
 .caravan--ai .caravan-col__score {
+  left: auto;
+  right: -88px;
+  justify-content: flex-start;
   bottom: var(--card-offset);
-  left: -88px;
+  color: var(--c-ai);
+}
+
+.caravan-col__icon {
+  font-size: 14px;
 }
 
 .caravan-col__dollar {
@@ -329,9 +374,6 @@ body {
 }
 
 .caravan-col__dollar.is-highest { font-weight: 700; }
-
-.caravan--human .caravan-col__score { color: var(--c-human); }
-.caravan--ai .caravan-col__score { color: var(--c-ai); }
 
 .caravan-col__dir {
   min-width: 12px;
@@ -363,43 +405,130 @@ body {
 .card__badge {
   position: absolute;
   top: -8px;
-  right: -8px;
+  left: -8px;
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
   border-radius: 9px;
   background: var(--c-accent);
   color: #1a160c;
-  font: 700 11px/18px var(--font-base);
-  text-align: center;
+  font: 700 11px/1 var(--font-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #1a160c;
   z-index: 3;
 }
 
-.card__badge--king { background: var(--c-suit-diamonds); }
+.card__badge--king {
+  background: #ffd60a;
+  color: #1a160c;
+  border-color: #b38f00;
+}
+
+/* When the card is slated for removal, grey the King ×N to match the greyed card */
+.caravan .card.is-pending .card__badge--king {
+  background: #c8c8c8;
+  color: #1a160c;
+  border-color: #8f8f8f;
+}
+
+/* On the AI side, the King ×N badge sits on the bottom edge, nudged up so it
+   is vertically centered on the bottom edge, at the left */
+.caravan--ai .card__badge--king {
+  top: auto;
+  bottom: -9px;
+  left: -11px;
+  transform: none;
+}
 
 /* ---------- Jack remove ---------- */
 .jack-remove {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  right: -11px;
   left: auto;
   width: 22px;
   height: 22px;
   border-radius: 50%;
   border: 1px solid #1a160c;
   background: var(--c-bad);
-  color: #fff;
-  font: 700 14px/20px var(--font-base);
-  text-align: center;
+  color: transparent; /* the X is drawn with pseudo-elements for exact centering */
   cursor: pointer;
   z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 0;
 }
+/* draw the × as two centered bars so it is perfectly centered in the circle */
+.jack-remove::before,
+.jack-remove::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.jack-remove::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
 .jack-remove:hover { background: #a93226; }
+
+/* when the X is pressed, fade + shrink the card group before it is removed */
+.caravan .card.is-removing {
+  animation: cardRemove 0.28s ease forwards;
+  pointer-events: none;
+}
+
+/* while a card in a caravan is being removed, darken every card in that
+   caravan row */
+.caravan.is-row-removing .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: inherit;
+  z-index: 4;
+  pointer-events: none;
+}
+
+@keyframes cardRemove {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+/* cards slated for removal (awaiting acknowledgment): grey them out.
+   z-index above the attachment layer (5) so the value card AND its King
+   attachment both grey together. */
+.caravan .card.is-pending::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: inherit;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* cards a Joker is about to remove: grey then fade out before they vanish */
+.caravan .card.is-pending-remove {
+  animation: cardRemove 0.32s ease forwards;
+  pointer-events: none;
+}
+.caravan .card.is-pending-remove::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: inherit;
+  z-index: 6;
+  pointer-events: none;
+}
 
 /* ---------- Controls / log ---------- */
 .controls {
@@ -465,8 +594,9 @@ body {
 }
 .log__line.is-key { color: var(--c-fg); }
 
-.log__sellable { color: var(--c-accent); }
-.log__sold { color: var(--c-accent); font-weight: 700; }
+.log__sellable,
+.log__sold { color: var(--c-accent); }
+.log__sold { font-weight: 700; }
 
 /* player identity via icons, not colored text */
 .log__who {
@@ -480,7 +610,7 @@ body {
   margin-left: -0.25em;
 }
 
-/* caravan reference: @caravan#[-row#] */
+/* caravan reference: @caravan# */
 .log__who-ref {
   font-size: 11px;
   font-weight: 700;
@@ -488,13 +618,19 @@ body {
   margin-left: -0.25em;
 }
 
-/* card names colored by suit on the white log panel */
-.log .log__card--red { color: #b3261e; font-weight: 700; }
-.log .log__card--black { color: #1a1a1a; font-weight: 700; }
+/* card names colored by suit on the white log panel (only used inside .log) */
+.log__card--red,
+.log__card--black,
+.log__card--diamonds,
+.log__card--clubs {
+  font-weight: 700;
+  font-size: 14px;
+}
+.log__card--red { color: #b3261e; }
+.log__card--black { color: #1a1a1a; }
 
-/* diamonds/clubs match their card art color, slightly larger */
-.log .log__card--diamonds { color: blue; font-size: 14px; font-weight: 700; }
-.log .log__card--clubs { color: green; font-size: 14px; font-weight: 700; }
+.log__card--diamonds { color: blue; }
+.log__card--clubs { color: green; }
 
 /* sub-lines under a log entry (e.g. cards removed by a Joker) */
 .log__bullets {
@@ -578,8 +714,6 @@ body {
   color: var(--c-dim);
   line-height: 1.5;
 }
-
-.rules b { color: var(--c-fg); }
 
 /* CARDS:START */
 .card--spades.card--ace{background-image:url("/cards/spade_ace.svg")}

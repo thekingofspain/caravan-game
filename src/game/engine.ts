@@ -69,6 +69,7 @@ export function setupGame(opts: SetupOptions): GameState {
     winner: null,
     log: [],
     started: false,
+    pending: [],
   };
 }
 
@@ -95,34 +96,58 @@ function normalizeCaravan(car: Caravan): void {
   }
 }
 
-// Joker removes all matching cards from play (target excluded): on an Ace all
-// cards of that suit, otherwise all cards of the same value — across every
-// caravan of both players. Attachments travel with their removed value card.
-// Returns one line per affected caravan listing the removed cards.
-function applyJoker(state: GameState, target: TargetRef): string[] {
+// Pure preview of which cards a Joker played on `target` would remove. This
+// includes the target card itself (the whole matched set is removed), across
+// every caravan of both players. Attachments travel with their removed card.
+export function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
   const tgt = state.players[target.player].caravans[target.caravan].cards[target.cardIndex];
+  if (!tgt) return [];
   const isAceTarget = tgt.card.rank === "A";
   const suit = tgt.card.suit;
   const value = baseValue(tgt.card);
-  const detail: string[] = [];
+  const out: TargetRef[] = [];
   for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
-    for (let ci = 0; ci < state.players[p].caravans.length; ci++) {
-      const car = state.players[p].caravans[ci];
-      const removed: Card[] = [];
-      for (let i = car.cards.length - 1; i >= 0; i--) {
-        const pc = car.cards[i];
-        if (pc === tgt) continue;
+    const car = state.players[p].caravans;
+    for (let ci = 0; ci < car.length; ci++) {
+      car[ci].cards.forEach((pc, cidx) => {
         const match = isAceTarget ? pc.card.suit === suit : baseValue(pc.card) === value;
-        if (match) {
-          removed.push(pc.card);
-          car.cards.splice(i, 1);
-        }
-      }
-      normalizeCaravan(car);
-      if (removed.length > 0) {
-        detail.push(`${ownerLabel(p)} caravan ${ci + 1}: ${removed.map(fmt).join(", ")}`);
-      }
+        if (match) out.push({ player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx });
+      });
     }
+  }
+  return out;
+}
+
+// Remove every card currently in `pending` (grouped per caravan, in descending
+// index order so earlier splices don't shift later ones) and clear the list.
+function commitPending(state: GameState): void {
+  const groups = new Map<string, TargetRef[]>();
+  for (const r of state.pending) {
+    const k = `${r.player}-${r.caravan}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k)!.push(r);
+  }
+  for (const refs of groups.values()) {
+    refs.sort((a, b) => b.cardIndex - a.cardIndex);
+    for (const r of refs) removeValueCard(state, r);
+  }
+  state.pending = [];
+}
+
+// Build the per-caravan bullet lines describing the pending removals.
+function pendingDetail(state: GameState, refs: TargetRef[]): string[] {
+  const byCar = new Map<string, Card[]>();
+  for (const r of refs) {
+    const pc = state.players[r.player].caravans[r.caravan].cards[r.cardIndex];
+    if (!pc) continue;
+    const key = `${r.player}-${r.caravan}`;
+    if (!byCar.has(key)) byCar.set(key, []);
+    byCar.get(key)!.push(pc.card);
+  }
+  const detail: string[] = [];
+  for (const [key, cards] of byCar) {
+    const [p, ci] = key.split("-").map(Number) as [PlayerId, number];
+    detail.push(`${ownerLabel(p)} caravan ${ci + 1}: ${cards.map(fmt).join(", ")}`);
   }
   return detail;
 }
@@ -166,7 +191,7 @@ function describe(action: Action, state: GameState): string {
     const caravan = action.target.caravan + 1;
     const owner = ownerLabel(action.target.player);
     let effect = "";
-    if (c.rank === "J") effect = ` — jacked ${fmt(tgt.card)} (0, removable)`;
+    if (c.rank === "J") effect = ` — jacked ${fmt(tgt.card)}`;
     else if (c.rank === "Q") effect = ` — reversed direction, set suit to {${SUIT_SYMBOL[c.suit as Suit]}}`;
     else if (isJoker(c)) {
       if (tgt.card.rank === "A") effect = ` — removed all {${SUIT_SYMBOL[tgt.card.suit as Suit]}} cards`;
@@ -193,6 +218,10 @@ function describe(action: Action, state: GameState): string {
     return `${actor} removed jacked ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;
   }
 
+  if (action.type === "acknowledge") {
+    return `${actor} acknowledged the opponent's last move.`;
+  }
+
   return `${actor} acted.`;
 }
 
@@ -211,7 +240,9 @@ export function applyAction(state: GameState, action: Action): GameState {
     next.started = true;
   }
 
-  if (action.type === "playValue") {
+  if (action.type === "acknowledge") {
+    commitPending(next);
+  } else if (action.type === "playValue") {
     const car = player.caravans[action.caravan];
     const card = player.hand[action.handIndex];
     if (!card || !isValueCard(card)) return state;
@@ -238,6 +269,7 @@ export function applyAction(state: GameState, action: Action): GameState {
     const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     if (card.rank === "J") {
       if (tgt) tgt.attachments.push(card);
+      next.pending = [action.target];
     } else if (card.rank === "Q") {
       if (tgt) tgt.attachments.push(card);
       const car = next.players[action.target.player].caravans[action.target.caravan];
@@ -248,8 +280,12 @@ export function applyAction(state: GameState, action: Action): GameState {
       if (tgt) tgt.attachments.push(card);
     } else if (isJoker(card)) {
       if (tgt) tgt.attachments.push(card);
-      jokerDetail = applyJoker(next, action.target);
+      next.pending = jokerRemovals(next, action.target);
+      jokerDetail = pendingDetail(next, next.pending);
     }
+    // A human move resolves its removals immediately; only an AI move leaves
+    // the affected cards pending so the human can acknowledge them first.
+    if (action.player === 0 && next.pending.length > 0) commitPending(next);
     draw(player);
   } else if (action.type === "discard") {
     if (player.caravans.some((c) => c.cards.length === 0)) return state;
@@ -292,7 +328,7 @@ export function applyAction(state: GameState, action: Action): GameState {
         `${loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
       ),
     ];
-  } else {
+  } else if (action.type !== "acknowledge") {
     next.current = next.current === 0 ? 1 : 0;
   }
   return next;
@@ -300,6 +336,11 @@ export function applyAction(state: GameState, action: Action): GameState {
 
 export function legalActions(state: GameState): Action[] {
   if (state.phase === "over") return [];
+  // While cards are pending removal (an opponent move awaiting acknowledgment),
+  // the only legal action is to acknowledge.
+  if (state.pending.length > 0) {
+    return [{ type: "acknowledge", player: state.current }];
+  }
   const pid = state.current;
   const player = state.players[pid];
   const actions: Action[] = [];

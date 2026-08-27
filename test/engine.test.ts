@@ -18,7 +18,7 @@ function mkPlayer(caravans: Caravan[], hand: Card[]): PlayerState {
   return { deck: [], hand, caravans, sales: 0 };
 }
 function mkGame(p0: PlayerState, p1: PlayerState, current: 0 | 1 = 0): GameState {
-  return { players: [p0, p1], current, phase: "play", winner: null, log: [] };
+  return { players: [p0, p1], current, phase: "play", winner: null, log: [], started: false, pending: [] };
 }
 
 describe("setup", () => {
@@ -64,23 +64,33 @@ describe("initial round (must-start constraint)", () => {
 });
 
 describe("face card effects", () => {
-  it("Jack jacks the targeted card (kept on board, value 0, removable)", () => {
-    const p0 = mkPlayer(EMPTY, [makeCard("spades", "J")]);
+  it("Jack removes the targeted card immediately on the player's own move", () => {
+    const p0 = mkPlayer(EMPTY, [makeCard("spades", "J"), makeCard("hearts", "3")]);
     const p1 = mkPlayer([caravanOf([]), caravanOf([]), caravanOf(["10"])], []);
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 2, cardIndex: 0 }, handIndex: 0 });
-    // Jack now attaches instead of splicing: card stays, marked jacked, value 0
-    expect(next.players[1].caravans[2].cards.length).toBe(1);
-    expect(isJacked(next.players[1].caravans[2].cards[0])).toBe(true);
-    expect(caravanTotal(next.players[1].caravans[2])).toBe(0);
-    expect(next.players[1].caravans[2].cards[0].attachments.some((c) => c.rank === "J")).toBe(true);
-    // removal is a separate action on the jacked card's owner turn (next is AI's turn, but we force player 1's perspective)
-    // verify legalActions includes removeJacked for the jacked card
-    const acts = legalActions({ ...next, current: 1 as 0 | 1 });
-    expect(acts.some((a) => a.type === "removeJacked" && a.target.player === 1 && a.target.caravan === 2 && a.target.cardIndex === 0)).toBe(true);
-    // exercising removal cleans the card
-    const afterRemove = applyAction({ ...next, current: 1 as 0 | 1 }, { type: "removeJacked", player: 1, target: { player: 1, caravan: 2, cardIndex: 0 } });
-    expect(afterRemove.players[1].caravans[2].cards.length).toBe(0);
+    // Jacked card is removed right away on the player's own turn (no separate step).
+    expect(next.players[1].caravans[2].cards.length).toBe(0);
+    expect(next.current).toBe(1);
+  });
+
+  it("Opponent jack leaves the card pending until acknowledged", () => {
+    const p0 = mkPlayer([caravanOf([]), caravanOf([]), caravanOf(["10"])], [makeCard("hearts", "3")]);
+    const p1 = mkPlayer(EMPTY, [makeCard("spades", "J")]);
+    const s = mkGame(p0, p1, 1);
+    const next = applyAction(s, { type: "playFace", player: 1, target: { player: 0, caravan: 2, cardIndex: 0 }, handIndex: 0 });
+    // Jacked card stays on board and is registered as pending (awaiting ack).
+    expect(next.players[0].caravans[2].cards.length).toBe(1);
+    expect(isJacked(next.players[0].caravans[2].cards[0])).toBe(true);
+    expect(next.pending.length).toBe(1);
+    // The only legal action while pending is to acknowledge.
+    const acts = legalActions(next);
+    expect(acts.length).toBe(1);
+    expect(acts[0].type).toBe("acknowledge");
+    // Acknowledging removes the jacked card and clears pending.
+    const ack = applyAction(next, { type: "acknowledge", player: next.current });
+    expect(ack.players[0].caravans[2].cards.length).toBe(0);
+    expect(ack.pending.length).toBe(0);
   });
 
   it("Queen reverses direction and changes suit", () => {
@@ -124,26 +134,26 @@ describe("face card effects", () => {
     expect(acts.some((a) => a.type === "playFace" && a.target.player === 1 && a.target.caravan === 0 && a.target.cardIndex === 0)).toBe(true);
   });
 
-  it("Joker on a 10 removes all other 10s from the table", () => {
+  it("Joker on a 10 removes all 10s of that rank (including the target)", () => {
     const p0 = mkPlayer(EMPTY, [makeCard("spades", "JOKER")]);
     const p1 = mkPlayer([caravanOf(["10", "5"]), caravanOf([]), caravanOf(["10"])], []);
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
-    expect(next.players[1].caravans[0].cards.length).toBe(2); // target 10 + the 5 stay
+    expect(next.players[1].caravans[0].cards.length).toBe(1); // only the 5 stays
     expect(next.players[1].caravans[2].cards.length).toBe(0); // other 10 removed
     const entry = next.log.find((e) => e.text.includes("Joker"))!;
-    expect(entry.detail).toEqual(["AI's caravan 3: {10♠}"]); // one bullet per affected caravan
+    expect(entry.detail).toEqual(["AI's caravan 1: {10♠}", "AI's caravan 3: {10♠}"]); // one bullet per affected caravan
   });
 
-  it("Joker on an Ace removes all other cards of that suit", () => {
+  it("Joker on an Ace removes all cards of that suit (including the target)", () => {
     const p0 = mkPlayer(EMPTY, [makeCard("spades", "JOKER")]);
     const p1 = mkPlayer([caravanOf(["A", "5"]), caravanOf(["A"]), caravanOf([])], []);
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFace", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
-    expect(next.players[1].caravans[0].cards.length).toBe(1); // ace (target) stays
+    expect(next.players[1].caravans[0].cards.length).toBe(0); // ace (target) and 5 removed
     expect(next.players[1].caravans[1].cards.length).toBe(0); // other spade ace removed
     const entry = next.log.find((e) => e.text.includes("Joker"))!;
-    expect(entry.detail).toEqual(["AI's caravan 1: {5♠}", "AI's caravan 2: {A♠}"]);
+    expect(entry.detail).toEqual(["AI's caravan 1: {A♠}, {5♠}", "AI's caravan 2: {A♠}"]);
   });
 });
 

@@ -14,12 +14,15 @@ interface CaravanProps {
   onCardClick: (target: TargetRef) => void;
   onPlaceholderClick: (caravanIndex: number) => void;
   onHoverTarget: (target: TargetRef | null) => void;
+  onAcknowledge: () => void;
   children?: ReactNode;
 }
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
 }
+
+const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 
 export function Caravan({
   playerType,
@@ -31,9 +34,12 @@ export function Caravan({
   onCardClick,
   onPlaceholderClick,
   onHoverTarget,
+  onAcknowledge,
   children,
 }: CaravanProps) {
   const isHuman = playerType === "human";
+
+  const caravanHasJacked = caravan.cards.some(isJacked);
 
   const caravanIdx = caravanIndex as 0 | 1 | 2;
   const total = caravanTotal(caravan);
@@ -69,6 +75,8 @@ export function Caravan({
     const classes = [cardClassName(pc.card)];
     if (isTarget) classes.push("is-target");
     if (isJackedCard) classes.push("is-jacked");
+    if (selection.pendingSet?.has(key)) classes.push("is-pending");
+    if (selection.pendingRemoveSet?.has(key)) classes.push("is-pending-remove");
     return classes.join(" ");
   }
 
@@ -80,9 +88,12 @@ export function Caravan({
 
   return (
     <div
-      className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
+      className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"} ${caravanHasJacked ? "has-jacked" : ""} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
     >
       <div className="caravan-col__score">
+        <span className="caravan-col__icon" aria-hidden="true">
+          {SIDE_ICON[playerType]}
+        </span>
         {inRange && <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span>}
         {total}
         {caravan.direction ? (
@@ -111,44 +122,48 @@ export function Caravan({
             onKeyDown={handleCardKeyDown}
           >
             {pc.attachments.map((a, j) => (
-              <div key={a.id} className={cardClassName(a)} style={{ "--c": j + 1 } as CSSProperties}>
+              <div
+                key={a.id}
+                className={`${cardClassName(a)}${a.rank === "J" || a.rank === "JOKER" ? " is-remove-src" : ""}`}
+                style={{ "--c": j + 1 } as CSSProperties}
+              >
                 {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
                 {jackedCard && j === jackIdx && removable && (
                   <span
                     role="button"
                     className="jack-remove"
                     tabIndex={0}
-                    aria-label={`Remove jacked card ${pc.card.rank} of ${pc.card.suit}`}
+                    aria-label={`Acknowledge and remove jacked card ${pc.card.rank} of ${pc.card.suit}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                      onAcknowledge();
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
-                        onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                        onAcknowledge();
                       }
                     }}
                   >
                     ×
                   </span>
                 )}
-                {a.rank === "JOKER" && (
+                {a.rank === "JOKER" && removable && (
                   <span
                     role="button"
                     className="jack-remove"
                     tabIndex={0}
-                    aria-label={`Remove joker ${a.rank}`}
+                    aria-label={`Acknowledge and remove joker ${a.rank}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                      onAcknowledge();
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
-                        onCardClick({ player: playerId, caravan: caravanIdx, cardIndex: k });
+                        onAcknowledge();
                       }
                     }}
                   >

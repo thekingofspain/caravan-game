@@ -44,6 +44,9 @@ export interface GameState {
   winner: PlayerId | null;
   log: LogEntry[];
   started: boolean;
+  /** Cards slated for removal by the last move (e.g. a Joker / Jack). They stay
+   *  on the board greyed until the affected player acknowledges (removes) them. */
+  pending: TargetRef[];
 }
 
 export interface TargetRef {
@@ -57,7 +60,8 @@ export type Action =
   | { type: "playFace"; player: PlayerId; target: TargetRef; handIndex: number }
   | { type: "discard"; player: PlayerId; handIndex: number }
   | { type: "disband"; player: PlayerId; caravan: 0 | 1 | 2 }
-  | { type: "removeJacked"; player: PlayerId; target: TargetRef };
+  | { type: "removeJacked"; player: PlayerId; target: TargetRef }
+  | { type: "acknowledge"; player: PlayerId };
 
 export function isValueCard(card: Card): boolean {
   return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";
@@ -86,5 +90,7 @@ export interface SelectionState {
   legalCaravans: number[];
   targetSet: Set<string>;
   jackRemovableSet: Set<string>;
+  pendingSet: Set<string>;
+  pendingRemoveSet: Set<string>;
   canDiscard: boolean;
 }
