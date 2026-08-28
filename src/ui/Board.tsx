@@ -42,6 +42,9 @@ export function Board({ store }: { store: GameStore }) {
   const humanPlayer = state.players[0];
   const aiPlayer = state.players[1];
 
+  const canDisbandAny =
+    human && !blocked && sel === null && humanPlayer.caravans.every((c) => c.cards.length > 0);
+
   const selectableIndices = useMemo(() => {
     const set = new Set<number>();
     if (human && !blocked) {
@@ -140,6 +143,16 @@ export function Board({ store }: { store: GameStore }) {
     [store.reset],
   );
 
+  const onDisband = useCallback(
+    (ci: number) => {
+      if (!canDisbandAny) return;
+      if (!window.confirm(`Disband caravan ${ci + 1}? All its cards will be discarded.`)) return;
+      act({ type: "disband", player: 0, caravan: ci as 0 | 1 | 2 });
+      setSel(null);
+    },
+    [canDisbandAny, act],
+  );
+
   const aiSelection = useMemo(
     () => ({
       selectedHandIndex: null,
@@ -199,7 +212,9 @@ export function Board({ store }: { store: GameStore }) {
                   onAcknowledge={onAcknowledge}
                 />
 
-                <div className="caravan-col__divider">Caravan {ci + 1}</div>
+                <div className="caravan-col__divider">
+                  <span>Caravan {ci + 1}</span>
+                </div>
 
                 <Caravan
                   playerType="human"
@@ -211,7 +226,18 @@ export function Board({ store }: { store: GameStore }) {
                   onCardClick={onCardClick}
                   onPlaceholderClick={onPlaceholderClick}
                   onAcknowledge={onAcknowledge}
-                />
+                >
+                  {canDisbandAny ? (
+                    <button
+                      type="button"
+                      className="caravan__disband"
+                      onClick={() => onDisband(ci)}
+                      aria-label={`Disband your caravan ${ci + 1}`}
+                    >
+                      Disband
+                    </button>
+                  ) : null}
+                </Caravan>
               </div>
             );
           })}

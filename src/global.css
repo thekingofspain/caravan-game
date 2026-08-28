@@ -325,6 +325,26 @@ body {
 .caravan--human .caravan__empty { top: var(--card-offset); }
 .caravan--ai .caravan__empty { top: auto; bottom: var(--card-offset); }
 
+/* ---------- Disband (human caravans) ---------- */
+.caravan__disband {
+  position: absolute;
+  left: -80px;
+  top: calc(var(--card-offset) + 22px);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: var(--c-bad);
+  border: 1px solid #e6b0aa;
+  border-radius: var(--radius);
+  padding: 1px 7px;
+  cursor: pointer;
+}
+.caravan__disband:hover { background: #a93226; }
+.caravan__disband:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+
 /* hover — selected card drives placeholder outline */
 .board:has(.hand__slot.is-selected) .caravan__empty.is-selectable:hover {
   border-color: var(--c-good);
@@ -334,7 +354,7 @@ body {
 /* ---------- Scores ---------- */
 .caravan-col__score {
   position: absolute;
-  left: -88px;
+  left: -80px;
   width: 72px;
   height: 24px;
   display: flex;
@@ -356,7 +376,7 @@ body {
 /* ai score sits on the opposite side of the caravan from the human score */
 .caravan--ai .caravan-col__score {
   left: auto;
-  right: -88px;
+  right: -80px;
   justify-content: flex-start;
   bottom: var(--card-offset);
   color: var(--c-ai);

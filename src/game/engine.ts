@@ -174,7 +174,7 @@ function caravanAnalysis(state: GameState): string {
   return `Final caravans — you ${side(0)}, AI ${side(1)}.`;
 }
 
-function describe(action: Action, state: GameState): string {
+function describe(action: Action, state: GameState): string | null {
   const names = ["You", "AI"] as const;
   const actor = names[action.player];
 
@@ -191,7 +191,7 @@ function describe(action: Action, state: GameState): string {
     const caravan = action.target.caravan + 1;
     const owner = ownerLabel(action.target.player);
     let effect = "";
-    if (c.rank === "J") effect = ` — jacked ${fmt(tgt.card)}`;
+    if (c.rank === "J") effect = ` — marked ${fmt(tgt.card)} for removal`;
     else if (c.rank === "Q") effect = ` — reversed direction, set suit to {${SUIT_SYMBOL[c.suit as Suit]}}`;
     else if (isJoker(c)) {
       if (tgt.card.rank === "A") effect = ` — removed all {${SUIT_SYMBOL[tgt.card.suit as Suit]}} cards`;
@@ -215,10 +215,13 @@ function describe(action: Action, state: GameState): string {
     const caravan = action.target.caravan + 1;
     const owner = ownerLabel(action.target.player);
     const cardDesc = tgt ? fmt(tgt.card) : "card";
-    return `${actor} removed jacked ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;
+    return `${actor} removed ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;
   }
 
   if (action.type === "acknowledge") {
+    // The human's acknowledgment of the opponent's last move is redundant with
+    // the move already being logged, so don't emit a log entry for it.
+    if (action.player === 0) return null;
     return `${actor} acknowledged the opponent's last move.`;
   }
 
@@ -304,9 +307,12 @@ export function applyAction(state: GameState, action: Action): GameState {
     draw(player);
   }
 
-  const entry = log(describe(action, state));
-  if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
-  next.log = [...next.log, entry];
+  const text = describe(action, state);
+  if (text !== null) {
+    const entry = log(text);
+    if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
+    next.log = [...next.log, entry];
+  }
 
   const winner = gameWinner(next);
   if (winner !== null) {

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { LogEntry } from "../game/types";
 
@@ -106,6 +106,13 @@ interface SidebarProps {
 }
 
 function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
+  const logRef = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [log]);
+
   return (
     <div className="sidebar">
       <div className="controls">
@@ -116,7 +123,7 @@ function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
           New game
         </button>
       </div>
-      <ol className="log">
+      <ol className="log" ref={logRef}>
         {log.map((entry) => (
           <li className="log__line" key={entry.id}>
             <span className="log__text">

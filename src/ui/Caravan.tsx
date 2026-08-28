@@ -129,7 +129,7 @@ function CaravanImpl({
                     role="button"
                     className="jack-remove"
                     tabIndex={0}
-                    aria-label={`Acknowledge and remove jacked card ${pc.card.rank} of ${pc.card.suit}`}
+                    aria-label={`Acknowledge and remove card ${pc.card.rank} of ${pc.card.suit}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onAcknowledge();
