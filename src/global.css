@@ -103,6 +103,7 @@ body {
 
 /* ---------- Board ---------- */
 .board {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -113,12 +114,12 @@ body {
 }
 
 .sidebar {
-  overflow-y: auto;
+  overflow: visible;
   padding: var(--sp-2);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  width: 240px;
+  width: 360px;
   flex-shrink: 0;
 }
 
@@ -130,6 +131,45 @@ body {
   padding: var(--sp-2);
   gap: var(--sp-2);
   flex: 1;
+}
+
+.play-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.play-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.play-row--ai {
+  align-items: flex-end;
+}
+
+.play-row--human {
+  align-items: flex-start;
+}
+
+/* each player's hand + deck grouped to the right of their caravans;
+   the deck is vertically centered to the hand, with extra margin between */
+.hand-deck {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-5);
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.hand-deck .hand-zone {
+  flex: 0 0 auto;
+  width: calc(var(--card-w) * 2.5);
+  overflow: visible;
 }
 
 /* ---------- Player sections ---------- */
@@ -146,8 +186,74 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: var(--sp-1) 0;
-  overflow: visible;
+  padding: 24px 0;
+  overflow-x: auto;
+}
+
+
+.deck-pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.deck-pile .card {
+  width: var(--card-w);
+  height: var(--card-h);
+}
+
+.deck-pile__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-fg);
+}
+
+.deck-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  z-index: 50;
+}
+
+.deck-overlay__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  color: var(--c-fg);
+  font-weight: 700;
+}
+
+.deck-overlay__close {
+  background: none;
+  border: none;
+  color: var(--c-fg);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.deck-overlay__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: center;
+  max-width: 80%;
+  max-height: 70%;
+  overflow-y: auto;
+}
+
+.sidebar .hand-zone--human {
+  margin-top: auto;
 }
 
 .hand-zone__label {
@@ -164,20 +270,42 @@ body {
   justify-content: center;
   flex: 1;
   position: relative;
+  /* fan-fold hand: 8 fixed slots pivoting from a point below the cards.
+     Pure rotation around a low pivot gives ~90% overlap at the bottom
+     edges and ~75% at the top edges. */
+  --fan-count: 8;
+  --fan-step: 5.5deg;
+  --fan-center: calc((var(--fan-count) - 1) / 2);
+  height: calc(var(--card-h) * 1.4);
 }
 
-/* shared overlapping — both AI and human hands */
-.hand__slot + .hand__slot { margin-left: calc(-1 * var(--overlap-h)); }
-.hand-zone__cards .hand__slot { position: relative; z-index: 1; }
-.hand-zone__cards .hand__slot:last-child { z-index: 2; }
+.hand-zone__cards .hand__slot {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: var(--card-w);
+  z-index: var(--i);
+  transform-origin: 50% 167%;
+  transform:
+    translateX(-50%)
+    rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)));
+}
+
+.hand-zone__cards .hand__slot.is-selected {
+  transform:
+    translateX(-50%)
+    rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)))
+    translateY(-25%);
+}
 
 /* ---------- Caravans ---------- */
 .caravans-row {
+  --score-w: 72px;
   flex: 1;
   display: flex;
-  gap: var(--sp-2);
+  gap: calc(var(--score-w) + 14px);
   min-height: 0;
-  padding-left: 48px;
+  padding-left: 84px;
   padding-right: 48px;
 }
 
@@ -186,12 +314,56 @@ body {
   flex-direction: column;
   gap: 0;
   flex: 1;
-  min-height: 0;
+  min-height: 50vh;
   position: relative;
   align-items: center;
 }
 
-.caravan-col__divider {
+.caravan-col__header {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.play-row--ai .caravan-col__header {
+  bottom: 0;
+}
+
+.play-row--human .caravan-col__header {
+  top: 0;
+}
+
+.caravan-col__score {
+  position: absolute;
+  left: calc(-1 * var(--score-w) + 8px);
+  width: var(--score-w);
+  top: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.caravan-col__header--human .caravan-col__score {
+  color: var(--c-human);
+}
+
+.caravan-col__header--ai .caravan-col__score {
+  color: var(--c-ai);
+}
+
+.caravan-col__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
   height: 24px;
   display: flex;
   align-items: center;
@@ -201,8 +373,14 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  flex-shrink: 0;
-  z-index: 1;
+}
+
+.play-row--ai .caravan-col {
+  padding-bottom: 26px;
+}
+
+.play-row--human .caravan-col {
+  padding-top: 26px;
 }
 
 /* ---------- Caravan ---------- */
@@ -351,37 +529,7 @@ body {
   opacity: 0.9;
 }
 
-/* ---------- Scores ---------- */
-.caravan-col__score {
-  position: absolute;
-  left: -80px;
-  width: 72px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  font-size: 16px;
-  font-weight: 700;
-  text-align: right;
-  gap: 4px;
-  flex-shrink: 0;
-  z-index: 30;
-}
-
-.caravan--human .caravan-col__score {
-  top: var(--card-offset);
-  color: var(--c-human);
-}
-
-/* ai score sits on the opposite side of the caravan from the human score */
-.caravan--ai .caravan-col__score {
-  left: auto;
-  right: -80px;
-  justify-content: flex-start;
-  bottom: var(--card-offset);
-  color: var(--c-ai);
-}
-
+/* ---------- Scores (rendered inside .caravan-col__header) ---------- */
 .caravan-col__icon {
   font-size: 14px;
 }
@@ -396,11 +544,19 @@ body {
 .caravan-col__dollar.is-highest { font-weight: 700; }
 
 .caravan-col__dir {
+  flex: 0 0 auto;
   min-width: 12px;
-  text-align: left;
+  margin-left: 6px;
+  text-align: center;
   font-size: 18px;
   line-height: 1;
   font-weight: 700;
+}
+
+.caravan-col__total {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
 }
 
 /* ---------- Hand slots ---------- */
@@ -414,8 +570,6 @@ body {
   border: 0;
   padding: 0;
 }
-
-.hand__slot.is-selected { transform: translateY(-20%); }
 
 .hand__slot--ai {
   cursor: default;
@@ -592,6 +746,49 @@ body {
   margin: 0;
   list-style: none;
   counter-reset: log-line;
+}
+
+/* ---------- Activity flyout ---------- */
+.activity-flyout {
+  position: absolute;
+  right: var(--sp-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 340px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-panel);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+
+.activity-flyout__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  color: var(--c-fg);
+  font-weight: 700;
+  border-bottom: 1px solid var(--c-line);
+}
+
+.activity-flyout__close {
+  background: transparent;
+  border: none;
+  color: var(--c-fg);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--sp-1);
+}
+
+.activity-flyout .log {
+  margin: var(--sp-2);
+  flex: 1;
+  min-height: 0;
 }
 
 .log__line {

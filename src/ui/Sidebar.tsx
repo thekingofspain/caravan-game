@@ -100,12 +100,9 @@ function decorateLog(text: string, keyBase: string | number = 0): ReactNode[] {
 
 interface SidebarProps {
   log: LogEntry[];
-  canDiscard: boolean;
-  onDiscard: () => void;
-  onNewGame: () => void;
 }
 
-function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
+function SidebarImpl({ log }: SidebarProps) {
   const logRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -114,16 +111,7 @@ function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
   }, [log]);
 
   return (
-    <div className="sidebar">
-      <div className="controls">
-        <button type="button" className="btn" disabled={!canDiscard} onClick={onDiscard}>
-          Discard
-        </button>
-        <button type="button" className="btn" onClick={onNewGame}>
-          New game
-        </button>
-      </div>
-      <ol className="log" ref={logRef}>
+    <ol className="log" ref={logRef}>
         {log.map((entry) => (
           <li className="log__line" key={entry.id}>
             <span className="log__text">
@@ -139,7 +127,6 @@ function SidebarImpl({ log, canDiscard, onDiscard, onNewGame }: SidebarProps) {
           </li>
         ))}
       </ol>
-    </div>
   );
 }
 

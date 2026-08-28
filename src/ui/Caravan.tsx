@@ -28,7 +28,6 @@ function CaravanImpl({
   caravan,
   caravanIndex,
   playerId,
-  highestSold,
   selection,
   onCardClick,
   onPlaceholderClick,
@@ -40,14 +39,6 @@ function CaravanImpl({
   const caravanHasJacked = caravan.cards.some(isJacked);
 
   const caravanIdx = caravanIndex as 0 | 1 | 2;
-  const total = caravanTotal(caravan);
-  const inRange = isInRange(total);
-
-  function dirArrow(dir: "asc" | "desc" | null): string {
-    if (dir === "asc") return "▲";
-    if (dir === "desc") return "▼";
-    return "";
-  }
 
   function handleCardClick(e: React.MouseEvent) {
     const wrap = (e.target as HTMLElement).closest("[data-index]");
@@ -88,18 +79,6 @@ function CaravanImpl({
     <div
       className={`caravan ${isHuman ? "caravan--human" : "caravan--ai"} ${caravanHasJacked ? "has-jacked" : ""} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "is-selectable" : ""}`}
     >
-      <div className="caravan-col__score">
-        <span className="caravan-col__icon" aria-hidden="true">
-          {SIDE_ICON[playerType]}
-        </span>
-        {inRange ? <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span> : null}
-        {total}
-        {caravan.direction ? (
-          <span className="caravan-col__dir" aria-hidden="true">
-            {dirArrow(caravan.direction)}
-          </span>
-        ) : null}
-      </div>
       {children}
       {caravan.cards.map((pc, k) => {
         const jackedCard = isJacked(pc);
@@ -178,6 +157,35 @@ function CaravanImpl({
           onClick={() => onPlaceholderClick(caravanIndex)}
         />
       ) : null}
+    </div>
+  );
+}
+
+function dirArrow(dir: "asc" | "desc" | null): string {
+  if (dir === "asc") return "▲";
+  if (dir === "desc") return "▼";
+  return "";
+}
+
+export function CaravanScore({
+  playerType,
+  caravan,
+  highestSold,
+}: {
+  playerType: PlayerType;
+  caravan: CaravanType;
+  highestSold: boolean;
+}) {
+  const total = caravanTotal(caravan);
+  const inRange = isInRange(total);
+  return (
+    <div className="caravan-col__score" aria-hidden="true">
+      <span className="caravan-col__icon">{SIDE_ICON[playerType]}</span>
+      <span className="caravan-col__total">
+        {inRange ? <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span> : null}
+        {total}
+      </span>
+      <span className="caravan-col__dir">{caravan.direction ? dirArrow(caravan.direction) : ""}</span>
     </div>
   );
 }
