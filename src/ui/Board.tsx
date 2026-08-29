@@ -225,6 +225,7 @@ export function Board({ store }: { store: GameStore }) {
                             highestSold={pairWinnerPlayer === 1}
                           />
                           <span className="caravan-col__title">{caravanName(1, ci)}</span>
+                          <span className="caravan-col__dir" data-dir={aiPlayer.caravans[ci].direction} aria-hidden="true" />
                       </div>
                       <Caravan
                         playerType="ai"
@@ -256,6 +257,7 @@ export function Board({ store }: { store: GameStore }) {
                             highestSold={pairWinnerPlayer === 0}
                           />
                           <span className="caravan-col__title">{caravanName(0, ci)}</span>
+                          <span className="caravan-col__dir" data-dir={humanPlayer.caravans[ci].direction} aria-hidden="true" />
                       </div>
                       <Caravan
                         playerType="human"

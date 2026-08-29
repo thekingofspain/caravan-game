@@ -159,12 +159,6 @@ function CaravanImpl({
   );
 }
 
-function dirArrow(dir: "asc" | "desc" | null): string {
-  if (dir === "asc") return "▲";
-  if (dir === "desc") return "▼";
-  return "";
-}
-
 export function CaravanScore({
   caravan,
   highestSold,
@@ -180,7 +174,6 @@ export function CaravanScore({
         {inRange ? <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span> : null}
         {total}
       </span>
-      <span className="caravan-col__dir">{caravan.direction ? dirArrow(caravan.direction) : ""}</span>
     </div>
   );
 }

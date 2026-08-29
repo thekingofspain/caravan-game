@@ -14,24 +14,57 @@
   --c-ai-rgb: 255, 138, 138;
   --c-brown: #8b4513;
 
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 12px;
-  --sp-4: 16px;
-  --sp-5: 24px;
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
 
-  --radius: 6px;
+  --radius: 0.375rem;
   --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
 
   --card-h: calc(100vh / 7);
   --card-w: calc(var(--card-h) * 212 / 329);
-  --overlap-h: calc(var(--card-w) * 0.55);
-  --overlap-v: calc(var(--card-h) * 0.28);
-  --cu: var(--overlap-v);
-  --cu-x: calc(var(--overlap-h) * 0.5);
-  --card-offset: calc(var(--card-h) / 8);
-  --card-border: 3px dashed var(--c-dim);
+
+  /* ---- card-on-card offsets (tweak in ONE place) ----
+     --card-offset-x : horizontal step when a face card sits on a value card.
+                       drives the "up to 3 face cards in a row" fan (c * offset-x)
+     --card-offset-y : vertical overlap step when value cards stack on each other */
+  --card-offset-x: calc(var(--card-w) * 0.275);
+  --card-offset-y: calc(var(--card-h) * 0.28);
+
+  /* intrinsic caravan width: value card + up to 3 face cards fanned right
+     (2 steps of --card-offset-x). The confirm/remove button hangs off the left
+     edge into the gap, so it is NOT part of the in-flow width. */
+  --caravan-w: calc(var(--card-w) + 2 * var(--card-offset-x));
+  /* horizontal footprint of the confirm / remove (Disband) button, used only
+     for its left offset position */
+  --confirm-x-w: 5rem;
+
+  /* the hand is a fan-fold: 8 cards pivot from a point below them, so its
+     width comes from the fan geometry, not from stacking card widths */
+  --fan-count: 8;
+  --fan-step: 5.5deg;
+  --fan-pivot: 1.67;            /* transform-origin y (167%) as multiples of card-h */
+  --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
+  --hand-w: calc(
+    var(--card-w) * cos(var(--fan-outer-angle))
+    + var(--card-h) * sin(var(--fan-outer-angle)) * (2 * var(--fan-pivot) + 1)
+  );
+
+  /* total board width = 5 relief gaps (2 page edges + 2 between caravans +
+     1 between caravans and hand) + 3 caravan columns + 8-card-wide hand.
+     This is the design target that should fit within 100vw. */
+  --board-w: calc(5 * var(--relief) + 3 * var(--caravan-w) + var(--hand-w));
+
+  --caravan-pad: calc(var(--card-h) / 8);
+  --card-border: 0.1875rem dashed var(--c-dim);
   --transition-fast: 0.15s ease;
+
+  /* single "relief" value: empty space from the page edges to the caravans /
+     hand deck, and the gap between caravans (c1 c2 c3). Halved from the
+     original; the score now lives inside the panel so this can be small. */
+  --relief: clamp(2.25rem, 2vw, 3.25rem);
 }
 
 * { box-sizing: border-box; }
@@ -47,7 +80,7 @@ body,
 body {
   background: var(--c-felt);
   color: var(--c-fg);
-  font: 14px/1.4 var(--font-base);
+  font: 0.875rem/1.4 var(--font-base);
   letter-spacing: 0.02em;
 }
 
@@ -99,8 +132,8 @@ body {
   flex: 1;
   min-height: 0;
   width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
+  min-width: var(--board-w);
+  padding: var(--relief);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -111,7 +144,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
-  width: 360px;
+  width: 22.5rem;
   flex-shrink: 0;
 }
 
@@ -120,8 +153,8 @@ body {
   flex-direction: column;
   min-height: 0;
   overflow: visible;
-  padding: var(--sp-2);
-  gap: var(--sp-2);
+  padding: 0;
+  gap: 0;
   flex: 1;
 }
 
@@ -138,7 +171,7 @@ body {
   display: flex;
   flex: 1;
   min-height: 0;
-  gap: var(--sp-4);
+  gap: var(--relief);
   justify-content: center;
 }
 
@@ -149,12 +182,13 @@ body {
 }
 
 .board-col--caravans {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .board-col--hands {
   flex: 0 0 auto;
+  width: var(--hand-w);
   align-items: center;
 }
 
@@ -166,11 +200,11 @@ body {
 }
 
 .play-row--ai {
-  align-items: flex-end;
+  align-items: stretch;
 }
 
 .play-row--human {
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 /* each player's hand + deck stacked vertically, deck on the outer edge and
@@ -187,7 +221,7 @@ body {
 }
 
 .hand-half--human {
-  transform: translateY(var(--hand-lift, 0px));
+  transform: translateY(var(--hand-lift, 0rem));
   transition: transform 120ms ease;
 }
 
@@ -211,7 +245,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: 24px 0;
+  padding: 1.5rem 0;
   overflow-x: auto;
 }
 
@@ -233,7 +267,7 @@ body {
 }
 
 .deck-pile__count {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--c-fg);
 }
@@ -262,7 +296,7 @@ body {
   background: none;
   border: none;
   color: var(--c-fg);
-  font-size: 22px;
+  font-size: 1.375rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -283,7 +317,7 @@ body {
 
 .hand-zone__label {
   color: var(--c-dim);
-  font-size: 10px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   flex-shrink: 0;
@@ -297,9 +331,7 @@ body {
   position: relative;
   /* fan-fold hand: 8 fixed slots pivoting from a point below the cards.
      Pure rotation around a low pivot gives ~90% overlap at the bottom
-     edges and ~75% at the top edges. */
-  --fan-count: 8;
-  --fan-step: 5.5deg;
+     edges and ~75% at the top edges. --fan-count / --fan-step come from :root. */
   --fan-center: calc((var(--fan-count) - 1) / 2);
   --hand-rot: 3deg;
   transform: rotate(var(--hand-rot));
@@ -333,36 +365,41 @@ body {
 
 /* ---------- Caravans ---------- */
 .caravans-row {
-  --score-w: 72px;
   flex: 1;
   display: flex;
-  gap: calc(var(--score-w) + 14px);
+  justify-content: center;
+  gap: var(--relief);
   min-height: 0;
-  padding-left: 63px;
-  padding-right: 48px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .caravan-col {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  flex: 1;
-  min-height: 42vh;
+  gap: var(--relief);
+  flex: 1 1 0;
+  /* widest a caravan ever gets (in-flow): value card + up to 3 face cards
+     fanned right (2 * --card-offset-x) = --caravan-w.
+     the confirm/remove button hangs off the left edge into the gap. */
+  min-width: var(--caravan-w);
+  min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
   position: relative;
   align-items: center;
 }
 
-/* rounded background that surrounds the score and the entire caravan area */
+/* rounded background that surrounds the score and the entire caravan area.
+   Fills the column so the visible gap between caravan boxes equals --relief. */
 .caravan-col::before {
   content: "";
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: calc(-1 * var(--score-w) + 2px + 21px);
-  right: -21px;
+  top: 0.125rem;
+  bottom: 0.125rem;
+  left: 0;
+  right: 0;
   z-index: 0;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 1.75rem;
+  border: 0.0625rem solid rgba(255, 255, 255, 0.10);
   background: rgba(255, 255, 255, 0.04);
   pointer-events: none;
 }
@@ -378,34 +415,38 @@ body {
 }
 
 .caravan-col__header {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  z-index: 30;
-  pointer-events: none;
-}
-
-.play-row--ai .caravan-col__header {
-  bottom: 0;
-}
-
-.play-row--human .caravan-col__header {
-  top: 0;
-}
-
-.caravan-col__score {
-  position: absolute;
-  left: calc(-1 * var(--score-w) + 8px);
-  width: var(--score-w);
-  top: 0;
-  height: 24px;
+  width: 100%;
+  height: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 16px;
+  gap: var(--relief);
+  padding: 0 0.5rem;
+}
+
+/* the direction arrow sits on the opposite side of the name from the score,
+   sized like the score so the title stays centered over the placeholder.
+   the arrow glyph itself is generated from the data-dir attribute in CSS */
+.caravan-col__dir {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 1.125rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.caravan-col__dir[data-dir="asc"]::before { content: "\25B2"; }
+.caravan-col__dir[data-dir="desc"]::before { content: "\25BC"; }
+
+.caravan-col__score {
+  flex: 1;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   font-weight: 700;
 }
 
@@ -418,16 +459,13 @@ body {
 }
 
 .caravan-col__title {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 24px;
+  flex: 0 0 auto;
+  width: var(--card-w);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--c-dim);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -435,11 +473,11 @@ body {
 }
 
 .play-row--ai .caravan-col {
-  padding-bottom: 26px;
+  flex-direction: column-reverse;
 }
 
 .play-row--human .caravan-col {
-  padding-top: 26px;
+  flex-direction: column;
 }
 
 /* ---------- Caravan ---------- */
@@ -447,7 +485,7 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: calc(var(--card-h) + var(--card-offset));
+  min-height: calc(var(--card-h) + var(--caravan-pad));
   width: var(--card-w);
   position: relative;
   isolation: isolate;
@@ -457,13 +495,13 @@ body {
 /* human: stack grows down from the top, anchored at start */
 .caravan--human {
   justify-content: flex-start;
-  padding-top: var(--card-offset);
+  padding-top: var(--caravan-pad);
 }
 
 /* ai: stack grows up from the bottom, anchored at end */
 .caravan--ai {
   flex-direction: column-reverse;
-  padding-bottom: var(--card-offset);
+  padding-bottom: var(--caravan-pad);
 }
 
 /* ---------- Card stacking ---------- */
@@ -472,12 +510,12 @@ body {
    and would otherwise get pulled up by the negative margin when there is more
    than one attachment on a single value card) */
 .caravan--human > .card + .card {
-  margin-top: calc(-1 * (var(--card-h) - var(--overlap-v)));
+  margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
 }
 
 .caravan--ai > .card + .card {
   margin-top: 0;
-  margin-bottom: calc(-1 * (var(--card-h) - var(--overlap-v)));
+  margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
 }
 
 /* ---------- Card states ---------- */
@@ -514,7 +552,7 @@ body {
 .caravan .card > .card {
   position: absolute;
   top: 0;
-  left: calc(var(--c, 0) * var(--cu-x));
+  left: calc(var(--c, 0) * var(--card-offset-x));
   z-index: 5;
   pointer-events: none;
 }
@@ -533,7 +571,7 @@ body {
    human side where they sit to the right); overlap amount and z-order unchanged */
 .caravan--ai .card > .card {
   left: auto;
-  right: calc(var(--c, 0) * var(--cu-x));
+  right: calc(var(--c, 0) * var(--card-offset-x));
 }
 
 /* on the ai side the face card sits to the left of the value card, so the
@@ -541,7 +579,7 @@ body {
    side's top-right X) rather than the right */
 .caravan--ai .jack-remove {
   right: auto;
-  left: -11px;
+  left: -0.6875rem;
 }
 
 /* ---------- Caravan empty ---------- */
@@ -559,28 +597,28 @@ body {
   padding: 0;
 }
 
-.caravan--human .caravan__empty { top: var(--card-offset); }
-.caravan--ai .caravan__empty { top: auto; bottom: var(--card-offset); }
+.caravan--human .caravan__empty { top: var(--caravan-pad); }
+.caravan--ai .caravan__empty { top: auto; bottom: var(--caravan-pad); }
 
 /* ---------- Disband (human caravans) ---------- */
 .caravan__disband {
   position: absolute;
-  left: -80px;
-  top: calc(var(--card-offset) + 22px);
+  left: calc(-1 * var(--confirm-x-w));
+  top: calc(var(--caravan-pad) + 1.375rem);
   font: inherit;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #fff;
   background: var(--c-bad);
-  border: 1px solid #e6b0aa;
+  border: 0.0625rem solid #e6b0aa;
   border-radius: var(--radius);
-  padding: 1px 7px;
+  padding: 0.0625rem 0.4375rem;
   cursor: pointer;
 }
 .caravan__disband:hover { background: #a93226; }
-.caravan__disband:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.caravan__disband:focus-visible { outline: 0.125rem solid #fff; outline-offset: 0.0625rem; }
 
 /* hover — selected card drives placeholder outline */
 .board:has(.hand__slot.is-selected) .caravan__empty.is-selectable:hover {
@@ -590,31 +628,19 @@ body {
 
 /* ---------- Scores (rendered inside .caravan-col__header) ---------- */
 .caravan-col__icon {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .caravan-col__dollar {
   color: var(--c-accent);
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 400;
-  margin-right: -2px;
+  margin-right: -0.125rem;
 }
 
 .caravan-col__dollar.is-highest { font-weight: 700; }
 
-.caravan-col__dir {
-  flex: 0 0 auto;
-  min-width: 12px;
-  margin-left: 6px;
-  text-align: center;
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 700;
-}
-
 .caravan-col__total {
-  margin-left: auto;
-  text-align: right;
   white-space: nowrap;
 }
 
@@ -637,19 +663,19 @@ body {
 /* ---------- Badges ---------- */
 .card__badge {
   position: absolute;
-  top: -8px;
-  left: -8px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
+  top: -0.5rem;
+  left: -0.5rem;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 0.5625rem;
   background: var(--c-accent);
   color: #1a160c;
-  font: 700 11px/1 var(--font-base);
+  font: 700 0.6875rem/1 var(--font-base);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #1a160c;
+  border: 0.0625rem solid #1a160c;
   z-index: 3;
 }
 
@@ -670,8 +696,8 @@ body {
    is vertically centered on the bottom edge, at the left */
 .caravan--ai .card__badge--king {
   top: auto;
-  bottom: -9px;
-  left: -11px;
+  bottom: -0.5625rem;
+  left: -0.6875rem;
   transform: none;
 }
 
@@ -680,12 +706,12 @@ body {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  right: -11px;
+  right: -0.6875rem;
   left: auto;
-  width: 22px;
-  height: 22px;
+  width: 1.375rem;
+  height: 1.375rem;
   border-radius: 50%;
-  border: 1px solid #1a160c;
+  border: 0.0625rem solid #1a160c;
   background: var(--c-bad);
   color: transparent; /* the X is drawn with pseudo-elements for exact centering */
   cursor: pointer;
@@ -699,10 +725,10 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 11px;
-  height: 2px;
+  width: 0.6875rem;
+  height: 0.125rem;
   background: #fff;
-  border-radius: 1px;
+  border-radius: 0.0625rem;
   transform: translate(-50%, -50%) rotate(45deg);
 }
 .jack-remove::after {
@@ -771,10 +797,10 @@ body {
 }
 
 .btn {
-  font: 700 12px var(--font-base);
+  font: 700 0.75rem var(--font-base);
   background: var(--c-accent);
   color: #1a160c;
-  border: 1px solid var(--c-accent);
+  border: 0.0625rem solid var(--c-accent);
   border-radius: var(--radius);
   padding: var(--sp-2) var(--sp-4);
   text-transform: uppercase;
@@ -795,13 +821,13 @@ body {
 .log {
   flex: 1;
   min-height: 0;
-  border: 1px solid var(--c-line);
+  border: 0.0625rem solid var(--c-line);
   border-radius: var(--radius);
   background: #fff;
   padding: var(--sp-2) var(--sp-3);
   overflow-y: auto;
   color: #000;
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin: 0;
   list-style: none;
   counter-reset: log-line;
@@ -813,14 +839,14 @@ body {
   right: var(--sp-3);
   top: 50%;
   transform: translateY(-50%);
-  width: 340px;
+  width: 21.25rem;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
   background: var(--c-panel);
-  border: 1px solid var(--c-line);
+  border: 0.0625rem solid var(--c-line);
   border-radius: var(--radius);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.45);
   z-index: 50;
 }
 
@@ -831,14 +857,14 @@ body {
   padding: var(--sp-2) var(--sp-3);
   color: var(--c-fg);
   font-weight: 700;
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: 0.0625rem solid var(--c-line);
 }
 
 .activity-flyout__close {
   background: transparent;
   border: none;
   color: var(--c-fg);
-  font-size: 18px;
+  font-size: 1.125rem;
   line-height: 1;
   cursor: pointer;
   padding: 0 var(--sp-1);
@@ -879,7 +905,7 @@ body {
 /* player identity via icons, not colored text */
 .log__who {
   white-space: nowrap;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1;
 }
 
@@ -890,7 +916,7 @@ body {
 
 /* caravan reference: @caravan# */
 .log__who-ref {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 700;
   color: var(--c-brown);
   margin-left: -0.25em;
@@ -902,7 +928,7 @@ body {
 .log__card--diamonds,
 .log__card--clubs {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .log__card--red { color: #b3261e; }
 .log__card--black { color: #1a1a1a; }
@@ -912,7 +938,7 @@ body {
 
 /* sub-lines under a log entry (e.g. cards removed by a Joker) */
 .log__bullets {
-  margin: 2px 0 4px;
+  margin: 0.125rem 0 0.25rem;
   padding-left: 1.4em;
   list-style: disc;
 }
@@ -924,8 +950,8 @@ body {
 /* ---------- Selection hover outlines ---------- */
 /* red: hover any card while a hand card is selected */
 .board:has(.hand__slot.is-selected) .caravan .card:hover {
-  outline: 3px solid var(--c-bad);
-  outline-offset: 2px;
+  outline: 0.1875rem solid var(--c-bad);
+  outline-offset: 0.125rem;
 }
 
 /* green: valid placements — top card of a selectable caravan (value cards),
@@ -938,13 +964,13 @@ body {
 /* ---------- Focus ---------- */
 .hand__slot:focus-visible,
 .btn:focus-visible {
-  outline: 3px solid var(--c-fg);
-  outline-offset: 2px;
+  outline: 0.1875rem solid var(--c-fg);
+  outline-offset: 0.125rem;
 }
 
 .caravan:focus-visible {
-  outline: 3px solid var(--c-accent);
-  outline-offset: 2px;
+  outline: 0.1875rem solid var(--c-accent);
+  outline-offset: 0.125rem;
 }
 
 /* ---------- Reduced motion ---------- */
@@ -955,8 +981,8 @@ body {
 
 /* ---------- High contrast ---------- */
 @media (forced-colors: active) {
-  .card { border: 2px solid ButtonText; }
-  .hand__slot.is-selected { outline: 3px solid Highlight; }
+  .card { border: 0.125rem solid ButtonText; }
+  .hand__slot.is-selected { outline: 0.1875rem solid Highlight; }
 }
 
 /* ---------- Modal ---------- */
@@ -972,13 +998,13 @@ body {
 }
 
 .modal__panel {
-  max-width: 560px;
+  max-width: 35rem;
   width: 100%;
-  border: 1px solid var(--c-accent);
+  border: 0.0625rem solid var(--c-accent);
   border-radius: var(--radius);
   background: var(--c-panel);
   padding: var(--sp-5);
-  box-shadow: 0 0 24px rgba(201, 162, 75, 0.2);
+  box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
 }
 
 .modal__title {
