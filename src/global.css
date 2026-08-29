@@ -301,7 +301,15 @@ body {
   --fan-count: 8;
   --fan-step: 5.5deg;
   --fan-center: calc((var(--fan-count) - 1) / 2);
+  --hand-rot: 3deg;
+  transform: rotate(var(--hand-rot));
+  transform-origin: center bottom;
   height: calc(var(--card-h) * 1.4);
+}
+
+/* AI hand tilts the opposite way for visual balance */
+.hand-zone--ai .hand-zone__cards {
+  --hand-rot: 3deg;
 }
 
 .hand-zone__cards .hand__slot {

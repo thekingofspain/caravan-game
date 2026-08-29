@@ -24,7 +24,7 @@ function PlayerHandImpl({
 
   return (
     <section className={`hand-zone ${isHuman ? "hand-zone--human" : "hand-zone--ai"}`} aria-label={`${label} hand, ${player.hand.length} cards`}>
-      <div className="hand-zone__cards">
+      <div className="hand-zone__cards" style={{ "--fan-count": player.hand.length } as React.CSSProperties}>
         {SLOT_KEYS.map((slotKey) => {
           const i = Number(slotKey.slice(1));
           const card = player.hand[i];
