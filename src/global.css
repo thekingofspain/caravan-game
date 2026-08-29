@@ -607,9 +607,8 @@ body {
 
 /* ---------- Disband (human caravans) ---------- */
 .caravan__disband {
-  position: absolute;
-  left: calc(-1 * var(--confirm-x-w));
-  top: calc(var(--caravan-pad) + 1.375rem);
+  order: 1;
+  margin-top: auto;
   font: inherit;
   font-size: 0.6875rem;
   font-weight: 700;
