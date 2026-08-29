@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
-import { PlayerType, TargetRef } from "../game/types";
+import { Ai, Human, PlayerId, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
 import { caravanName } from "../game/names";
 import { Caravan, CaravanScore } from "./Caravan";
@@ -19,7 +19,7 @@ export function Board({ store }: { store: GameStore }) {
   const [sel, setSel] = useState<number | null>(null);
   const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
   const [activityOpen, setActivityOpen] = useState(false);
-  const [viewDeck, setViewDeck] = useState<0 | 1 | null>(null);
+  const [viewDeck, setViewDeck] = useState<PlayerId | null>(null);
 
   const human = isHumanTurn(state);
   const blocked = state.pending.length > 0;
@@ -43,8 +43,8 @@ export function Board({ store }: { store: GameStore }) {
   const pendingKeys = useMemo(() => new Set(state.pending.map(targetKey)), [state.pending]);
   const jackRemovableSet = pendingKeys;
 
-  const humanPlayer = state.players[0];
-  const aiPlayer = state.players[1];
+  const humanPlayer = state.players[Human];
+  const aiPlayer = state.players[Ai];
 
   const canDisbandAny =
     human && !blocked && sel === null && humanPlayer.caravans.every((c) => c.cards.length > 0);
@@ -72,7 +72,7 @@ export function Board({ store }: { store: GameStore }) {
     setPendingRemove(new Set(state.pending.map(targetKey)));
     window.setTimeout(() => {
       setPendingRemove(new Set());
-      act({ type: "acknowledge", player: 0 });
+      act({ type: "acknowledge", player: Human });
       setSel(null);
     }, 320);
   }, [state.pending, act]);
@@ -83,17 +83,17 @@ export function Board({ store }: { store: GameStore }) {
       const card = humanPlayer.hand[sel];
       if (!card) return;
 
-      if (target.player === 1) {
+      if (target.player === Ai) {
         if (targetSet.has(targetKey(target))) {
-          act({ type: "playFace", player: 0, target, handIndex: sel });
+          act({ type: "playFace", player: Human, target, handIndex: sel });
           setSel(null);
         }
         return;
       }
 
-      if (target.player === 0) {
+      if (target.player === Human) {
         if (jackRemovableSet.has(targetKey(target))) {
-          act({ type: "removeJacked", player: 0, target });
+          act({ type: "removeJacked", player: Human, target });
           setSel(null);
           return;
         }
@@ -103,14 +103,14 @@ export function Board({ store }: { store: GameStore }) {
           const caravanLen = humanPlayer.caravans[target.caravan].cards.length;
           const isTop = target.cardIndex === caravanLen - 1;
           if (legalCaravans.includes(target.caravan) && isTop) {
-            act({ type: "playValue", player: 0, caravan: target.caravan, handIndex: sel });
+            act({ type: "playValue", player: Human, caravan: target.caravan, handIndex: sel });
             setSel(null);
           }
           return;
         }
 
         if (targetSet.has(targetKey(target))) {
-          act({ type: "playFace", player: 0, target, handIndex: sel });
+          act({ type: "playFace", player: Human, target, handIndex: sel });
           setSel(null);
         }
       }
@@ -126,7 +126,7 @@ export function Board({ store }: { store: GameStore }) {
       const isValue = card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";
       const ci = caravanIndex as 0 | 1 | 2;
       if (isValue && legalCaravans.includes(ci)) {
-        act({ type: "playValue", player: 0, caravan: ci, handIndex: sel });
+        act({ type: "playValue", player: Human, caravan: ci, handIndex: sel });
         setSel(null);
       }
     },
@@ -151,15 +151,15 @@ export function Board({ store }: { store: GameStore }) {
     if (sel !== null && canDiscard) {
       onDiscard();
     } else {
-      setViewDeck(0);
+      setViewDeck(Human);
     }
   }, [sel, canDiscard, onDiscard]);
 
   const onDisband = useCallback(
     (ci: number) => {
       if (!canDisbandAny) return;
-      if (!window.confirm(`Disband ${caravanName(0, ci)}? All its cards will be discarded.`)) return;
-      act({ type: "disband", player: 0, caravan: ci as 0 | 1 | 2 });
+      if (!window.confirm(`Disband ${caravanName(Human, ci)}? All its cards will be discarded.`)) return;
+      act({ type: "disband", player: Human, caravan: ci as 0 | 1 | 2 });
       setSel(null);
     },
     [canDisbandAny, act],
@@ -216,23 +216,22 @@ export function Board({ store }: { store: GameStore }) {
               <div className="caravans-row">
                 {[0, 1, 2].map((ci) => {
                   const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
-                  const side: PlayerType = "ai";
+                  const side = "ai";
                   return (
                     <div className="caravan-col" key={ci}>
                       <div className={`caravan-col__header caravan-col__header--${side}`}>
                           <CaravanScore
                             caravan={aiPlayer.caravans[ci]}
-                            highestSold={pairWinnerPlayer === 1}
+                            highestSold={pairWinnerPlayer === Ai}
                           />
-                          <span className="caravan-col__title">{caravanName(1, ci)}</span>
+                          <span className="caravan-col__title">{caravanName(Ai, ci)}</span>
                           <span className="caravan-col__dir" data-dir={aiPlayer.caravans[ci].direction} aria-hidden="true" />
                       </div>
                       <Caravan
-                        playerType="ai"
                         caravan={aiPlayer.caravans[ci]}
                         caravanIndex={ci}
-                        playerId={1}
-                        highestSold={pairWinnerPlayer === 1}
+                        playerId={Ai}
+                        highestSold={pairWinnerPlayer === Ai}
                         selection={aiSelection}
                         onCardClick={onCardClick}
                         onPlaceholderClick={noop}
@@ -248,23 +247,22 @@ export function Board({ store }: { store: GameStore }) {
               <div className="caravans-row">
                 {[0, 1, 2].map((ci) => {
                   const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
-                  const side: PlayerType = "human";
+                  const side = "human";
                   return (
                     <div className="caravan-col" key={ci}>
                       <div className={`caravan-col__header caravan-col__header--${side}`}>
                           <CaravanScore
                             caravan={humanPlayer.caravans[ci]}
-                            highestSold={pairWinnerPlayer === 0}
+                            highestSold={pairWinnerPlayer === Human}
                           />
-                          <span className="caravan-col__title">{caravanName(0, ci)}</span>
+                          <span className="caravan-col__title">{caravanName(Human, ci)}</span>
                           <span className="caravan-col__dir" data-dir={humanPlayer.caravans[ci].direction} aria-hidden="true" />
                       </div>
                       <Caravan
-                        playerType="human"
                         caravan={humanPlayer.caravans[ci]}
                         caravanIndex={ci}
-                        playerId={0}
-                        highestSold={pairWinnerPlayer === 0}
+                        playerId={Human}
+                        highestSold={pairWinnerPlayer === Human}
                         selection={humanSelection}
                         onCardClick={onCardClick}
                         onPlaceholderClick={onPlaceholderClick}
@@ -275,7 +273,7 @@ export function Board({ store }: { store: GameStore }) {
                             type="button"
                             className="caravan__disband"
                             onClick={() => onDisband(ci)}
-                            aria-label={`Disband your ${caravanName(0, ci)}`}
+                            aria-label={`Disband your ${caravanName(Human, ci)}`}
                           >
                             Disband
                           </button>
@@ -293,14 +291,14 @@ export function Board({ store }: { store: GameStore }) {
               <button
                 type="button"
                 className="deck-pile deck-pile--ai"
-                onClick={() => setViewDeck(1)}
+                onClick={() => setViewDeck(Ai)}
                 aria-label={`AI deck, ${aiPlayer.deck.length} cards remaining. View the deck.`}
               >
                 <div className="card card--back card--deck2" />
                 <span className="deck-pile__count">{aiPlayer.deck.length}</span>
               </button>
               <PlayerHand
-                playerType="ai"
+                playerId={Ai}
                 player={aiPlayer}
                 selectedHandIndex={null}
                 selectableIndices={new Set()}
@@ -324,7 +322,7 @@ export function Board({ store }: { store: GameStore }) {
 
             <div className="hand-half hand-half--human">
               <PlayerHand
-                playerType="human"
+                playerId={Human}
                 player={humanPlayer}
                 selectedHandIndex={sel}
                 selectableIndices={selectableIndices}
@@ -362,10 +360,10 @@ export function Board({ store }: { store: GameStore }) {
       )}
 
       {viewDeck !== null && (
-        <div className="deck-overlay" role="dialog" aria-label={`${viewDeck === 0 ? "Your" : "AI"} remaining deck`}>
+        <div className="deck-overlay" role="dialog" aria-label={`${viewDeck === Human ? "Your" : "AI"} remaining deck`}>
           <div className="deck-overlay__header">
             <span>
-              {viewDeck === 0 ? "Your" : "AI"} deck — {state.players[viewDeck].deck.length} cards
+              {viewDeck === Human ? "Your" : "AI"} deck — {state.players[viewDeck].deck.length} cards
             </span>
             <button
               type="button"

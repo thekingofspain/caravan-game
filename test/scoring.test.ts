@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/game/cards";
 import { pairWinner, gameWinner, allSold } from "../src/game/scoring";
-import { Caravan, GameState, PlayerState } from "../src/game/types";
+import {Caravan, GameState, PlayerState, Human, Ai} from "../src/game/types";
 
 function caravanOf(items: any[], suit: any = "spades"): Caravan {
   const cards = items.map((it) =>
@@ -15,7 +15,7 @@ function mkPlayer(caravans: Caravan[]): PlayerState {
   return { deck: [], hand: [], caravans, sales: 0 };
 }
 function mkGame(p0: Caravan[], p1: Caravan[]): GameState {
-  return { players: [mkPlayer(p0), mkPlayer(p1)], current: 0, phase: "play", winner: null, log: [] };
+  return { players: [mkPlayer(p0), mkPlayer(p1)], current: Human, phase: "play", winner: null, log: [] };
 }
 
 describe("pairWinner", () => {
@@ -26,14 +26,14 @@ describe("pairWinner", () => {
     expect(pairWinner(mkGame([caravanOf(["10", ["10", 1]])], [caravanOf(["10", ["10", 1]])]), 0)).toBe(null);
   });
   it("higher in-range value wins", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(0); // 24 vs 19
-    expect(pairWinner(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(1); // 19 vs 24
+    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(Human); // 24 vs 19
+    expect(pairWinner(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(Ai); // 19 vs 24
   });
   it("tie in range is not resolved", () => {
     expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(null); // 24 vs 24
   });
   it("both in range picks the higher", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(0); // 24 vs 22
+    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(Human); // 24 vs 22
   });
 });
 
@@ -61,7 +61,7 @@ describe("allSold / gameWinner", () => {
     );
     // pair0: 24 vs 22 -> 0 ; pair1: 23 vs 25 -> 1 ; pair2: 26 vs 21 -> 0  => 0 wins 2
     expect(allSold(g)).toBe(true);
-    expect(gameWinner(g)).toBe(0);
+    expect(gameWinner(g)).toBe(Human);
   });
 
   it("opponent wins a 1-2 split", () => {
@@ -78,6 +78,6 @@ describe("allSold / gameWinner", () => {
       ],
     );
     // pair0: 24 vs 22 ->0 ; pair1: 23 vs 25 ->1 ; pair2: 22 vs 26 ->1  => 1 wins 2
-    expect(gameWinner(g)).toBe(1);
+    expect(gameWinner(g)).toBe(Ai);
   });
 });

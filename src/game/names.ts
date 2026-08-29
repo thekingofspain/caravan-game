@@ -1,8 +1,8 @@
-import { PlayerId } from "./types";
+import { Ai, Human, PlayerId } from "./types";
 
 const NAMES: Record<PlayerId, [string, string, string]> = {
-  0: ["Boneyard", "Redding", "Shady Sands"],
-  1: ["Dayglow", "New Reno", "The Hub"],
+  [Human]: ["Boneyard", "Redding", "Shady Sands"],
+  [Ai]: ["Dayglow", "New Reno", "The Hub"],
 };
 
 export const CARAVAN_NAMES = NAMES;

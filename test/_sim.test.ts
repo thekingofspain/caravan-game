@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { setupGame, applyAction } from "../src/game/engine";
 import { chooseAction } from "../src/game/ai";
-import { Action, GameState, PlayerId } from "../src/game/types";
+import {Action, GameState, PlayerId, Human, Ai} from "../src/game/types";
 
 function playOut(seed: number) {
-  let s: GameState = setupGame({ first: 0, seed });
+  let s: GameState = setupGame({ first: Human, seed });
   let steps = 0;
   while (s.phase === "play" && steps < 2000) {
     const a: Action = chooseAction(s, s.current as PlayerId);

@@ -5,9 +5,11 @@ import { gameWinner, pairWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
   Action,
+  Ai,
   Card,
   Caravan,
   GameState,
+  Human,
   PlayerId,
   PlayerState,
   Suit,
@@ -65,7 +67,7 @@ export function setupGame(opts: SetupOptions): GameState {
   const ai = shuffle(buildDeck(), rng).slice(0, 30);
   return {
     players: [makePlayer(human), makePlayer(ai)],
-    current: opts.first ?? 0,
+    current: opts.first ?? Human,
     phase: "play",
     winner: null,
     log: [],
@@ -107,7 +109,7 @@ export function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] 
   const suit = tgt.card.suit;
   const value = baseValue(tgt.card);
   const out: TargetRef[] = [];
-  for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
+  for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
     const car = state.players[p].caravans;
     for (let ci = 0; ci < car.length; ci++) {
       car[ci].cards.forEach((pc, cidx) => {
@@ -159,7 +161,7 @@ function fmt(card: Card): string {
 }
 
 function ownerLabel(p: PlayerId): string {
-  return p === 0 ? "your" : "AI's";
+  return p === Human ? "your" : "AI's";
 }
 
 function caravanAnalysis(state: GameState): string {
@@ -172,7 +174,7 @@ function caravanAnalysis(state: GameState): string {
         return `${t}`;
       })
       .join("/");
-  return `Final caravans — you ${side(0)}, AI ${side(1)}.`;
+  return `Final caravans — you ${side(Human)}, AI ${side(Ai)}.`;
 }
 
 function describe(action: Action, state: GameState): string | null {
@@ -222,7 +224,7 @@ function describe(action: Action, state: GameState): string | null {
   if (action.type === "acknowledge") {
     // The human's acknowledgment of the opponent's last move is redundant with
     // the move already being logged, so don't emit a log entry for it.
-    if (action.player === 0) return null;
+    if (action.player === Human) return null;
     return `${actor} acknowledged the opponent's last move.`;
   }
 
@@ -289,7 +291,7 @@ export function applyAction(state: GameState, action: Action): GameState {
     }
     // A human move resolves its removals immediately; only an AI move leaves
     // the affected cards pending so the human can acknowledge them first.
-    if (action.player === 0 && next.pending.length > 0) commitPending(next);
+    if (action.player === Human && next.pending.length > 0) commitPending(next);
     draw(player);
   } else if (action.type === "discard") {
     if (player.caravans.some((c) => c.cards.length === 0)) return state;
@@ -321,22 +323,22 @@ export function applyAction(state: GameState, action: Action): GameState {
     next.winner = winner;
     next.log = [
       ...next.log,
-      log(`${winner === 0 ? "You win the caravan!" : "AI wins the caravan."} ${caravanAnalysis(next)}`),
+      log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${caravanAnalysis(next)}`),
     ];
   } else {
     if (action.type !== "acknowledge") {
-      next.current = next.current === 0 ? 1 : 0;
+      next.current = next.current === Human ? Ai : Human;
     }
     if (legalActions(next).length === 0) {
       // The player whose turn is next cannot make any move (out of cards /
       // no legal play) and loses; the opponent wins automatically.
       const loser = next.current;
       next.phase = "over";
-      next.winner = loser === 0 ? 1 : 0;
+      next.winner = loser === Human ? Ai : Human;
       next.log = [
         ...next.log,
         log(
-          `${loser === 0 ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
+          `${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
         ),
       ];
     }
@@ -358,7 +360,7 @@ export function legalActions(state: GameState): Action[] {
 
   // remove jacked cards are always available (even during must-start, to clean board)
   const jackRemovals: Action[] = [];
-  for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
+  for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
     const owner = state.players[p];
     for (let ci = 0; ci < owner.caravans.length; ci++) {
       const car = owner.caravans[ci];
@@ -392,7 +394,7 @@ export function legalActions(state: GameState): Action[] {
         if (canPlayValue(card, car)) actions.push({ type: "playValue", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
       }
     } else {
-      for (let p = 0 as PlayerId; p <= 1; p = (p + 1) as PlayerId) {
+      for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
         const opp = state.players[p];
         for (let ci = 0; ci < opp.caravans.length; ci++) {
           const car = opp.caravans[ci];

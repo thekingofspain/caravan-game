@@ -2,10 +2,9 @@ import { memo } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../game/cards";
 import { caravanTotal, isInRange, isJacked } from "../game/rules";
-import { Card, Caravan as CaravanType, PlayerId, PlayerType, SelectionState, TargetRef } from "../game/types";
+import { Card, Caravan as CaravanType, Human, PlayerId, SelectionState, TargetRef } from "../game/types";
 
 interface CaravanProps {
-  playerType: PlayerType;
   caravan: CaravanType;
   caravanIndex: number;
   playerId: PlayerId;
@@ -22,7 +21,6 @@ function targetKey(t: TargetRef): string {
 }
 
 function CaravanImpl({
-  playerType,
   caravan,
   caravanIndex,
   playerId,
@@ -32,7 +30,7 @@ function CaravanImpl({
   onAcknowledge,
   children,
 }: CaravanProps) {
-  const isHuman = playerType === "human";
+  const isHuman = playerId === Human;
 
   const caravanHasJacked = caravan.cards.some(isJacked);
 

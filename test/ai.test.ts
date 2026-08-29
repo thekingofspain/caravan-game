@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Action } from "../src/game/types";
+import {Action, Human, Ai} from "../src/game/types";
 import { applyAction, legalActions, setupGame } from "../src/game/engine";
 import { chooseAction } from "../src/game/ai";
 import { caravanTotal } from "../src/game/rules";
@@ -32,7 +32,7 @@ function sameAction(a: Action, b: Action): boolean {
 
 describe("AI", () => {
   it("always returns a legal action", () => {
-    let s = setupGame({ seed: 3, first: 0 });
+    let s = setupGame({ seed: 3, first: Human });
     for (let i = 0; i < 200 && s.phase === "play"; i++) {
       const a = chooseAction(s, s.current);
       const legal = legalActions(s).some((l) => sameAction(l, a));
@@ -42,18 +42,18 @@ describe("AI", () => {
   });
 
   it("plays a caravan into the 21-26 winning range", () => {
-    let s = setupGame({ seed: 11, first: 1 });
+    let s = setupGame({ seed: 11, first: Ai });
     for (let i = 0; i < 80 && s.phase === "play"; i++) {
       s = applyAction(s, chooseAction(s, s.current));
-      const totals = s.players[1].caravans.map((c) => caravanTotal(c));
+      const totals = s.players[Ai].caravans.map((c) => caravanTotal(c));
       if (totals.some((t) => t >= 21 && t <= 26)) break;
     }
-    const totals = s.players[1].caravans.map((c) => caravanTotal(c));
+    const totals = s.players[Ai].caravans.map((c) => caravanTotal(c));
     expect(totals.some((t) => t >= 21 && t <= 26)).toBe(true);
   });
 
   it("AI vs AI reaches a legal game-over", () => {
-    let s = setupGame({ seed: 1, first: 0 });
+    let s = setupGame({ seed: 1, first: Human });
     let plies = 0;
     const seen = new Set<string>();
     while (s.phase === "play" && plies < 8000) {
@@ -74,6 +74,6 @@ describe("AI", () => {
       plies++;
     }
     expect(s.phase).toBe("over");
-    expect(s.winner === 0 || s.winner === 1).toBe(true);
+    expect(s.winner === Human || s.winner === Ai).toBe(true);
   });
 });

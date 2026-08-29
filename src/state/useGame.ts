@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { Action, GameState, PlayerId } from "../game/types";
+import { Action, Ai, GameState, Human, PlayerId } from "../game/types";
 import { applyAction, legalActions, setupGame } from "../game/engine";
 import { chooseAction } from "../game/ai";
 
@@ -18,20 +18,20 @@ export interface GameStore {
 type ReducerAction = Action | { type: "reset"; config: GameConfig };
 
 function reducer(state: GameState, action: ReducerAction): GameState {
-  if (action.type === "reset") return setupGame({ ...action.config, first: 0 });
+  if (action.type === "reset") return setupGame({ ...action.config, first: Human });
   return applyAction(state, action);
 }
 
 export function useGame(initial: GameConfig): GameStore {
   const [cfg, setCfg] = useState<GameConfig>(initial);
-  const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: 0 }));
+  const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: Human }));
   const [thinking, setThinking] = useState(false);
 
   useEffect(() => {
-    if (state.phase === "over" || state.current !== 1) return;
+    if (state.phase === "over" || state.current !== Ai) return;
     setThinking(true);
     const t = setTimeout(() => {
-      const a = chooseAction(state, 1);
+      const a = chooseAction(state, Ai);
       dispatch(a);
       setThinking(false);
     }, 650);
@@ -47,9 +47,8 @@ export function useGame(initial: GameConfig): GameStore {
   const legal = useMemo(() => legalActions(state), [state]);
   return { state, legal, act, reset, thinking };
 }
-
 export function isHumanTurn(state: GameState): boolean {
-  return state.phase === "play" && state.current === 0;
+  return state.phase === "play" && state.current === Human;
 }
 
 export function handSelectable(state: GameState, legal: Action[], handIndex: number): boolean {

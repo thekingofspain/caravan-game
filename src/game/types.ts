@@ -27,9 +27,9 @@ export interface PlayerState {
   caravans: Caravan[];
   sales: number;
 }
-
-export type PlayerId = 0 | 1;
-
+export const Human = 0 as const;
+export const Ai = 1 as const;
+export type PlayerId = typeof Human | typeof Ai;
 export interface LogEntry {
   id: number;
   text: string;
@@ -81,8 +81,6 @@ export function baseValue(card: Card): number {
   const n = Number(card.rank);
   return Number.isNaN(n) ? 0 : n;
 }
-
-export type PlayerType = "human" | "ai";
 
 export interface SelectionState {
   selectedHandIndex: number | null;

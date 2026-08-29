@@ -1,8 +1,8 @@
-import { Action, GameState, PlayerId } from "./types";
+import { Action, Ai, GameState, Human, PlayerId } from "./types";
 import { applyAction, legalActions } from "./engine";
 import { caravanTotal, isInRange } from "./rules";
 
-const OTHER: Record<PlayerId, PlayerId> = { 0: 1, 1: 0 };
+const OTHER: Record<PlayerId, PlayerId> = { [Human]: Ai, [Ai]: Human };
 
 function caravanScore(myT: number, oppT: number): number {
   const myIn = isInRange(myT);
@@ -39,11 +39,13 @@ export function chooseAction(state: GameState, me: PlayerId, rng: Rng = Math.ran
 
   const acts = legalActions(state);
   if (acts.length === 0) throw new Error("chooseAction: no legal actions");
-
   let bestScore = -Infinity;
   let best: Action[] = [];
   for (const a of acts) {
-    const next = applyAction(state, a);
+    let next = applyAction(state, a);
+    if (next.pending.length > 0) {
+      next = applyAction(next, { type: "acknowledge", player: next.current });
+    }
     let sc = evaluateState(next, me);
     if (a.type === "discard") sc -= 0.5;
     if (sc > bestScore) {

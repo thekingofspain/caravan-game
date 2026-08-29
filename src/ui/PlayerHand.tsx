@@ -1,11 +1,11 @@
 import { memo } from "react";
 import { cardClassName, cardLabel } from "../game/cards";
-import { PlayerType, PlayerState } from "../game/types";
+import { Human, PlayerId, PlayerState } from "../game/types";
 
 const SLOT_KEYS = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"];
 
 interface PlayerHandProps {
-  playerType: PlayerType;
+  playerId: PlayerId;
   player: PlayerState;
   selectedHandIndex: number | null;
   selectableIndices: Set<number>;
@@ -13,13 +13,13 @@ interface PlayerHandProps {
 }
 
 function PlayerHandImpl({
-  playerType,
+  playerId,
   player,
   selectedHandIndex,
   selectableIndices,
   onCardClick,
 }: PlayerHandProps) {
-  const isHuman = playerType === "human";
+  const isHuman = playerId === Human;
   const label = isHuman ? "You" : "AI";
 
   return (

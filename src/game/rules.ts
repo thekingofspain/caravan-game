@@ -24,11 +24,6 @@ export function isInRange(total: number): boolean {
 export function canPlayValue(card: Card, caravan: Caravan): boolean {
   const actives = activeCards(caravan);
   if (actives.length === 0) return true;
-  // over condition: a caravan that is already bust cannot receive more value cards
-  // and a value card that would push the total over 26 is illegal
-  const total = caravanTotal(caravan);
-  if (total > 26) return false;
-  if (total + baseValue(card) > 26) return false;
   const prev = actives[actives.length - 1];
   if (card.rank === prev.card.rank) return false;
   if (caravan.direction === null) return true;
