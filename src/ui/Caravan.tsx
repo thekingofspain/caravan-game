@@ -21,8 +21,6 @@ function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;
 }
 
-const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
-
 function CaravanImpl({
   playerType,
   caravan,
@@ -168,11 +166,9 @@ function dirArrow(dir: "asc" | "desc" | null): string {
 }
 
 export function CaravanScore({
-  playerType,
   caravan,
   highestSold,
 }: {
-  playerType: PlayerType;
   caravan: CaravanType;
   highestSold: boolean;
 }) {
@@ -180,7 +176,6 @@ export function CaravanScore({
   const inRange = isInRange(total);
   return (
     <div className="caravan-col__score" aria-hidden="true">
-      <span className="caravan-col__icon">{SIDE_ICON[playerType]}</span>
       <span className="caravan-col__total">
         {inRange ? <span className={`caravan-col__dollar ${highestSold ? "is-highest" : ""}`}>$</span> : null}
         {total}

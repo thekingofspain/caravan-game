@@ -1,8 +1,13 @@
 import { memo, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { LogEntry } from "../game/types";
+import { CARAVAN_NAMES } from "../game/names";
 
-const RE_WHO = /(?:row (\d+) of )?(AI's|your) caravan (\d+)|\bYou\b|\bAI\b|AI's|\byour\b/g;
+const CARAVAN_NAME_ALT = Object.values(CARAVAN_NAMES).flat().join("|");
+const RE_WHO = new RegExp(
+  `(?:row (\\d+) of )?(AI's|your) caravan (${CARAVAN_NAME_ALT})|\\bYou\\b|\\bAI\\b|AI's|\\byour\\b`,
+  "g",
+);
 const RE_CARD = /\{([^{}]+)\}/g;
 const RE_STYLE = /\*\*([^*]+)\*\*|\*([^*]+)\*/g;
 
@@ -18,9 +23,9 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
   while (m !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     const key = `${keyBase}-${k++}`;
-    if (m[2] !== undefined) {
-      const side = m[2] === "AI's" ? "ai" : "human";
-      const ref = `@${m[3]}`;
+      if (m[2] !== undefined) {
+        const side = m[2] === "AI's" ? "ai" : "human";
+        const ref = m[3];
       nodes.push(
         <span
           key={key}

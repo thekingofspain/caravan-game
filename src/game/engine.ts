@@ -1,5 +1,6 @@
 import { buildDeck, jokerColor, SUIT_SYMBOL } from "./cards";
 import { canPlayValue, caravanTotal, isInRange, isJacked, isValidTarget } from "./rules";
+import { caravanName } from "./names";
 import { gameWinner, pairWinner } from "./scoring";
 import { LogEntry } from "./types";
 import {
@@ -147,7 +148,7 @@ function pendingDetail(state: GameState, refs: TargetRef[]): string[] {
   const detail: string[] = [];
   for (const [key, cards] of byCar) {
     const [p, ci] = key.split("-").map(Number) as [PlayerId, number];
-    detail.push(`${ownerLabel(p)} caravan ${ci + 1}: ${cards.map(fmt).join(", ")}`);
+    detail.push(`${ownerLabel(p)} caravan ${caravanName(p, ci)}: ${cards.map(fmt).join(", ")}`);
   }
   return detail;
 }
@@ -181,14 +182,14 @@ function describe(action: Action, state: GameState): string | null {
   if (action.type === "playValue") {
     const c = state.players[action.player].hand[action.handIndex];
     const row = state.players[action.player].caravans[action.caravan].cards.length + 1;
-    return `${actor} placed ${fmt(c)} on row ${row} of ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
+    return `${actor} placed ${fmt(c)} on row ${row} of ${ownerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
   }
 
   if (action.type === "playFace") {
     const c = state.players[action.player].hand[action.handIndex];
     const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     const row = action.target.cardIndex + 1;
-    const caravan = action.target.caravan + 1;
+    const caravan = caravanName(action.target.player, action.target.caravan);
     const owner = ownerLabel(action.target.player);
     let effect = "";
     if (c.rank === "J") effect = ` — marked ${fmt(tgt.card)} for removal`;
@@ -206,13 +207,13 @@ function describe(action: Action, state: GameState): string | null {
   }
 
   if (action.type === "disband") {
-    return `${actor} disbanded ${ownerLabel(action.player)} caravan ${action.caravan + 1}.`;
+    return `${actor} disbanded ${ownerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
   }
 
   if (action.type === "removeJacked") {
     const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     const row = action.target.cardIndex + 1;
-    const caravan = action.target.caravan + 1;
+    const caravan = caravanName(action.target.player, action.target.caravan);
     const owner = ownerLabel(action.target.player);
     const cardDesc = tgt ? fmt(tgt.card) : "card";
     return `${actor} removed ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;

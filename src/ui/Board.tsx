@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { PlayerType, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
+import { caravanName } from "../game/names";
 import { Caravan, CaravanScore } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
 import { CardView } from "./CardView";
@@ -157,7 +158,7 @@ export function Board({ store }: { store: GameStore }) {
   const onDisband = useCallback(
     (ci: number) => {
       if (!canDisbandAny) return;
-      if (!window.confirm(`Disband caravan ${ci + 1}? All its cards will be discarded.`)) return;
+      if (!window.confirm(`Disband ${caravanName(0, ci)}? All its cards will be discarded.`)) return;
       act({ type: "disband", player: 0, caravan: ci as 0 | 1 | 2 });
       setSel(null);
     },
@@ -217,12 +218,11 @@ export function Board({ store }: { store: GameStore }) {
               return (
                 <div className="caravan-col" key={ci}>
                   <div className={`caravan-col__header caravan-col__header--${side}`}>
-                    <CaravanScore
-                      playerType={side}
-                      caravan={aiPlayer.caravans[ci]}
-                      highestSold={pairWinnerPlayer === 1}
-                    />
-                    <span className="caravan-col__title">Caravan {ci + 1}</span>
+                      <CaravanScore
+                        caravan={aiPlayer.caravans[ci]}
+                        highestSold={pairWinnerPlayer === 1}
+                      />
+                      <span className="caravan-col__title">{caravanName(1, ci)}</span>
                   </div>
                   <Caravan
                     playerType="ai"
@@ -268,12 +268,11 @@ export function Board({ store }: { store: GameStore }) {
               return (
                 <div className="caravan-col" key={ci}>
                   <div className={`caravan-col__header caravan-col__header--${side}`}>
-                    <CaravanScore
-                      playerType={side}
-                      caravan={humanPlayer.caravans[ci]}
-                      highestSold={pairWinnerPlayer === 0}
-                    />
-                    <span className="caravan-col__title">Caravan {ci + 1}</span>
+                      <CaravanScore
+                        caravan={humanPlayer.caravans[ci]}
+                        highestSold={pairWinnerPlayer === 0}
+                      />
+                      <span className="caravan-col__title">{caravanName(0, ci)}</span>
                   </div>
                   <Caravan
                     playerType="human"
@@ -291,7 +290,7 @@ export function Board({ store }: { store: GameStore }) {
                         type="button"
                         className="caravan__disband"
                         onClick={() => onDisband(ci)}
-                        aria-label={`Disband your caravan ${ci + 1}`}
+                        aria-label={`Disband your ${caravanName(0, ci)}`}
                       >
                         Disband
                       </button>

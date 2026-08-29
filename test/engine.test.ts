@@ -142,7 +142,7 @@ describe("face card effects", () => {
     expect(next.players[1].caravans[0].cards.length).toBe(1); // only the 5 stays
     expect(next.players[1].caravans[2].cards.length).toBe(0); // other 10 removed
     const entry = next.log.find((e) => e.text.includes("Joker"))!;
-    expect(entry.detail).toEqual(["AI's caravan 1: {10♠}", "AI's caravan 3: {10♠}"]); // one bullet per affected caravan
+    expect(entry.detail).toEqual(["AI's caravan Dayglow: {10♠}", "AI's caravan The Hub: {10♠}"]); // one bullet per affected caravan
   });
 
   it("Joker on an Ace removes all cards of that suit (including the target)", () => {
@@ -153,7 +153,7 @@ describe("face card effects", () => {
     expect(next.players[1].caravans[0].cards.length).toBe(0); // ace (target) and 5 removed
     expect(next.players[1].caravans[1].cards.length).toBe(0); // other spade ace removed
     const entry = next.log.find((e) => e.text.includes("Joker"))!;
-    expect(entry.detail).toEqual(["AI's caravan 1: {A♠}, {5♠}", "AI's caravan 2: {A♠}"]);
+    expect(entry.detail).toEqual(["AI's caravan Dayglow: {A♠}, {5♠}", "AI's caravan New Reno: {A♠}"]);
   });
 });
 
