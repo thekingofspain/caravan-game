@@ -9,7 +9,6 @@ function Game({ config }: { config: GameConfig }) {
   const store = useGame(config);
   return (
     <div className="app">
-      <h1 className="app__title">Caravan</h1>
       <Board store={store} />
     </div>
   );

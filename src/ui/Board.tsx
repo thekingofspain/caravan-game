@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
 import { PlayerType, TargetRef } from "../game/types";
 import { pairWinner } from "../game/scoring";
@@ -193,131 +193,151 @@ export function Board({ store }: { store: GameStore }) {
     [sel, humanPlayer.hand, legalCaravans, targetSet, jackRemovableSet, pendingKeys, pendingRemove, canDiscard],
   );
 
-  return (
+  // permanently raise the human hand by ~50% of its own height
+  useLayoutEffect(() => {
+    const apply = () => {
+      const hand = document.querySelector<HTMLElement>(".hand-half--human");
+      if (!hand) return;
+      hand.style.removeProperty("--hand-lift");
+      const h = hand.getBoundingClientRect().height;
+      hand.style.setProperty("--hand-lift", `${-0.12 * h}px`);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
+
+   return (
     <div className="board">
       <div className="playfield">
-        <div className="play-controls">
-          <button type="button" className="btn" onClick={onNewGame}>
-            New game
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setActivityOpen((v) => !v)}
-            aria-expanded={activityOpen}
-          >
-            Activity
-          </button>
-        </div>
-
-        <div className="play-row play-row--ai">
-          <div className="caravans-row">
-            {[0, 1, 2].map((ci) => {
-              const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
-              const side: PlayerType = "ai";
-              return (
-                <div className="caravan-col" key={ci}>
-                  <div className={`caravan-col__header caravan-col__header--${side}`}>
-                      <CaravanScore
+        <div className="board-cols">
+          <div className="board-col board-col--caravans">
+            <div className="play-row play-row--ai">
+              <div className="caravans-row">
+                {[0, 1, 2].map((ci) => {
+                  const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
+                  const side: PlayerType = "ai";
+                  return (
+                    <div className="caravan-col" key={ci}>
+                      <div className={`caravan-col__header caravan-col__header--${side}`}>
+                          <CaravanScore
+                            caravan={aiPlayer.caravans[ci]}
+                            highestSold={pairWinnerPlayer === 1}
+                          />
+                          <span className="caravan-col__title">{caravanName(1, ci)}</span>
+                      </div>
+                      <Caravan
+                        playerType="ai"
                         caravan={aiPlayer.caravans[ci]}
+                        caravanIndex={ci}
+                        playerId={1}
                         highestSold={pairWinnerPlayer === 1}
+                        selection={aiSelection}
+                        onCardClick={onCardClick}
+                        onPlaceholderClick={noop}
+                        onAcknowledge={onAcknowledge}
                       />
-                      <span className="caravan-col__title">{caravanName(1, ci)}</span>
-                  </div>
-                  <Caravan
-                    playerType="ai"
-                    caravan={aiPlayer.caravans[ci]}
-                    caravanIndex={ci}
-                    playerId={1}
-                    highestSold={pairWinnerPlayer === 1}
-                    selection={aiSelection}
-                    onCardClick={onCardClick}
-                    onPlaceholderClick={noop}
-                    onAcknowledge={onAcknowledge}
-                  />
-                </div>
-              );
-            })}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="hand-deck">
-            <PlayerHand
-              playerType="ai"
-              player={aiPlayer}
-              selectedHandIndex={null}
-              selectableIndices={new Set()}
-              onCardClick={noop}
-            />
-            <button
-              type="button"
-              className="deck-pile deck-pile--ai"
-              onClick={() => setViewDeck(1)}
-              aria-label={`AI deck, ${aiPlayer.deck.length} cards remaining. View the deck.`}
-            >
-              <div className="card card--back card--deck2" />
-              <span className="deck-pile__count">{aiPlayer.deck.length}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="play-row play-row--human">
-          <div className="caravans-row">
-            {[0, 1, 2].map((ci) => {
-              const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
-              const side: PlayerType = "human";
-              return (
-                <div className="caravan-col" key={ci}>
-                  <div className={`caravan-col__header caravan-col__header--${side}`}>
-                      <CaravanScore
+            <div className="play-row play-row--human">
+              <div className="caravans-row">
+                {[0, 1, 2].map((ci) => {
+                  const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
+                  const side: PlayerType = "human";
+                  return (
+                    <div className="caravan-col" key={ci}>
+                      <div className={`caravan-col__header caravan-col__header--${side}`}>
+                          <CaravanScore
+                            caravan={humanPlayer.caravans[ci]}
+                            highestSold={pairWinnerPlayer === 0}
+                          />
+                          <span className="caravan-col__title">{caravanName(0, ci)}</span>
+                      </div>
+                      <Caravan
+                        playerType="human"
                         caravan={humanPlayer.caravans[ci]}
+                        caravanIndex={ci}
+                        playerId={0}
                         highestSold={pairWinnerPlayer === 0}
-                      />
-                      <span className="caravan-col__title">{caravanName(0, ci)}</span>
-                  </div>
-                  <Caravan
-                    playerType="human"
-                    caravan={humanPlayer.caravans[ci]}
-                    caravanIndex={ci}
-                    playerId={0}
-                    highestSold={pairWinnerPlayer === 0}
-                    selection={humanSelection}
-                    onCardClick={onCardClick}
-                    onPlaceholderClick={onPlaceholderClick}
-                    onAcknowledge={onAcknowledge}
-                  >
-                    {canDisbandAny ? (
-                      <button
-                        type="button"
-                        className="caravan__disband"
-                        onClick={() => onDisband(ci)}
-                        aria-label={`Disband your ${caravanName(0, ci)}`}
+                        selection={humanSelection}
+                        onCardClick={onCardClick}
+                        onPlaceholderClick={onPlaceholderClick}
+                        onAcknowledge={onAcknowledge}
                       >
-                        Disband
-                      </button>
-                    ) : null}
-                  </Caravan>
-                </div>
-              );
-            })}
+                        {canDisbandAny ? (
+                          <button
+                            type="button"
+                            className="caravan__disband"
+                            onClick={() => onDisband(ci)}
+                            aria-label={`Disband your ${caravanName(0, ci)}`}
+                          >
+                            Disband
+                          </button>
+                        ) : null}
+                      </Caravan>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <div className="hand-deck">
-            <PlayerHand
-              playerType="human"
-              player={humanPlayer}
-              selectedHandIndex={sel}
-              selectableIndices={selectableIndices}
-              onCardClick={onHandClick}
-            />
-            <button
-              type="button"
-              className="deck-pile"
-              onClick={onDeckClick}
-              aria-label={`Your deck, ${humanPlayer.deck.length} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`}
-            >
-              <div className="card card--back card--deck1" />
-              <span className="deck-pile__count">{humanPlayer.deck.length}</span>
-            </button>
+          <div className="board-col board-col--hands">
+            <div className="hand-half">
+              <button
+                type="button"
+                className="deck-pile deck-pile--ai"
+                onClick={() => setViewDeck(1)}
+                aria-label={`AI deck, ${aiPlayer.deck.length} cards remaining. View the deck.`}
+              >
+                <div className="card card--back card--deck2" />
+                <span className="deck-pile__count">{aiPlayer.deck.length}</span>
+              </button>
+              <PlayerHand
+                playerType="ai"
+                player={aiPlayer}
+                selectedHandIndex={null}
+                selectableIndices={new Set()}
+                onCardClick={noop}
+              />
+            </div>
+
+            <div className="play-controls">
+              <button type="button" className="btn" onClick={onNewGame}>
+                New game
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setActivityOpen((v) => !v)}
+                aria-expanded={activityOpen}
+              >
+                Activity
+              </button>
+            </div>
+
+            <div className="hand-half hand-half--human">
+              <PlayerHand
+                playerType="human"
+                player={humanPlayer}
+                selectedHandIndex={sel}
+                selectableIndices={selectableIndices}
+                onCardClick={onHandClick}
+              />
+              <button
+                type="button"
+                className="deck-pile"
+                onClick={onDeckClick}
+                aria-label={`Your deck, ${humanPlayer.deck.length} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`}
+              >
+                <div className="card card--back card--deck1" />
+                <span className="deck-pile__count">{humanPlayer.deck.length}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

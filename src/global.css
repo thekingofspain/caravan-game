@@ -10,6 +10,8 @@
   --c-suit-diamonds: #ffd166;
   --c-human: #8ab4f8;
   --c-ai: #ff8a8a;
+  --c-human-rgb: 138, 180, 248;
+  --c-ai-rgb: 255, 138, 138;
   --c-brown: #8b4513;
 
   --sp-1: 4px;
@@ -57,17 +59,6 @@ body {
   overflow: hidden;
 }
 
-.app__title {
-  color: var(--c-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
-  margin: 0;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
 .start {
   flex: 1;
   display: flex;
@@ -110,7 +101,8 @@ body {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .sidebar {
@@ -141,10 +133,36 @@ body {
   min-height: 0;
 }
 
+/* two-column board: caravans on the left, hands/cards on the right */
+.board-cols {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: var(--sp-4);
+  justify-content: center;
+}
+
+.board-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-col--caravans {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.board-col--hands {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
 .play-controls {
   display: flex;
   justify-content: flex-end;
   gap: var(--sp-2);
+  flex: 0 0 auto;
 }
 
 .play-row--ai {
@@ -155,18 +173,25 @@ body {
   align-items: flex-start;
 }
 
-/* each player's hand + deck grouped to the right of their caravans;
-   the deck is vertically centered to the hand, with extra margin between */
-.hand-deck {
+/* each player's hand + deck stacked vertically, deck on the outer edge and
+   hand next to the controls, so the column reads: ai deck / ai hand /
+   buttons / human hand / human deck */
+.hand-half {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: var(--sp-5);
-  flex: 0 0 auto;
+  justify-content: center;
+  gap: var(--sp-3);
+  flex: 1 1 0;
   min-height: 0;
 }
 
-.hand-deck .hand-zone {
+.hand-half--human {
+  transform: translateY(var(--hand-lift, 0px));
+  transition: transform 120ms ease;
+}
+
+.hand-half .hand-zone {
   flex: 0 0 auto;
   width: calc(var(--card-w) * 2.5);
   overflow: visible;
@@ -305,7 +330,7 @@ body {
   display: flex;
   gap: calc(var(--score-w) + 14px);
   min-height: 0;
-  padding-left: 84px;
+  padding-left: 63px;
   padding-right: 48px;
 }
 
@@ -314,9 +339,34 @@ body {
   flex-direction: column;
   gap: 0;
   flex: 1;
-  min-height: 50vh;
+  min-height: 42vh;
   position: relative;
   align-items: center;
+}
+
+/* rounded background that surrounds the score and the entire caravan area */
+.caravan-col::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: calc(-1 * var(--score-w) + 2px + 21px);
+  right: -21px;
+  z-index: 0;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.play-row--human .caravan-col::before {
+  border-color: rgba(var(--c-human-rgb), 0.28);
+  background: rgba(var(--c-human-rgb), 0.06);
+}
+
+.play-row--ai .caravan-col::before {
+  border-color: rgba(var(--c-ai-rgb), 0.28);
+  background: rgba(var(--c-ai-rgb), 0.06);
 }
 
 .caravan-col__header {
@@ -373,6 +423,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 .play-row--ai .caravan-col {
