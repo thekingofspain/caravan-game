@@ -1,20 +1,24 @@
-import { Action, Ai, GameState, Human, PlayerId } from "./types";
+import { Action, Ai, CARAVAN_COUNT, GameState, Human, PlayerId } from "./types";
 import { applyAction, legalActions } from "./engine";
 import { caravanTotal, isInRange } from "./rules";
 
 const OTHER: Record<PlayerId, PlayerId> = { [Human]: Ai, [Ai]: Human };
 
+const WIN_BONUS = 100;
+const BUST_PENALTY = 80;
+const TIE_PENALTY = 20;
+
 function caravanScore(myT: number, oppT: number): number {
   const myIn = isInRange(myT);
   const oppIn = isInRange(oppT);
   if (myIn && oppIn) {
-    if (myT > oppT) return 100 + (myT - 21);
-    if (myT < oppT) return -100 - (26 - oppT);
-    return -20; // tie: unresolved, slightly bad
+    if (myT > oppT) return WIN_BONUS + (myT - 21);
+    if (myT < oppT) return -WIN_BONUS - (26 - oppT);
+    return -TIE_PENALTY; // tie: unresolved, slightly bad
   }
-  if (myIn) return 100 + (myT - 21);
-  if (oppIn) return -100 - (26 - oppT);
-  if (myT > 26) return -80; // busted
+  if (myIn) return WIN_BONUS + (myT - 21);
+  if (oppIn) return -WIN_BONUS - (26 - oppT);
+  if (myT > 26) return -BUST_PENALTY; // busted
   if (oppT > 26) return 8; // opponent busted, good for me
   return (myT / 21) * 5; // both under: reward progress toward 21
 }
@@ -22,32 +26,24 @@ function caravanScore(myT: number, oppT: number): number {
 export function evaluateState(state: GameState, me: PlayerId): number {
   const other = OTHER[me];
   let score = 0;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < CARAVAN_COUNT; i++) {
     const myT = caravanTotal(state.players[me].caravans[i]);
     const oppT = caravanTotal(state.players[other].caravans[i]);
     score += caravanScore(myT, oppT);
   }
   return score;
 }
-
 export type Rng = () => number;
 
 export function chooseAction(state: GameState, me: PlayerId, rng: Rng = Math.random): Action {
-  // While cards are pending removal (awaiting acknowledgment), the only legal
-  // move is to acknowledge it.
-  if (state.pending.length > 0) return { type: "acknowledge", player: state.current };
-
   const acts = legalActions(state);
   if (acts.length === 0) throw new Error("chooseAction: no legal actions");
   let bestScore = -Infinity;
   let best: Action[] = [];
   for (const a of acts) {
-    let next = applyAction(state, a);
-    if (next.pending.length > 0) {
-      next = applyAction(next, { type: "acknowledge", player: next.current });
-    }
+    const next = applyAction(state, a);
     let sc = evaluateState(next, me);
-    if (a.type === "discard") sc -= 0.5;
+    if (a.type === "discardCard") sc -= 0.5;
     if (sc > bestScore) {
       bestScore = sc;
       best = [a];

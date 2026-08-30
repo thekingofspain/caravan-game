@@ -60,8 +60,8 @@ function CaravanImpl({
     const classes = [cardClassName(pc.card)];
     if (isTarget) classes.push("is-target");
     if (isJackedCard) classes.push("is-jacked");
-    if (selection.pendingSet?.has(key)) classes.push("is-pending");
-    if (selection.pendingRemoveSet?.has(key)) classes.push("is-pending-remove");
+    if (selection.greyedSet?.has(key)) classes.push("is-pending");
+    if (selection.removingSet?.has(key)) classes.push("is-pending-remove");
     return classes.join(" ");
   }
 
@@ -78,7 +78,7 @@ function CaravanImpl({
       {children}
       {caravan.cards.map((pc, k) => {
         const jackedCard = isJacked(pc);
-        const removable = selection.jackRemovableSet.has(targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k }));
+        const removable = selection.pendingRemovalSet.has(targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k }));
         const lastKingIndex = pc.attachments.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
         const jackIdx = pc.attachments.findIndex((c) => c.rank === "J");
         const kingBadge = pc.kingCount > 0 ? `×${Math.pow(2, pc.kingCount)}` : "";

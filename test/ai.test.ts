@@ -6,9 +6,9 @@ import { caravanTotal } from "../src/game/rules";
 
 function sameAction(a: Action, b: Action): boolean {
   if (a.type !== b.type) return false;
-  if (a.type === "playValue" && b.type === "playValue")
+  if (a.type === "playValueCard" && b.type === "playValueCard")
     return a.player === b.player && a.caravan === b.caravan && a.handIndex === b.handIndex;
-  if (a.type === "playFace" && b.type === "playFace")
+  if (a.type === "playFaceCard" && b.type === "playFaceCard")
     return (
       a.player === b.player &&
       a.handIndex === b.handIndex &&
@@ -16,17 +16,9 @@ function sameAction(a: Action, b: Action): boolean {
       a.target.caravan === b.target.caravan &&
       a.target.cardIndex === b.target.cardIndex
     );
-  if (a.type === "discard" && b.type === "discard")
+  if (a.type === "discardCard" && b.type === "discardCard")
     return a.player === b.player && a.handIndex === b.handIndex;
-  if (a.type === "disband" && b.type === "disband") return a.player === b.player && a.caravan === b.caravan;
-  if (a.type === "acknowledge" && b.type === "acknowledge") return a.player === b.player;
-  if (a.type === "removeJacked" && b.type === "removeJacked")
-    return (
-      a.player === b.player &&
-      a.target.player === b.target.player &&
-      a.target.caravan === b.target.caravan &&
-      a.target.cardIndex === b.target.cardIndex
-    );
+  if (a.type === "dismissCaravan" && b.type === "dismissCaravan") return a.player === b.player && a.caravan === b.caravan;
   return false;
 }
 
@@ -66,7 +58,7 @@ describe("AI", () => {
         s.players.map((p) => [p.hand.map((c) => c.id), p.caravans.map((c) => c.cards.map((x) => x.card.id))]),
       );
       if (seen.has(key)) {
-        const disband = legal.find((l) => l.type === "disband");
+        const disband = legal.find((l) => l.type === "dismissCaravan");
         if (disband) s = applyAction(s, disband);
       } else {
         seen.add(key);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/game/cards";
 import { Caravan, PlacedCard } from "../src/game/types";
-import { caravanTotal, canPlayValue, placedValue } from "../src/game/rules";
+import { caravanTotal, canPlayValueCard, placedValue } from "../src/game/rules";
 
 function placed(rank: any, suit: any = "spades", kingCount = 0): PlacedCard {
   return { card: makeCard(suit, rank), kingCount, attachments: [] };
@@ -29,27 +29,27 @@ describe("caravanTotal / placedValue", () => {
   });
 });
 
-describe("canPlayValue", () => {
+describe("canPlayValueCard", () => {
   it("allows any value card on an empty caravan", () => {
-    expect(canPlayValue(makeCard("spades", "5"), caravan([]))).toBe(true);
+    expect(canPlayValueCard(makeCard("spades", "5"), caravan([]))).toBe(true);
   });
   it("rejects equal rank played in sequence", () => {
-    expect(canPlayValue(makeCard("hearts", "5"), caravan([placed("5")]))).toBe(false);
+    expect(canPlayValueCard(makeCard("hearts", "5"), caravan([placed("5")]))).toBe(false);
   });
   it("ascending direction requires increasing value", () => {
     const c = caravan([placed("3"), placed("5")]);
     expect(c.direction).toBe("asc");
-    expect(canPlayValue(makeCard("clubs", "7"), c)).toBe(true);
-    expect(canPlayValue(makeCard("clubs", "4"), c)).toBe(false);
+    expect(canPlayValueCard(makeCard("clubs", "7"), c)).toBe(true);
+    expect(canPlayValueCard(makeCard("clubs", "4"), c)).toBe(false);
   });
   it("matching previous suit is legal regardless of direction", () => {
     const c = caravan([placed("3"), placed("5")]);
-    expect(canPlayValue(makeCard("spades", "2"), c)).toBe(true);
+    expect(canPlayValueCard(makeCard("spades", "2"), c)).toBe(true);
   });
   it("descending direction requires decreasing value", () => {
     const c = caravan([placed("9"), placed("7")]);
     expect(c.direction).toBe("desc");
-    expect(canPlayValue(makeCard("clubs", "5"), c)).toBe(true);
-    expect(canPlayValue(makeCard("clubs", "8"), c)).toBe(false);
+    expect(canPlayValueCard(makeCard("clubs", "5"), c)).toBe(true);
+    expect(canPlayValueCard(makeCard("clubs", "8"), c)).toBe(false);
   });
 });

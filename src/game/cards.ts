@@ -1,6 +1,9 @@
 import { Card, Rank, Suit } from "./types";
 
 let idCounter = 0;
+export function resetCardIds(): void {
+  idCounter = 0;
+}
 function nextId(suit: Suit | "joker", rank: Rank): string {
   idCounter += 1;
   return `${suit}-${rank}-${idCounter}`;
@@ -50,7 +53,7 @@ const RANK_CLASS: Record<Rank, string> = {
   "7": "7",
   "8": "8",
   "9": "9",
-  "10": "10",
+  "10": "ten",
   J: "jack",
   Q: "queen",
   K: "king",

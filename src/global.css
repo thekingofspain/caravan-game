@@ -1035,7 +1035,7 @@ body {
 .card--spades.card--7{background-image:url("/cards/7S.svg")}
 .card--spades.card--8{background-image:url("/cards/8S.svg")}
 .card--spades.card--9{background-image:url("/cards/9S.svg")}
-.card--spades.card--10{background-image:url("/cards/TS.svg")}
+.card--spades.card--ten{background-image:url("/cards/TS.svg")}
 .card--spades.card--jack{background-image:url("/cards/JS.svg")}
 .card--spades.card--queen{background-image:url("/cards/QS.svg")}
 .card--spades.card--king{background-image:url("/cards/KS.svg")}
@@ -1048,7 +1048,7 @@ body {
 .card--hearts.card--7{background-image:url("/cards/7H.svg")}
 .card--hearts.card--8{background-image:url("/cards/8H.svg")}
 .card--hearts.card--9{background-image:url("/cards/9H.svg")}
-.card--hearts.card--10{background-image:url("/cards/TH.svg")}
+.card--hearts.card--ten{background-image:url("/cards/TH.svg")}
 .card--hearts.card--jack{background-image:url("/cards/JH.svg")}
 .card--hearts.card--queen{background-image:url("/cards/QH.svg")}
 .card--hearts.card--king{background-image:url("/cards/KH.svg")}
@@ -1061,7 +1061,7 @@ body {
 .card--diamonds.card--7{background-image:url("/cards/7D.svg")}
 .card--diamonds.card--8{background-image:url("/cards/8D.svg")}
 .card--diamonds.card--9{background-image:url("/cards/9D.svg")}
-.card--diamonds.card--10{background-image:url("/cards/TD.svg")}
+.card--diamonds.card--ten{background-image:url("/cards/TD.svg")}
 .card--diamonds.card--jack{background-image:url("/cards/JD.svg")}
 .card--diamonds.card--queen{background-image:url("/cards/QD.svg")}
 .card--diamonds.card--king{background-image:url("/cards/KD.svg")}
@@ -1074,7 +1074,7 @@ body {
 .card--clubs.card--7{background-image:url("/cards/7C.svg")}
 .card--clubs.card--8{background-image:url("/cards/8C.svg")}
 .card--clubs.card--9{background-image:url("/cards/9C.svg")}
-.card--clubs.card--10{background-image:url("/cards/TC.svg")}
+.card--clubs.card--ten{background-image:url("/cards/TC.svg")}
 .card--clubs.card--jack{background-image:url("/cards/JC.svg")}
 .card--clubs.card--queen{background-image:url("/cards/QC.svg")}
 .card--clubs.card--king{background-image:url("/cards/KC.svg")}

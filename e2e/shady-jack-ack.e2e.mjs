@@ -1,0 +1,142 @@
+import { chromium } from "playwright";
+import assert from "node:assert/strict";
+let id=3000;
+function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
+const Human=0, Ai=1;
+function caravanOf(cards){
+  let direction=null, suit=null;
+  if(cards.length>=2){
+    const a = cards[0].card.rank==="A"?1:Number(cards[0].card.rank);
+    const b = cards[1].card.rank==="A"?1:Number(cards[1].card.rank);
+    direction = b>a ? "asc" : "desc";
+  }
+  if(cards.length>=1) suit=cards[0].card.suit;
+  return { cards, direction, suit };
+}
+function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans, sales:0 }; }
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport:{width:1280,height:900} });
+const errors=[];
+page.on("console", m=> m.type()==="error" && errors.push(m.text()));
+page.on("pageerror", e=> errors.push("PAGEERROR: "+e.message));
+
+await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"networkidle" });
+await page.waitForSelector(".board");
+const startBtn = page.locator(".start .btn, button:has-text('Start')");
+if(await startBtn.count()>0) await startBtn.first().click({force:true});
+await page.waitForSelector(".play-row--human .caravan--human", {timeout:5000});
+await page.waitForTimeout(600);
+
+// Program the exact board before turn 15 (human Jack on 2♥)
+// Based on log: Human 2♣ Boneyard, AI 10♥ Dayglow, Human 3♣ Redding, AI 7♦ The Hub, Human 5♣ Shady, AI 6♥ New Reno, Human 6♦ Shady, AI K♦ on 10♥ Dayglow, Human 7♥ Shady, AI 6♠ Dayglow, Human 2♥ Shady, AI 9♥ The Hub, Human 7♦ Shady, AI 9♣ New Reno — next is Human J♦ on 2♥ Shady
+const humanBoneyard = caravanOf([
+  {card: makeCard("clubs","2"), kingCount:0, attachments:[]},
+]);
+const humanRedding = caravanOf([
+  {card: makeCard("clubs","3"), kingCount:0, attachments:[]},
+]);
+const humanShady = caravanOf([
+  {card: makeCard("clubs","5"), kingCount:0, attachments:[]},
+  {card: makeCard("diamonds","6"), kingCount:0, attachments:[]},
+  {card: makeCard("hearts","7"), kingCount:0, attachments:[]},
+  {card: makeCard("hearts","2"), kingCount:0, attachments:[]},
+  {card: makeCard("diamonds","7"), kingCount:0, attachments:[]},
+]);
+// AI Dayglow: 10♥ + K♦ (×2) , 6♠ , 5♦  — King on 10
+const aiDayglow = caravanOf([
+  {card: makeCard("hearts","10"), kingCount:1, attachments:[makeCard("diamonds","K")]},
+  {card: makeCard("spades","6"), kingCount:0, attachments:[]},
+  {card: makeCard("diamonds","5"), kingCount:0, attachments:[]},
+]);
+const aiNewReno = caravanOf([
+  {card: makeCard("hearts","6"), kingCount:0, attachments:[]},
+  {card: makeCard("clubs","9"), kingCount:0, attachments:[]},
+]);
+const aiHub = caravanOf([
+  {card: makeCard("diamonds","7"), kingCount:0, attachments:[]},
+  {card: makeCard("hearts","9"), kingCount:0, attachments:[]},
+]);
+
+const humanCaravans = [humanBoneyard, humanRedding, humanShady];
+const aiCaravans = [aiDayglow, aiNewReno, aiHub];
+
+const humanHand = [makeCard("diamonds","J"), makeCard("spades","4"), makeCard("hearts","4")];
+const aiHand = [makeCard("spades","4"), makeCard("hearts","5")];
+
+let programmedState = {
+  players: [mkPlayer(humanCaravans, humanHand, []), mkPlayer(aiCaravans, aiHand, [])],
+  current: Human, phase:"play", winner:null, log:[], started:true,
+};
+
+console.log("Programming Shady state before Human J♦ on 2♥ (turn 15)...");
+console.log(" Human Shady:", programmedState.players[Human].caravans[2].cards.map(c=> c.card.rank+c.card.suit[0]).join(","));
+console.log(" Human hand:", programmedState.players[Human].hand.map(c=> c.rank+c.suit[0]).join(","));
+console.log(" AI Dayglow:", programmedState.players[Ai].caravans[0].cards.map(c=> `${c.card.rank}${c.card.suit[0]}${c.kingCount?`×${Math.pow(2,c.kingCount)}`:""}`).join(","));
+
+await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
+await page.waitForTimeout(500);
+
+let before = await page.evaluate(()=>{
+  const s = window.__caravanStore.state;
+  const shady = s.players[0].caravans[2];
+  return {
+    shady: shady.cards.map((c,i)=> ({idx:i, rank:c.card.rank, suit:c.card.suit, kc:c.kingCount})),
+    shadyCount: shady.cards.length,
+    current: s.current,
+    pending: document.querySelectorAll(".card.is-pending").length,
+    html: document.querySelectorAll(".play-row--human .caravan--human")[2]?.innerHTML.slice(0,600),
+  };
+});
+console.log(" before:", JSON.stringify(before, null,2));
+assert.equal(before.shadyCount, 5, "Shady should have 5 cards before Jack (5♣,6♦,7♥,2♥,7♦)");
+assert.equal(before.shady[3].rank, "2", "index3 should be 2♥");
+assert.equal(before.current, Human, "should be Human turn before Jack");
+
+console.log("Human plays J♦ on 2♥ on Shady Sands (index3) — marked 2♥ for removal");
+await page.evaluate(()=>{
+  const s = window.__caravanStore.state;
+  const idx = s.players[0].hand.findIndex(c=> c.rank==="J" && c.suit==="diamonds");
+  window.__act({ type:"playFaceCard", player:0, target:{player:0, caravan:2, cardIndex:3}, handIndex: idx });
+});
+await page.waitForTimeout(600);
+
+let after = await page.evaluate(()=>{
+  const s = window.__caravanStore.state;
+  const t = window.__caravanStore.transition;
+  const shady = s.players[0].caravans[2];
+  return {
+    shady: shady.cards.map(c=> c.card.rank+c.card.suit[0]),
+    shadyCount: shady.cards.length,
+    current: s.current,
+    transition: t,
+    pending: document.querySelectorAll(".card.is-pending, .card.is-pending-remove").length,
+    ackBtn: document.querySelectorAll(".ack-btn, .jack-remove").length,
+    selectable: document.querySelectorAll(".hand__slot.is-selectable").length,
+  };
+});
+console.log(" after:", JSON.stringify(after, null,2));
+
+// Validate: since human made the move, there is not acknowledgement, turn should have ended and cards removed
+assert.equal(after.pending, 0, "no grey pending after human Jack — should be immediately removed");
+assert.equal(after.shadyCount, 4, "Shady should have 4 cards after removing 2♥ (was 5, now 4)");
+assert.ok(!after.shady.includes("2h"), "2♥ should be gone");
+assert.equal(after.shady.join(","), "5c,6d,7h,7d", "Shady should be 5♣,6♦,7♥,7♦ after Jack");
+assert.equal(after.current, Ai, "game should jump to AI turn as soon as J is placed by human (current 1)");
+assert.equal(after.transition, null, "no pending transition for human Jack (confirmer is Ai, immediate)");
+assert.equal(after.shady.length, 4);
+
+// Human should not be blocked, but it's AI turn so human selectable is 0, AI will play
+let humanSelAfter = await page.locator(".hand__slot.is-selectable").count();
+console.log(` human selectable after Jack (now AI turn): ${humanSelAfter} (expect 0)`);
+assert.equal(after.current, Ai, "still AI turn");
+
+// Let AI play one move to ensure human unblocked after
+await page.waitForTimeout(1000);
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".hand__slot.is-selectable").length }));
+console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel}`);
+
+assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);
+console.log("\n=== SHADY JACK TEST PASSED ===");
+console.log("Human J♦ on 2♥ removed immediately, no ack, turn jumped to AI as spec");
+await browser.close();

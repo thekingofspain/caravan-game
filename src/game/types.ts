@@ -30,6 +30,9 @@ export interface PlayerState {
 export const Human = 0 as const;
 export const Ai = 1 as const;
 export type PlayerId = typeof Human | typeof Ai;
+export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
+export const CARAVAN_COUNT = 3 as const;
+export type CaravanIndex = 0 | 1 | 2;
 export interface LogEntry {
   id: number;
   text: string;
@@ -44,24 +47,25 @@ export interface GameState {
   winner: PlayerId | null;
   log: LogEntry[];
   started: boolean;
-  /** Cards slated for removal by the last move (e.g. a Joker / Jack). They stay
-   *  on the board greyed until the affected player acknowledges (removes) them. */
-  pending: TargetRef[];
 }
 
 export interface TargetRef {
   player: PlayerId;
-  caravan: 0 | 1 | 2;
+  caravan: CaravanIndex;
   cardIndex: number;
 }
 
 export type Action =
-  | { type: "playValue"; player: PlayerId; caravan: 0 | 1 | 2; handIndex: number }
-  | { type: "playFace"; player: PlayerId; target: TargetRef; handIndex: number }
-  | { type: "discard"; player: PlayerId; handIndex: number }
-  | { type: "disband"; player: PlayerId; caravan: 0 | 1 | 2 }
-  | { type: "removeJacked"; player: PlayerId; target: TargetRef }
-  | { type: "acknowledge"; player: PlayerId };
+  | { type: "playValueCard"; player: PlayerId; caravan: CaravanIndex; handIndex: number }
+  | { type: "playFaceCard"; player: PlayerId; target: TargetRef; handIndex: number }
+  | { type: "discardCard"; player: PlayerId; handIndex: number }
+  | { type: "dismissCaravan"; player: PlayerId; caravan: CaravanIndex };
+export class IllegalActionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IllegalActionError";
+  }
+}
 
 export function isValueCard(card: Card): boolean {
   return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "JOKER";
@@ -87,8 +91,8 @@ export interface SelectionState {
   selectedCard: Card | null;
   legalCaravans: number[];
   targetSet: Set<string>;
-  jackRemovableSet: Set<string>;
-  pendingSet: Set<string>;
-  pendingRemoveSet: Set<string>;
+  pendingRemovalSet: Set<string>;
+  greyedSet: Set<string>;
+  removingSet: Set<string>;
   canDiscard: boolean;
 }

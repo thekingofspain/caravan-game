@@ -1,15 +1,19 @@
-import { buildDeck, jokerColor, SUIT_SYMBOL } from "./cards";
-import { canPlayValue, caravanTotal, isInRange, isJacked, isValidTarget } from "./rules";
+import { buildDeck, jokerColor, SUIT_SYMBOL, resetCardIds } from "./cards";
+import { canPlayValueCard, caravanTotal, isInRange, isJacked, isValidTarget } from "./rules";
 import { caravanName } from "./names";
 import { gameWinner, pairWinner } from "./scoring";
-import { LogEntry } from "./types";
 import {
   Action,
   Ai,
   Card,
   Caravan,
+  CaravanIndex,
+  CARAVAN_COUNT,
+  PLAYERS,
   GameState,
   Human,
+  IllegalActionError,
+  LogEntry,
   PlayerId,
   PlayerState,
   Suit,
@@ -62,6 +66,9 @@ function makePlayer(deck: Card[]): PlayerState {
 }
 
 export function setupGame(opts: SetupOptions): GameState {
+  // Reset per-game counters for repeatable IDs (F.I.R.S.T. Repeatable)
+  logId = 0;
+  resetCardIds();
   const rng = mulberry32(opts.seed ?? 1);
   const human = shuffle(buildDeck(), rng).slice(0, 30);
   const ai = shuffle(buildDeck(), rng).slice(0, 30);
@@ -72,7 +79,6 @@ export function setupGame(opts: SetupOptions): GameState {
     winner: null,
     log: [],
     started: false,
-    pending: [],
   };
 }
 
@@ -109,7 +115,7 @@ export function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] 
   const suit = tgt.card.suit;
   const value = baseValue(tgt.card);
   const out: TargetRef[] = [];
-  for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
+  for (const p of PLAYERS) {
     const car = state.players[p].caravans;
     for (let ci = 0; ci < car.length; ci++) {
       car[ci].cards.forEach((pc, cidx) => {
@@ -120,12 +126,10 @@ export function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] 
   }
   return out;
 }
-
-// Remove every card currently in `pending` (grouped per caravan, in descending
-// index order so earlier splices don't shift later ones) and clear the list.
-function commitPending(state: GameState): void {
+// Remove given targets (grouped per caravan, descending order) — used for Joker/Jack immediate commit.
+function removeTargets(state: GameState, refs: TargetRef[]): void {
   const groups = new Map<string, TargetRef[]>();
-  for (const r of state.pending) {
+  for (const r of refs) {
     const k = `${r.player}-${r.caravan}`;
     if (!groups.has(k)) groups.set(k, []);
     groups.get(k)!.push(r);
@@ -134,11 +138,10 @@ function commitPending(state: GameState): void {
     refs.sort((a, b) => b.cardIndex - a.cardIndex);
     for (const r of refs) removeValueCard(state, r);
   }
-  state.pending = [];
 }
 
-// Build the per-caravan bullet lines describing the pending removals.
-function pendingDetail(state: GameState, refs: TargetRef[]): string[] {
+// Build per-caravan bullet lines describing removals (for Joker log).
+function removalDetail(state: GameState, refs: TargetRef[]): string[] {
   const byCar = new Map<string, Card[]>();
   for (const r of refs) {
     const pc = state.players[r.player].caravans[r.caravan].cards[r.cardIndex];
@@ -150,21 +153,20 @@ function pendingDetail(state: GameState, refs: TargetRef[]): string[] {
   const detail: string[] = [];
   for (const [key, cards] of byCar) {
     const [p, ci] = key.split("-").map(Number) as [PlayerId, number];
-    detail.push(`${ownerLabel(p)} caravan ${caravanName(p, ci)}: ${cards.map(fmt).join(", ")}`);
+    detail.push(`${formatOwnerLabel(p)} caravan ${caravanName(p, ci)}: ${cards.map(formatCardLog).join(", ")}`);
   }
   return detail;
 }
-
-function fmt(card: Card): string {
+function formatCardLog(card: Card): string {
   if (card.rank === "JOKER") return `{${jokerColor(card) === "red" ? "Red" : "Black"} Joker}`;
   return `{${card.rank}${SUIT_SYMBOL[card.suit as Suit]}}`;
 }
 
-function ownerLabel(p: PlayerId): string {
+function formatOwnerLabel(p: PlayerId): string {
   return p === Human ? "your" : "AI's";
 }
 
-function caravanAnalysis(state: GameState): string {
+function formatFinalScore(state: GameState): string {
   const side = (p: PlayerId) =>
     state.players[p].caravans
       .map((c, i) => {
@@ -181,62 +183,111 @@ function describe(action: Action, state: GameState): string | null {
   const names = ["You", "AI"] as const;
   const actor = names[action.player];
 
-  if (action.type === "playValue") {
+  if (action.type === "playValueCard") {
     const c = state.players[action.player].hand[action.handIndex];
     const row = state.players[action.player].caravans[action.caravan].cards.length + 1;
-    return `${actor} placed ${fmt(c)} on row ${row} of ${ownerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
+    return `${actor} placed ${formatCardLog(c)} on row ${row} of ${formatOwnerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
   }
 
-  if (action.type === "playFace") {
+  if (action.type === "playFaceCard") {
     const c = state.players[action.player].hand[action.handIndex];
     const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
     const row = action.target.cardIndex + 1;
     const caravan = caravanName(action.target.player, action.target.caravan);
-    const owner = ownerLabel(action.target.player);
+    const owner = formatOwnerLabel(action.target.player);
     let effect = "";
-    if (c.rank === "J") effect = ` — marked ${fmt(tgt.card)} for removal`;
+    if (c.rank === "J") effect = ` — marked ${formatCardLog(tgt.card)} for removal`;
     else if (c.rank === "Q") effect = ` — reversed direction, set suit to {${SUIT_SYMBOL[c.suit as Suit]}}`;
     else if (isJoker(c)) {
       if (tgt.card.rank === "A") effect = ` — removed all {${SUIT_SYMBOL[tgt.card.suit as Suit]}} cards`;
       else effect = ` — removed all ${baseValue(tgt.card)}s`;
     }
-    return `${actor} placed ${fmt(c)} on ${fmt(tgt.card)} on row ${row} of ${owner} caravan ${caravan}${effect}.`;
+    return `${actor} placed ${formatCardLog(c)} on ${formatCardLog(tgt.card)} on row ${row} of ${owner} caravan ${caravan}${effect}.`;
   }
 
-  if (action.type === "discard") {
+  if (action.type === "discardCard") {
     const c = state.players[action.player].hand[action.handIndex];
-    return `${actor} discarded ${fmt(c)}.`;
+    return `${actor} discarded ${formatCardLog(c)}.`;
   }
 
-  if (action.type === "disband") {
-    return `${actor} disbanded ${ownerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
-  }
-
-  if (action.type === "removeJacked") {
-    const tgt = state.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
-    const row = action.target.cardIndex + 1;
-    const caravan = caravanName(action.target.player, action.target.caravan);
-    const owner = ownerLabel(action.target.player);
-    const cardDesc = tgt ? fmt(tgt.card) : "card";
-    return `${actor} removed ${cardDesc} on row ${row} of ${owner} caravan ${caravan}.`;
-  }
-
-  if (action.type === "acknowledge") {
-    // The human's acknowledgment of the opponent's last move is redundant with
-    // the move already being logged, so don't emit a log entry for it.
-    if (action.player === Human) return null;
-    return `${actor} acknowledged the opponent's last move.`;
+  if (action.type === "dismissCaravan") {
+    return `${actor} dismissed ${formatOwnerLabel(action.player)} caravan ${caravanName(action.player, action.caravan)}.`;
   }
 
   return `${actor} acted.`;
 }
 
+function handlePlayValueCard(next: GameState, action: Extract<Action, { type: "playValueCard" }>): void {
+  const player = next.players[action.player];
+  const car = player.caravans[action.caravan];
+  const card = player.hand[action.handIndex];
+  if (!card || !isValueCard(card)) throw new IllegalActionError("playValueCard: not a value card");
+  if (!canPlayValueCard(card, car)) throw new IllegalActionError("playValueCard: illegal placement");
+  player.hand.splice(action.handIndex, 1);
+  car.cards.push({ card, kingCount: 0, attachments: [] });
+  if (car.cards.length === 1) car.suit = card.suit as Caravan["suit"];
+  if (car.cards.length === 2) {
+    const a = baseValue(car.cards[0].card);
+    const b = baseValue(car.cards[1].card);
+    car.direction = b > a ? "asc" : "desc";
+  }
+  draw(player);
+}
+
+function handlePlayFaceCard(
+  next: GameState,
+  action: Extract<Action, { type: "playFaceCard" }>,
+): string[] | null {
+  const player = next.players[action.player];
+  const card = player.hand[action.handIndex];
+  if (!card || (!isFaceCard(card) && !isJoker(card))) throw new IllegalActionError("playFaceCard: not a face card");
+  if (!isValidTarget(next, action.target)) throw new IllegalActionError("playFaceCard: invalid target");
+  const tgtPre = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
+  if (card.rank === "J" && tgtPre && isJacked(tgtPre)) throw new IllegalActionError("playFaceCard: Jack on jacked card");
+  if (card.rank === "K" && tgtPre && isJacked(tgtPre)) throw new IllegalActionError("playFaceCard: King on jacked card");
+  player.hand.splice(action.handIndex, 1);
+  const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
+  let jokerDetail: string[] | null = null;
+  if (card.rank === "J") {
+    if (tgt) tgt.attachments.push(card);
+    removeTargets(next, [action.target]);
+  } else if (card.rank === "Q") {
+    if (tgt) tgt.attachments.push(card);
+    const car = next.players[action.target.player].caravans[action.target.caravan];
+    if (car.direction !== null) car.direction = car.direction === "asc" ? "desc" : "asc";
+    car.suit = card.suit as Caravan["suit"];
+  } else if (card.rank === "K") {
+    if (tgt) tgt.kingCount += 1;
+    if (tgt) tgt.attachments.push(card);
+  } else if (isJoker(card)) {
+    if (tgt) tgt.attachments.push(card);
+    const refs = jokerRemovals(next, action.target);
+    jokerDetail = removalDetail(next, refs);
+    removeTargets(next, refs);
+  }
+  draw(player);
+  return jokerDetail;
+}
+
+function handleDiscardCard(next: GameState, action: Extract<Action, { type: "discardCard" }>): void {
+  const player = next.players[action.player];
+  if (player.caravans.some((c) => c.cards.length === 0)) throw new IllegalActionError("discardCard: cannot discard before all caravans started");
+  if (!player.hand[action.handIndex]) throw new IllegalActionError("discardCard: invalid hand index");
+  player.hand.splice(action.handIndex, 1);
+  draw(player);
+}
+
+function handleDismissCaravan(next: GameState, action: Extract<Action, { type: "dismissCaravan" }>): void {
+  const player = next.players[action.player];
+  if (player.caravans.some((c) => c.cards.length === 0)) throw new IllegalActionError("dismissCaravan: cannot disband before all caravans started");
+  player.caravans[action.caravan] = emptyCaravan();
+}
+
 export function applyAction(state: GameState, action: Action): GameState {
-  if (state.phase === "over") return state;
-  if (action.player !== state.current) return state;
+  if (state.phase === "over") throw new IllegalActionError("game over");
+  if (action.player !== state.current) throw new IllegalActionError("not current player");
 
   const next: GameState = structuredClone(state);
-  const player = next.players[action.player];
   let jokerDetail: string[] | null = null;
 
   if (
@@ -246,68 +297,14 @@ export function applyAction(state: GameState, action: Action): GameState {
     next.started = true;
   }
 
-  if (action.type === "acknowledge") {
-    commitPending(next);
-  } else if (action.type === "playValue") {
-    const car = player.caravans[action.caravan];
-    const card = player.hand[action.handIndex];
-    if (!card || !isValueCard(card)) return state;
-    if (!canPlayValue(card, car)) return state;
-    player.hand.splice(action.handIndex, 1);
-    car.cards.push({ card, kingCount: 0, attachments: [] });
-    if (car.cards.length === 1) car.suit = card.suit as Caravan["suit"];
-    if (car.cards.length === 2) {
-      const a = baseValue(car.cards[0].card);
-      const b = baseValue(car.cards[1].card);
-      car.direction = b > a ? "asc" : "desc";
-    }
-    draw(player);
-  } else if (action.type === "playFace") {
-    const card = player.hand[action.handIndex];
-    if (!card || (!isFaceCard(card) && !isJoker(card))) return state;
-    if (!isValidTarget(next, action.target)) return state;
-    const tgtPre = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
-    // Jack cannot be played on an already-jacked card
-    if (card.rank === "J" && tgtPre && isJacked(tgtPre)) return state;
-    // King cannot be played on a jacked card; stacking Kings (even to bust) is legal
-    if (card.rank === "K" && tgtPre && isJacked(tgtPre)) return state;
-    player.hand.splice(action.handIndex, 1);
-    const tgt = next.players[action.target.player].caravans[action.target.caravan].cards[action.target.cardIndex];
-    if (card.rank === "J") {
-      if (tgt) tgt.attachments.push(card);
-      next.pending = [action.target];
-    } else if (card.rank === "Q") {
-      if (tgt) tgt.attachments.push(card);
-      const car = next.players[action.target.player].caravans[action.target.caravan];
-      if (car.direction !== null) car.direction = car.direction === "asc" ? "desc" : "asc";
-      car.suit = card.suit as Caravan["suit"];
-    } else if (card.rank === "K") {
-      if (tgt) tgt.kingCount += 1;
-      if (tgt) tgt.attachments.push(card);
-    } else if (isJoker(card)) {
-      if (tgt) tgt.attachments.push(card);
-      next.pending = jokerRemovals(next, action.target);
-      jokerDetail = pendingDetail(next, next.pending);
-    }
-    // A human move resolves its removals immediately; only an AI move leaves
-    // the affected cards pending so the human can acknowledge them first.
-    if (action.player === Human && next.pending.length > 0) commitPending(next);
-    draw(player);
-  } else if (action.type === "discard") {
-    if (player.caravans.some((c) => c.cards.length === 0)) return state;
-    if (!player.hand[action.handIndex]) return state;
-    player.hand.splice(action.handIndex, 1);
-    draw(player);
-  } else if (action.type === "disband") {
-    if (player.caravans.some((c) => c.cards.length === 0)) return state;
-    player.caravans[action.caravan] = emptyCaravan();
-  } else if (action.type === "removeJacked") {
-    if (!isValidTarget(next, action.target)) return state;
-    const car = next.players[action.target.player].caravans[action.target.caravan];
-    const tgt = car.cards[action.target.cardIndex];
-    if (!tgt || !isJacked(tgt)) return state;
-    removeValueCard(next, action.target);
-    draw(player);
+  if (action.type === "playValueCard") {
+    handlePlayValueCard(next, action);
+  } else if (action.type === "playFaceCard") {
+    jokerDetail = handlePlayFaceCard(next, action);
+  } else if (action.type === "discardCard") {
+    handleDiscardCard(next, action);
+  } else if (action.type === "dismissCaravan") {
+    handleDismissCaravan(next, action);
   }
 
   const text = describe(action, state);
@@ -323,12 +320,10 @@ export function applyAction(state: GameState, action: Action): GameState {
     next.winner = winner;
     next.log = [
       ...next.log,
-      log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${caravanAnalysis(next)}`),
+      log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${formatFinalScore(next)}`),
     ];
   } else {
-    if (action.type !== "acknowledge") {
-      next.current = next.current === Human ? Ai : Human;
-    }
+    next.current = next.current === Human ? Ai : Human;
     if (legalActions(next).length === 0) {
       // The player whose turn is next cannot make any move (out of cards /
       // no legal play) and loses; the opponent wins automatically.
@@ -338,7 +333,7 @@ export function applyAction(state: GameState, action: Action): GameState {
       next.log = [
         ...next.log,
         log(
-          `${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${caravanAnalysis(next)}`,
+          `${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${formatFinalScore(next)}`,
         ),
       ];
     }
@@ -348,30 +343,11 @@ export function applyAction(state: GameState, action: Action): GameState {
 
 export function legalActions(state: GameState): Action[] {
   if (state.phase === "over") return [];
-  // While cards are pending removal (an opponent move awaiting acknowledgment),
-  // the only legal action is to acknowledge.
-  if (state.pending.length > 0) {
-    return [{ type: "acknowledge", player: state.current }];
-  }
+  // Pending is now UX-only via getTransitionInfo(previous, move, current) — engine commits immediately.
   const pid = state.current;
   const player = state.players[pid];
   const actions: Action[] = [];
   const hasEmpty = player.caravans.some((c) => c.cards.length === 0);
-
-  // remove jacked cards are always available (even during must-start, to clean board)
-  const jackRemovals: Action[] = [];
-  for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
-    const owner = state.players[p];
-    for (let ci = 0; ci < owner.caravans.length; ci++) {
-      const car = owner.caravans[ci];
-      for (let cidx = 0; cidx < car.cards.length; cidx++) {
-        const pc = car.cards[cidx];
-        if (isJacked(pc)) {
-          jackRemovals.push({ type: "removeJacked", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx } });
-        }
-      }
-    }
-  }
 
   if (hasEmpty) {
     for (let ci = 0; ci < player.caravans.length; ci++) {
@@ -379,10 +355,9 @@ export function legalActions(state: GameState): Action[] {
       if (car.cards.length !== 0) continue;
       for (let hi = 0; hi < player.hand.length; hi++) {
         const card = player.hand[hi];
-        if (isValueCard(card)) actions.push({ type: "playValue", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
+        if (isValueCard(card)) actions.push({ type: "playValueCard", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
       }
     }
-    actions.push(...jackRemovals);
     return actions;
   }
 
@@ -391,10 +366,10 @@ export function legalActions(state: GameState): Action[] {
     if (isValueCard(card)) {
       for (let ci = 0; ci < player.caravans.length; ci++) {
         const car = player.caravans[ci];
-        if (canPlayValue(card, car)) actions.push({ type: "playValue", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
+        if (canPlayValueCard(card, car)) actions.push({ type: "playValueCard", player: pid, caravan: ci as 0 | 1 | 2, handIndex: hi });
       }
     } else {
-      for (let p: PlayerId = Human; p <= Ai; p = (p + 1) as PlayerId) {
+      for (const p of PLAYERS) {
         const opp = state.players[p];
         for (let ci = 0; ci < opp.caravans.length; ci++) {
           const car = opp.caravans[ci];
@@ -403,18 +378,16 @@ export function legalActions(state: GameState): Action[] {
             if (card.rank === "J" && isJacked(tgt)) continue;
             // King stacking is legal even when it busts; only jacked targets are invalid
             if (card.rank === "K" && isJacked(tgt)) continue;
-            actions.push({ type: "playFace", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx }, handIndex: hi });
+            actions.push({ type: "playFaceCard", player: pid, target: { player: p, caravan: ci as 0 | 1 | 2, cardIndex: cidx }, handIndex: hi });
           }
         }
       }
     }
   }
 
-  actions.push(...jackRemovals);
-
   if (player.deck.length > 0) {
-    for (let hi = 0; hi < player.hand.length; hi++) actions.push({ type: "discard", player: pid, handIndex: hi });
+    for (let hi = 0; hi < player.hand.length; hi++) actions.push({ type: "discardCard", player: pid, handIndex: hi });
   }
-  for (let ci = 0; ci < 3; ci++) actions.push({ type: "disband", player: pid, caravan: ci as 0 | 1 | 2 });
+  for (let ci = 0; ci < CARAVAN_COUNT; ci++) actions.push({ type: "dismissCaravan", player: pid, caravan: ci as CaravanIndex });
   return actions;
 }

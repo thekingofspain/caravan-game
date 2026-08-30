@@ -1,5 +1,5 @@
 import { caravanTotal, isInRange } from "./rules";
-import { Ai, GameState, Human, PlayerId } from "./types";
+import { Ai, CARAVAN_COUNT, GameState, Human, PlayerId } from "./types";
 
 export function pairWinner(state: GameState, i: 0 | 1 | 2): PlayerId | null {
   const v0 = caravanTotal(state.players[Human].caravans[i]);
@@ -20,13 +20,13 @@ export function gameWinner(state: GameState): PlayerId | null {
 }
 
 export function allSold(state: GameState): boolean {
-  return [0, 1, 2].every((i) => pairWinner(state, i as 0 | 1 | 2) !== null);
+  return Array.from({length: CARAVAN_COUNT}, (_,i)=> i as 0|1|2).every((i) => pairWinner(state, i) !== null);
 }
 
 export function pairsWon(state: GameState): [number, number] {
   let a = 0;
   let b = 0;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < CARAVAN_COUNT; i++) {
     const w = pairWinner(state, i as 0 | 1 | 2);
     if (w === Human) a++;
     else if (w === Ai) b++;

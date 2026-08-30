@@ -141,3 +141,39 @@ Then use `playwright-cli screenshot` (or the e2e `page.screenshot`) to capture t
 - Card sizing stays `100vh/10` (required by e2e height assertion).
 - `.caravans` container may stay `grid` (3 columns) — not a card-overlap issue; converting to flex is optional.
 - Row/column counts are bounded for `:nth-child` generation (16 rows / 6 face cols is ample for normal play).
+
+---
+
+## 9. Next Review Item — UX / Rules Separation + Action Naming (P1-1 follow-up)
+
+**Goal:** Remove UX concerns from `src/game/engine.ts` pure rules; rename `Action` to intention-revealing `verb+object`.
+
+**Context from P1-1 review (`applyAction` SRP):** `applyAction:234` currently handles both game rules and UX timing (`pending`/`acknowledge`). `Board.tsx` and `ai.ts` are forced to know UX.
+
+**Changes:**
+
+1.  **Separate UX actions from gameplay (rules stay in `engine.ts`, UX moves to `state/useGame.ts` + `ui/Board.tsx`):**
+    *   **UX (remove from `GameState`/`Action`):** `acknowledge` → `acknowledgeRemovals`, `removeJacked` → `clearJackedCard`, `reset`/`startNewGame` stays in `useGame` (already outside engine), `showActions` is query `legalActions(state)` not an `Action`.
+    *   **Rules (keep in `engine.ts`):** `playValueCard`, `playFaceCard`, `discardCard`, `dismissCaravan` (was `disband`). `GameState.pending: TargetRef[]` deleted — engine commits `J`/`JOKER` removals immediately via `removeValueCard`; UX layer keeps `uiPending: TargetRef[]` for 320ms grey-out animation (`Board.tsx:72-77`).
+    *   Update `types.ts`: `type GameAction = ...` (4 variants) + `type UxAction = ...` (UX-only). `engine.ts`: delete `commitPending` acknowledge branch `249-250`, delete `legalActions:353 pending` guard, delete `jackRemovals` from `legalActions:362-374`, make `J`/`JOKER` immediate `removeCards(next, refs)` (`engine.ts:276-289`).
+    *   Update `state/useGame.ts`: own `uiPending` state, `act: (a:GameAction)=>void`, `acknowledgeRemovals: ()=>void`, `clearJackedCard: (t:TargetRef)=>void` (UX draw, no turn flip). `ai.ts:38-46` drops `pending` double-clone.
+    *   Update `ui/Board.tsx`: `state.pending` → `store.uiPending`, `jackRemovableSet` derived from `uiPending`, `onAcknowledge` → `store.acknowledgeRemovals()`, `blocked = uiPending.length>0`.
+
+2.  **Rename actions to complete `verb+object` (LSP rename, no shims):**
+    *   `playValue` → `playValueCard`
+    *   `playFace` → `playFaceCard`
+    *   `discard` → `discardCard`
+    *   `disband` → `dismissCaravan`
+    *   `removeJacked` → `clearJackedCard` (UX) / `acknowledge` → `acknowledgeRemovals` (UX)
+    *   Consumers: `Board.tsx:88,106,129,140`, `ai.ts:50`, `test/engine.test.ts`, `test/ai.test.ts`, `e2e/*.mjs` if selectors reference action logs.
+
+**Verification:**
+```
+npm run typecheck
+npm test                          # update engine/ai tests for immediate removal, no pending
+npm run build
+node e2e/cards.e2e.mjs && node e2e/hand-cards.e2e.mjs && node e2e/opponent-stacking.e2e.mjs && node e2e/win-game.e2e.mjs
+```
+**Risk if not:** UX timing stays in rules → AI must simulate `acknowledge`, `legalActions` polluted, renaming later touches all callers; pending asymmetry (`Human` commits immediate `engine.ts:294` vs `AI` pending) remains hidden.
+
+**Follow-up after this item:** P1-2 Global mutable `idCounter/logId` purity (`cards.ts:3`, `engine.ts:28`) → per-game counters.

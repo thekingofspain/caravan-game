@@ -20,9 +20,9 @@ function createSelection(overrides: Partial<SelectionState> = {}): SelectionStat
     selectedCard: null,
     legalCaravans: [],
     targetSet: new Set(),
-    jackRemovableSet: new Set(),
-    pendingSet: new Set(),
-    pendingRemoveSet: new Set(),
+    pendingRemovalSet: new Set(),
+    greyedSet: new Set(),
+    removingSet: new Set(),
     canDiscard: false,
     ...overrides,
   };

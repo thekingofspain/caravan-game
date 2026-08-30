@@ -21,7 +21,7 @@ export function isInRange(total: number): boolean {
   return total >= 21 && total <= 26;
 }
 
-export function canPlayValue(card: Card, caravan: Caravan): boolean {
+export function canPlayValueCard(card: Card, caravan: Caravan): boolean {
   const actives = activeCards(caravan);
   if (actives.length === 0) return true;
   const prev = actives[actives.length - 1];
