@@ -1,14 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { makeCard } from "../src/game/cards";
-import { Caravan as CaravanType, SelectionState } from "../src/game/types";
+import { makeCard } from "../src/model/cards";
+import { Caravan as CaravanType, SelectionState } from "../src/model/types";
 
 function createCaravan(cards: Array<{ rank: string; suit: string }>): CaravanType {
   return {
-    cards: cards.map((c) => ({
-      card: makeCard(c.suit as any, c.rank as any),
-      kingCount: 0,
-      attachments: [],
-    })),
+    rows: cards.map((c) => [makeCard(1, c.rank as any, c.suit as any)]),
     direction: null,
     suit: null,
   };
@@ -31,16 +27,16 @@ function createSelection(overrides: Partial<SelectionState> = {}): SelectionStat
 describe("Caravan data logic", () => {
   it("creates empty caravan", () => {
     const caravan = createCaravan([]);
-    expect(caravan.cards).toHaveLength(0);
+    expect(caravan.rows).toHaveLength(0);
     expect(caravan.direction).toBeNull();
     expect(caravan.suit).toBeNull();
   });
 
   it("creates caravan with cards", () => {
     const caravan = createCaravan([{ rank: "10", suit: "spades" }]);
-    expect(caravan.cards).toHaveLength(1);
-    expect(caravan.cards[0].card.rank).toBe("10");
-    expect(caravan.cards[0].card.suit).toBe("spades");
+    expect(caravan.rows).toHaveLength(1);
+    expect(caravan.rows[0][0].rank).toBe("10");
+    expect(caravan.rows[0][0].suit).toBe("spades");
   });
 
   it("selection tracks target set", () => {

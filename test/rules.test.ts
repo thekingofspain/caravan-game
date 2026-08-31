@@ -1,55 +1,64 @@
 import { describe, it, expect } from "vitest";
-import { makeCard } from "../src/game/cards";
-import { Caravan, PlacedCard } from "../src/game/types";
-import { caravanTotal, canPlayValueCard, placedValue } from "../src/game/rules";
+import { makeCard } from "../src/model/cards";
+import { Caravan, CaravanRow } from "../src/model/types";
+import { calculateScore, canPlaceCard, calculateCaravanRowValue } from "../src/model/rules/caravanCardRules";
 
-function placed(rank: any, suit: any = "spades", kingCount = 0): PlacedCard {
-  return { card: makeCard(suit, rank), kingCount, attachments: [] };
+function row(rank: string, suit: string = "spades", kings: number = 0): CaravanRow {
+  const base = makeCard(1, rank as any, suit as any);
+  const ks: CaravanRow = [base];
+  for (let i = 0; i < kings; i++) ks.push(makeCard(1, "K" as any, "spades" as any));
+  return ks;
 }
-function caravan(cards: PlacedCard[]): Caravan {
+function caravan(rows: CaravanRow[]): Caravan {
   let direction: any = null;
-  if (cards.length >= 2) direction = cards[1].card.rank > cards[0].card.rank ? "asc" : "desc";
-  const suit = cards.length ? cards[0].card.suit : null;
-  return { cards, direction, suit };
+  if (rows.length >= 2) {
+    const a = rows[0][0];
+    const b = rows[1][0];
+    const av = a.rank === "A" ? 1 : Number(a.rank) || 0;
+    const bv = b.rank === "A" ? 1 : Number(b.rank) || 0;
+    direction = bv > av ? "asc" : "desc";
+  }
+  const suit = rows.length ? rows[0][0].suit : null;
+  return { rows, direction, suit: suit as any };
 }
 
-describe("caravanTotal / placedValue", () => {
+describe("calculateScore / calculateCaravanRowValue", () => {
   it("sums base values", () => {
-    expect(caravanTotal(caravan([placed("10"), placed("6")]))).toBe(16);
+    expect(calculateScore(caravan([row("10"), row("6")]))).toBe(16);
   });
   it("ace counts as 1", () => {
-    expect(caravanTotal(caravan([placed("A")]))).toBe(1);
+    expect(calculateScore(caravan([row("A")]))).toBe(1);
   });
   it("one king doubles the target", () => {
-    expect(caravanTotal(caravan([placed("10", "spades", 1)]))).toBe(20);
-    expect(placedValue(placed("10", "spades", 1))).toBe(20);
+    expect(calculateScore(caravan([row("10", "spades", 1)]))).toBe(20);
+    expect(calculateCaravanRowValue(row("10", "spades", 1))).toBe(20);
   });
   it("two kings quadruple the target", () => {
-    expect(caravanTotal(caravan([placed("10", "spades", 2)]))).toBe(40);
+    expect(calculateScore(caravan([row("10", "spades", 2)]))).toBe(40);
   });
 });
 
-describe("canPlayValueCard", () => {
+describe("canPlaceCard", () => {
   it("allows any value card on an empty caravan", () => {
-    expect(canPlayValueCard(makeCard("spades", "5"), caravan([]))).toBe(true);
+    expect(canPlaceCard(makeCard(1, "5" as any, "spades" as any), caravan([]))).toBe(true);
   });
   it("rejects equal rank played in sequence", () => {
-    expect(canPlayValueCard(makeCard("hearts", "5"), caravan([placed("5")]))).toBe(false);
+    expect(canPlaceCard(makeCard(1, "5" as any, "hearts" as any), caravan([row("5")]))).toBe(false);
   });
   it("ascending direction requires increasing value", () => {
-    const c = caravan([placed("3"), placed("5")]);
+    const c = caravan([row("3"), row("5")]);
     expect(c.direction).toBe("asc");
-    expect(canPlayValueCard(makeCard("clubs", "7"), c)).toBe(true);
-    expect(canPlayValueCard(makeCard("clubs", "4"), c)).toBe(false);
+    expect(canPlaceCard(makeCard(1, "7" as any, "clubs" as any), c)).toBe(true);
+    expect(canPlaceCard(makeCard(1, "4" as any, "clubs" as any), c)).toBe(false);
   });
   it("matching previous suit is legal regardless of direction", () => {
-    const c = caravan([placed("3"), placed("5")]);
-    expect(canPlayValueCard(makeCard("spades", "2"), c)).toBe(true);
+    const c = caravan([row("3"), row("5")]);
+    expect(canPlaceCard(makeCard(1, "2" as any, "spades" as any), c)).toBe(true);
   });
   it("descending direction requires decreasing value", () => {
-    const c = caravan([placed("9"), placed("7")]);
+    const c = caravan([row("9"), row("7")]);
     expect(c.direction).toBe("desc");
-    expect(canPlayValueCard(makeCard("clubs", "5"), c)).toBe(true);
-    expect(canPlayValueCard(makeCard("clubs", "8"), c)).toBe(false);
+    expect(canPlaceCard(makeCard(1, "5" as any, "clubs" as any), c)).toBe(true);
+    expect(canPlaceCard(makeCard(1, "8" as any, "clubs" as any), c)).toBe(false);
   });
 });

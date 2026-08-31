@@ -27,13 +27,13 @@ export type PlaceholderCard = { id: string; rank: "PLACEHOLDER"; suit: null; jok
 export type Card = StandardCard | JokerCard | PlaceholderCard;
 
 export function isJokerCard(card: Card): card is JokerCard {
-  return card.rank === "Joker" || (card as any).rank === "JOKER";
+  return card.rank === "Joker";
 }
 export function isStandardCard(card: Card): card is StandardCard {
-  return card.rank !== "Joker" && (card as any).rank !== "JOKER" && card.rank !== "PLACEHOLDER";
+  return card.rank !== "Joker" && card.rank !== "PLACEHOLDER";
 }
 export function isPlaceholderCard(card: Card): card is PlaceholderCard {
-  return (card as PlaceholderCard).isPlaceholder === true;
+  return card.rank === "PLACEHOLDER";
 }
 
 export type CaravanRow = Card[];
@@ -104,7 +104,6 @@ interface DismissCaravanMove {
   caravan: CaravanIndex;
 }
 export type Move = PlayValueCardMove | PlayFaceCardMove | DiscardCardMove | DismissCaravanMove;
-export type Action = Move;
 export class IllegalMoveError extends Error {
   constructor(message: string) {
     super(message);
@@ -119,7 +118,7 @@ export class IllegalActionError extends IllegalMoveError {
 }
 export function isValueCard(card: Card): boolean {
   if (isPlaceholderCard(card)) return false;
-  return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "Joker" && (card as any).rank !== "JOKER";
+  return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "Joker";
 }
 
 export function isFaceCard(card: Card): boolean {
@@ -127,12 +126,10 @@ export function isFaceCard(card: Card): boolean {
   return card.rank === "J" || card.rank === "Q" || card.rank === "K";
 }
 
-export const isJoker = isJokerCard;
-
 export function baseValue(card: Card): number {
   if (isPlaceholderCard(card)) return 0;
   if (card.rank === "A") return 1;
-  if (isJokerCard(card) || (card as any).rank === "JOKER") return 0;
+  if (isJokerCard(card)) return 0;
   const n = Number(card.rank);
   return Number.isNaN(n) ? 0 : n;
 }

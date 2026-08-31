@@ -25,19 +25,15 @@ export function formatOwnerLabel(p: PlayerId): string {
 
 export function formatFinalScore(state: GameState): string {
   const scores = state.players.map((pl) => {
-    const totals = pl.caravans.map((c: any) => {
-      const t = ((c as any).rows ?? (c as any).cards ?? []).reduce((s: number, row: any) => {
-        // row is either Card[] or PlacedCard
-        const isRowArray = Array.isArray(row);
-        const rowForCheck = isRowArray ? row : [row.card, ...(row.attachments || [])];
-        if (hasJackAttached(rowForCheck as any)) return s;
-        const kingCount = isRowArray ? row.slice(1).filter((cc: any) => cc.rank === "K").length : (row.kingCount || 0);
-        const base = isRowArray ? baseValue(row[0]) : baseValue(row.card);
-        return s + base * Math.pow(2, kingCount);
+    const t = pl.caravans.reduce((s, c) => {
+      const total = c.rows.reduce((sum, row) => {
+        if (hasJackAttached(row)) return sum;
+        const kingCount = row.slice(1).filter((x) => x.rank === "K").length;
+        return sum + baseValue(row[0]) * Math.pow(2, kingCount);
       }, 0);
-      return t;
-    });
-    return totals.join("/");
+      return s + total;
+    }, 0);
+    return t;
   });
   return `(${scores[0]} vs ${scores[1]})`;
 }
@@ -45,29 +41,25 @@ export function formatFinalScore(state: GameState): string {
 export function removalDetail(state: GameState, refs: TargetRef[]): string[] {
   const byCar = new Map<string, Card[]>();
   for (const r of refs) {
-    const car: any = state.players[r.player].caravans[r.caravan];
-    const rows = car.rows ?? car.cards;
-    const row: any = rows[r.cardIndex];
+    const car = state.players[r.player].caravans[r.caravan];
+    const row = car.rows[r.cardIndex];
     if (!row) continue;
-    const isRowArray = Array.isArray(row);
-    if (isRowArray && row.length === 0) continue;
-    if (!isRowArray && !row.card) continue;
     const key = `${r.player}-${r.caravan}`;
     if (!byCar.has(key)) byCar.set(key, []);
-    const lastCard: any = isRowArray ? row[row.length - 1] : row.attachments?.[row.attachments.length - 1];
-    const isLastJoker = lastCard && isJokerCard(lastCard as Card);
-    const cardsToPush: Card[] = isRowArray ? (isLastJoker ? row.slice(0, -1) : row) : [row.card, ...(row.attachments || [])].filter(Boolean) as Card[];
-    if (isLastJoker && isRowArray) {
-      // already handled
-    } else if (isLastJoker && !isRowArray) {
-      // for old, remove last joker from attachments
-      cardsToPush.pop();
+    // All cards in the row are removed; if last attachment is Joker, its removal is already counted via refs, but detail lists the value card
+    const isLastJoker = row[row.length - 1]?.rank === "Joker";
+    const cardsToPush: Card[] = isLastJoker ? row.slice(0, -1) : row;
+    if (r.cardIndex === row.length - 1) {
+      // For Joker self-removal edge, don't double count
+      // Actually jokerRemovals includes the joker target itself, row includes joker; slice avoids listing joker twice
     }
     byCar.get(key)!.push(...cardsToPush);
   }
   const detail: string[] = [];
   for (const [key, cards] of byCar) {
-    const [p, ci] = key.split("-").map(Number) as [PlayerId, number];
+    const [pStr, ciStr] = key.split("-");
+    const p = Number(pStr) as PlayerId;
+    const ci = Number(ciStr);
     detail.push(`${formatOwnerLabel(p)} caravan ${caravanName(p, ci)}: ${cards.map(formatCardLog).join(", ")}`);
   }
   return detail;
@@ -77,24 +69,19 @@ export function describe(action: Move, state: GameState): Nullable<string> {
   const who = action.player === Human ? "You" : "AI";
   if (action.type === "playValueCard") {
     const card = state.players[action.player].hand[action.handIndex];
-    if (!card) return null;
-    return `${who} played ${formatCardLog(card)} to ${caravanName(action.player, action.caravan)}`;
+    return `${who} played ${formatCardLog(card!)} to ${caravanName(action.player, action.caravan)}`;
   }
   if (action.type === "playFaceCard") {
     const card = state.players[action.player].hand[action.handIndex];
-    const carTgt: any = state.players[action.target.player].caravans[action.target.caravan];
-    const rowsTgt = carTgt.rows ?? carTgt.cards;
-    const tgt = rowsTgt[action.target.cardIndex];
-    if (!card || !tgt) return null;
-    const tgtCard = Array.isArray(tgt) ? tgt[0] : (tgt as any).card;
-    if (!tgtCard || (Array.isArray(tgt) && tgt.length===0)) return null;
-    const targetLabel = `${formatOwnerLabel(action.target.player)} ${caravanName(action.target.player, action.target.caravan)} ${formatCardLog(tgtCard)}`;
-    return `${who} played ${formatCardLog(card)} on ${targetLabel}`;
+    const carTgt = state.players[action.target.player].caravans[action.target.caravan];
+    const tgt = carTgt.rows[action.target.cardIndex];
+    const tgtCard = tgt ? tgt[0] : undefined;
+    const tgtLog = tgtCard ? formatCardLog(tgtCard) : `card ${action.target.cardIndex}`;
+    return `${who} played ${formatCardLog(card!)} on ${formatOwnerLabel(action.target.player)} ${caravanName(action.target.player, action.target.caravan)} ${tgtLog}`;
   }
   if (action.type === "discardCard") {
     const card = state.players[action.player].hand[action.handIndex];
-    if (!card) return null;
-    return `${who} discarded ${formatCardLog(card)}`;
+    return `${who} discarded ${formatCardLog(card!)}`;
   }
   if (action.type === "dismissCaravan") {
     return `${who} dismissed ${caravanName(action.player, action.caravan)}`;

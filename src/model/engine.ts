@@ -58,47 +58,40 @@ function draw(player: PlayerState): void {
 }
 
 function normalizeCaravan(car: Caravan): void {
-  if (((car as any).rows ?? (car as any).cards).length === 0) {
+  if (car.rows.length === 0) {
     car.direction = null;
     car.suit = null;
-  } else if (((car as any).rows ?? (car as any).cards).length === 1) {
+  } else if (car.rows.length === 1) {
     car.direction = null;
-    const first: any = ((car as any).rows ?? (car as any).cards)[0];
-    car.suit = (Array.isArray(first) ? first[0].suit : first.card.suit) as Caravan["suit"];
+    car.suit = car.rows[0][0].suit;
   } else {
-    const rows: any = (car as any).rows ?? (car as any).cards;
-    const aRow: any = rows[rows.length-2];
-    const bRow: any = rows[rows.length-1];
-    const aCard: any = Array.isArray(aRow) ? aRow[0] : aRow.card;
-    const bCard: any = Array.isArray(bRow) ? bRow[0] : bRow.card;
-    const a = baseValue(aCard);
-    const b = baseValue(bCard);
+    const aRow = car.rows[car.rows.length - 2];
+    const bRow = car.rows[car.rows.length - 1];
+    const a = baseValue(aRow[0]);
+    const b = baseValue(bRow[0]);
     car.direction = b > a ? "asc" : "desc";
   }
 }
 
 function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
-  const carTgt: any = state.players[target.player].caravans[target.caravan];
-  const rowsTgt: any = carTgt.rows ?? carTgt.cards;
-  const targetRow: any = rowsTgt[target.cardIndex];
-  if (!targetRow || (Array.isArray(targetRow) ? targetRow.length===0 : !targetRow.card)) return [];
-  const targetCard: any = Array.isArray(targetRow) ? targetRow[0] : targetRow.card;
+  const targetRow = state.players[target.player].caravans[target.caravan].rows[target.cardIndex];
+  if (!targetRow || targetRow.length === 0) return [];
+  const targetCard = targetRow[0];
   const isAce = targetCard.rank === "A";
   const suit = targetCard.suit;
   const rankVal = baseValue(targetCard);
   const refs: TargetRef[] = [];
-  for (let p=0; p<2; p++) {
+  for (let p = 0; p < 2; p++) {
     const player = p as PlayerId;
-    for (let ci=0; ci<CARAVAN_COUNT; ci++) {
-      const car = state.players[player].caravans[ci as 0|1|2];
-      for (let cidx=0; cidx<((car as any).rows ?? (car as any).cards).length; cidx++) {
-        const row: any = ((car as any).rows ?? (car as any).cards)[cidx];
-        if (!row || (Array.isArray(row) ? row.length===0 : !row.card)) continue;
-        const card: any = Array.isArray(row) ? row[0] : row.card;
+    for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
+      const car = state.players[player].caravans[ci as 0 | 1 | 2];
+      for (let cidx = 0; cidx < car.rows.length; cidx++) {
+        const card = car.rows[cidx][0];
+        if (!card) continue;
         if (isAce) {
-          if (card.suit === suit) refs.push({ player, caravan: ci as 0|1|2, cardIndex: cidx });
+          if (card.suit === suit) refs.push({ player, caravan: ci as 0 | 1 | 2, cardIndex: cidx });
         } else {
-          if (baseValue(card) === rankVal) refs.push({ player, caravan: ci as 0|1|2, cardIndex: cidx });
+          if (baseValue(card) === rankVal) refs.push({ player, caravan: ci as 0 | 1 | 2, cardIndex: cidx });
         }
       }
     }
@@ -115,7 +108,7 @@ function removeTargets(state: GameState, refs: TargetRef[]): void {
   for (const [key, indices] of byCar) {
     const [p, ci] = key.split("-").map(Number) as [PlayerId, CaravanIndex];
     const car = state.players[p].caravans[ci];
-    for (const idx of indices.sort((a,b)=>b-a)) ((car as any).rows ?? (car as any).cards).splice(idx, 1);
+    for (const idx of indices.sort((a, b) => b - a)) car.rows.splice(idx, 1);
     normalizeCaravan(car);
   }
 }
@@ -127,53 +120,39 @@ function handlePlayValueCard(next: GameState, action: Extract<Move, { type: "pla
   if (!card || !isValueCard(card)) throw new IllegalMoveError("playValueCard: not a value card");
   if (!canPlaceCard(card, car)) throw new IllegalMoveError("playValueCard: cannot place card");
   player.hand.splice(action.handIndex, 1);
-  ((car as any).rows ?? (car as any).cards).push([card]);
+  car.rows.push([card]);
   normalizeCaravan(car);
   draw(player);
 }
 
 function attachJack(next: GameState, card: Card, target: TargetRef): void {
-  const car: any = next.players[target.player].caravans[target.caravan];
-  const rows: any = car.rows ?? car.cards;
-  const tgt: any = rows[target.cardIndex];
+  const car = next.players[target.player].caravans[target.caravan];
+  const tgt = car.rows[target.cardIndex];
   if (!tgt) return;
-  if (Array.isArray(tgt)) tgt.push(card); else {
-    tgt.attachments = [...(tgt.attachments||[]), card];
-    if (card.rank === "J") tgt.kingCount = tgt.kingCount; // no change
-  }
+  tgt.push(card);
   removeTargets(next, [target]);
 }
 
 function attachQueen(next: GameState, card: Card, target: TargetRef): void {
-  const car: any = next.players[target.player].caravans[target.caravan];
-  const rows: any = car.rows ?? car.cards;
-  const tgt: any = rows[target.cardIndex];
+  const car = next.players[target.player].caravans[target.caravan];
+  const tgt = car.rows[target.cardIndex];
   if (!tgt) return;
-  if (Array.isArray(tgt)) tgt.push(card); else tgt.attachments = [...(tgt.attachments||[]), card];
-  const car2: any = next.players[target.player].caravans[target.caravan];
-  if (car2.direction !== null) car.direction = car.direction === "asc" ? "desc" : "asc";
-  car2.suit = card.suit as Caravan["suit"];
+  tgt.push(card);
+  if (car.direction !== null) car.direction = car.direction === "asc" ? "desc" : "asc";
+  car.suit = card.suit;
 }
 
 function attachKing(next: GameState, card: Card, target: TargetRef): void {
-  const car: any = next.players[target.player].caravans[target.caravan];
-  const rows: any = car.rows ?? car.cards;
-  const tgt: any = rows[target.cardIndex];
+  const car = next.players[target.player].caravans[target.caravan];
+  const tgt = car.rows[target.cardIndex];
   if (!tgt) return;
-  if (Array.isArray(tgt)) {
-    tgt.push(card);
-  } else {
-    // old PlacedCard
-    tgt.attachments = [...(tgt.attachments||[]), card];
-    if (card.rank === "K") tgt.kingCount = (tgt.kingCount || 0) + 1;
-  }
+  tgt.push(card);
 }
 
 function attachJoker(next: GameState, card: Card, target: TargetRef): string[] {
-  const car: any = next.players[target.player].caravans[target.caravan];
-  const rows: any = car.rows ?? car.cards;
-  const tgt: any = rows[target.cardIndex];
-  if (Array.isArray(tgt)) tgt.push(card); else if (tgt) tgt.attachments = [...(tgt.attachments||[]), card];
+  const car = next.players[target.player].caravans[target.caravan];
+  const tgt = car.rows[target.cardIndex];
+  if (tgt) tgt.push(card);
   const refs = jokerRemovals(next, target);
   const detail = removalDetail(next, refs);
   removeTargets(next, refs);
@@ -187,12 +166,11 @@ function handlePlayFaceCard(
   const player = next.players[action.player];
   const card = player.hand[action.handIndex];
   if (!card || (!isFaceCard(card) && !isJokerCard(card))) throw new IllegalMoveError("playFaceCard: not a face card");
-  if (!isValidCardIndex(next.players[action.target.player].caravans[action.target.caravan], action.target.cardIndex)) throw new IllegalMoveError("playFaceCard: invalid target");
-  const carTgt: any = next.players[action.target.player].caravans[action.target.caravan];
-  const rowsTgt = carTgt.rows ?? carTgt.cards;
-  const tgtPre = rowsTgt[action.target.cardIndex];
-  if (card.rank === "J" && tgtPre && hasJackAttached(tgtPre as any)) throw new IllegalMoveError("playFaceCard: Jack on jacked card");
-  if (card.rank === "K" && tgtPre && hasJackAttached(tgtPre as any)) throw new IllegalMoveError("playFaceCard: King on jacked card");
+  if (!isValidCardIndex(next.players[action.target.player].caravans[action.target.caravan], action.target.cardIndex))
+    throw new IllegalMoveError("playFaceCard: invalid target");
+  const tgtPre = next.players[action.target.player].caravans[action.target.caravan].rows[action.target.cardIndex];
+  if (card.rank === "J" && tgtPre && hasJackAttached(tgtPre)) throw new IllegalMoveError("playFaceCard: Jack on jacked card");
+  if (card.rank === "K" && tgtPre && hasJackAttached(tgtPre)) throw new IllegalMoveError("playFaceCard: King on jacked card");
   player.hand.splice(action.handIndex, 1);
   let jokerDetail: Nullable<string[]> = null;
   if (card.rank === "J") attachJack(next, card, action.target);
@@ -207,7 +185,8 @@ function handleDiscardCard(next: GameState, action: Extract<Move, { type: "disca
   const player = next.players[action.player];
   const card = player.hand[action.handIndex];
   const isPlaceholder = card && isPlaceholderCard(card);
-  if (!isPlaceholder && player.caravans.some((c) => ((c as any).rows ?? (c as any).cards).length === 0)) throw new IllegalMoveError("discardCard: cannot discard before all caravans started");
+  if (!isPlaceholder && player.caravans.some((c) => c.rows.length === 0))
+    throw new IllegalMoveError("discardCard: cannot discard before all caravans started");
   if (!player.hand[action.handIndex]) throw new IllegalMoveError("discardCard: invalid hand index");
   player.hand.splice(action.handIndex, 1);
   draw(player);
@@ -215,7 +194,8 @@ function handleDiscardCard(next: GameState, action: Extract<Move, { type: "disca
 
 function handleDismissCaravan(next: GameState, action: Extract<Move, { type: "dismissCaravan" }>): void {
   const player = next.players[action.player];
-  if (player.caravans.some((c) => ((c as any).rows ?? (c as any).cards).length === 0)) throw new IllegalMoveError("dismissCaravan: cannot disband before all caravans started");
+  if (player.caravans.some((c) => c.rows.length === 0))
+    throw new IllegalMoveError("dismissCaravan: cannot disband before all caravans started");
   player.caravans[action.caravan] = emptyCaravan();
 }
 export function applyMove(state: GameState, action: Move): GameState {
@@ -272,12 +252,12 @@ export function legalMoves(state: GameState): Move[] {
   const pid = state.current;
   const player = state.players[pid];
   const actions: Move[] = [];
-  const hasEmpty = player.caravans.some((c) => ((c as any).rows ?? (c as any).cards).length === 0);
+  const hasEmpty = player.caravans.some((c) => c.rows.length === 0);
 
   if (hasEmpty) {
     for (let ci = 0; ci < player.caravans.length; ci++) {
       const car = player.caravans[ci];
-      if (((car as any).rows ?? (car as any).cards).length !== 0) continue;
+      if (car.rows.length !== 0) continue;
       for (let hi = 0; hi < player.hand.length; hi++) {
         const card = player.hand[hi];
         if (isValueCard(card)) actions.push({ type: "playValueCard", player: pid, caravan: ci as CaravanIndex, handIndex: hi });
@@ -289,9 +269,9 @@ export function legalMoves(state: GameState): Move[] {
       for (const p of PLAYERS) {
         for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
           const targetCar = state.players[p].caravans[ci];
-          for (let cidx = 0; cidx < ((targetCar as any).rows ?? (targetCar as any).cards).length; cidx++) {
+          for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
             const tgt: TargetRef = { player: p, caravan: ci as CaravanIndex, cardIndex: cidx };
-            const row = ((targetCar as any).rows ?? (targetCar as any).cards)[cidx];
+            const row = targetCar.rows[cidx];
             if (card.rank === "J" && hasJackAttached(row)) continue;
             if (card.rank === "K" && hasJackAttached(row)) continue;
             actions.push({ type: "playFaceCard", player: pid, target: tgt, handIndex: hi });
@@ -321,9 +301,9 @@ export function legalMoves(state: GameState): Move[] {
     for (const p of PLAYERS) {
       for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
         const targetCar = state.players[p].caravans[ci];
-        for (let cidx = 0; cidx < ((targetCar as any).rows ?? (targetCar as any).cards).length; cidx++) {
+        for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
           const tgt: TargetRef = { player: p, caravan: ci as CaravanIndex, cardIndex: cidx };
-          const row = ((targetCar as any).rows ?? (targetCar as any).cards)[cidx];
+          const row = targetCar.rows[cidx];
           if (card.rank === "J" && hasJackAttached(row)) continue;
           if (card.rank === "K" && hasJackAttached(row)) continue;
           actions.push({ type: "playFaceCard", player: pid, target: tgt, handIndex: hi });

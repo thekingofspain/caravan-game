@@ -16,10 +16,9 @@ function forEachCaravanRow(state: GameState, fn: (row: CaravanRow, ref: TargetRe
   for (let p = 0; p < 2; p++) {
     const player = p as PlayerId;
     for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-      const car: any = state.players[player].caravans[ci as 0 | 1 | 2];
-      const rows: any = car.rows ?? car.cards;
-      for (let idx = 0; idx < rows.length; idx++) {
-        const row: any = rows[idx];
+      const car = state.players[player].caravans[ci as 0 | 1 | 2];
+      for (let idx = 0; idx < car.rows.length; idx++) {
+        const row = car.rows[idx];
         fn(row, { player, caravan: ci as 0 | 1 | 2, cardIndex: idx });
       }
     }
@@ -37,20 +36,17 @@ export function getTransitionInfo(
   let confirmer: PlayerId | null = null;
 
   if (move.type === "playFaceCard") {
-    const prevCar: any = previous.players[move.target.player].caravans[move.target.caravan];
-    const currCar: any = current.players[move.target.player].caravans[move.target.caravan];
-    const prevRows: any = prevCar.rows ?? prevCar.cards;
-    const currRows: any = currCar.rows ?? currCar.cards;
-    if (prevRows.length === currRows.length) {
+    const prevCar = previous.players[move.target.player].caravans[move.target.caravan];
+    const currCar = current.players[move.target.player].caravans[move.target.caravan];
+    if (prevCar.rows.length === currCar.rows.length) {
       const card = current.players[move.player].hand[move.handIndex] ?? previous.players[move.player].hand[move.handIndex];
       addedTemp = { card: card as Card, at: move.target };
     } else {
       forEachCaravanRow(previous, (row, ref) => {
-        const carCurr: any = current.players[ref.player].caravans[ref.caravan];
-        const rowsCurr: any = carCurr.rows ?? carCurr.cards;
-        const stillExists: any = rowsCurr[ref.cardIndex];
-        const stillId = stillExists ? (Array.isArray(stillExists) ? stillExists[0]?.id : stillExists.card?.id) : undefined;
-        const rowId = Array.isArray(row) ? row[0]?.id : (row as any).card?.id;
+        const carCurr = current.players[ref.player].caravans[ref.caravan];
+        const stillExists = carCurr.rows[ref.cardIndex];
+        const stillId = stillExists?.[0]?.id;
+        const rowId = row[0]?.id;
         if (!stillExists || stillId !== rowId) impacted.push(ref);
       });
       const card = previous.players[move.player].hand[move.handIndex];
@@ -69,12 +65,12 @@ export function getDisplayedState(previous: GameState | null, current: GameState
   const { card, at } = transition.addedTemp;
   const caravan = cloned.players[at.player].caravans[at.caravan];
   const row = caravan.rows[at.cardIndex];
-  if (row) row.push(card as any);
+  if (row) row.push(card as Card);
   return cloned;
 }
 
 export function sortAttachments(cards: Card[]): Card[] {
-  const order: Record<string, number> = { K: 0, J: 1, JOKER: 2, Q: 3 };
+  const order: Record<string, number> = { K: 0, J: 1, Joker: 2, Q: 3 };
   return [...cards].sort((a, b) => {
     const oa = order[a.rank] ?? 99;
     const ob = order[b.rank] ?? 99;

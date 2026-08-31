@@ -1,21 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { makeCard } from "../src/game/cards";
-import { pairWinner, gameWinner, allSold } from "../src/game/scoring";
-import {Caravan, GameState, PlayerState, Human, Ai} from "../src/game/types";
+import { makeCard } from "../src/model/cards";
+import { pairWinner, gameWinner, allSold } from "../src/model/scoring";
+import { Caravan, GameState, PlayerState, Human, Ai } from "../src/model/types";
+import { CaravanRow } from "../src/model/types";
 
+function row(rank: string, suit: string = "spades", kings: number = 0): CaravanRow {
+  const base = makeCard(1, rank as any, suit as any);
+  const r: CaravanRow = [base];
+  for (let i = 0; i < kings; i++) r.push(makeCard(1, "K" as any, "spades" as any));
+  return r;
+}
 function caravanOf(items: any[], suit: any = "spades"): Caravan {
-  const cards = items.map((it) =>
-    Array.isArray(it)
-      ? { card: makeCard(suit, it[0]), kingCount: it[1], attachments: [] }
-      : { card: makeCard(suit, it), kingCount: 0, attachments: [] },
+  const rows: CaravanRow[] = items.map((it) =>
+    Array.isArray(it) ? row(it[0], suit, it[1]) : row(it, suit, 0)
   );
-  return { cards, direction: null, suit: items.length ? suit : null };
+  return { rows, direction: null, suit: items.length ? (suit as any) : null };
 }
 function mkPlayer(caravans: Caravan[]): PlayerState {
-  return { deck: [], hand: [], caravans, sales: 0 };
+  return { deck: [], hand: [], caravans };
 }
 function mkGame(p0: Caravan[], p1: Caravan[]): GameState {
-  return { players: [mkPlayer(p0), mkPlayer(p1)], current: Human, phase: "play", winner: null, log: [] };
+  return { players: [mkPlayer(p0), mkPlayer(p1)], current: Human, phase: "play", winner: null, log: [], started: false };
 }
 
 describe("pairWinner", () => {
@@ -26,14 +31,14 @@ describe("pairWinner", () => {
     expect(pairWinner(mkGame([caravanOf(["10", ["10", 1]])], [caravanOf(["10", ["10", 1]])]), 0)).toBe(null);
   });
   it("higher in-range value wins", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(Human); // 24 vs 19
-    expect(pairWinner(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(Ai); // 19 vs 24
+    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(Human);
+    expect(pairWinner(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(Ai);
   });
   it("tie in range is not resolved", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(null); // 24 vs 24
+    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(null);
   });
   it("both in range picks the higher", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(Human); // 24 vs 22
+    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(Human);
   });
 });
 
@@ -48,36 +53,18 @@ describe("allSold / gameWinner", () => {
 
   it("a player with 2+ sold caravans wins", () => {
     const g = mkGame(
-      [
-        caravanOf([["10", 1], "4"]),
-        caravanOf(["10", "9", "4"]),
-        caravanOf(["10", "9", "7"]),
-      ],
-      [
-        caravanOf(["10", "8", "4"]),
-        caravanOf(["10", "9", "6"]),
-        caravanOf(["10", "9", "2"]),
-      ],
+      [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "4"]), caravanOf(["10", "9", "7"])],
+      [caravanOf(["10", "8", "4"]), caravanOf(["10", "9", "6"]), caravanOf(["10", "9", "2"])],
     );
-    // pair0: 24 vs 22 -> 0 ; pair1: 23 vs 25 -> 1 ; pair2: 26 vs 21 -> 0  => 0 wins 2
     expect(allSold(g)).toBe(true);
     expect(gameWinner(g)).toBe(Human);
   });
 
   it("opponent wins a 1-2 split", () => {
     const g = mkGame(
-      [
-        caravanOf([["10", 1], "4"]),
-        caravanOf(["10", "9", "4"]),
-        caravanOf(["10", "8", "4"]),
-      ],
-      [
-        caravanOf(["10", "8", "4"]),
-        caravanOf(["10", "9", "6"]),
-        caravanOf(["10", "9", "7"]),
-      ],
+      [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "4"]), caravanOf(["10", "8", "4"])],
+      [caravanOf(["10", "8", "4"]), caravanOf(["10", "9", "6"]), caravanOf(["10", "9", "7"])],
     );
-    // pair0: 24 vs 22 ->0 ; pair1: 23 vs 25 ->1 ; pair2: 22 vs 26 ->1  => 1 wins 2
     expect(gameWinner(g)).toBe(Ai);
   });
 });
