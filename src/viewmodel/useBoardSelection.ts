@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import type { Action, TargetRef } from "../game/types";
-import type { TransitionInfo } from "../game/transition";
+import type { Action, TargetRef } from "../model/types";
+import type { TransitionInfo } from "../model/transition";
 
 function targetKey(t: TargetRef): string {
   return `${t.player}-${t.caravan}-${t.cardIndex}`;

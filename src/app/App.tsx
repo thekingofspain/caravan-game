@@ -1,5 +1,5 @@
-import { GameConfig, useGame } from "./state/useGame";
-import { Board } from "./ui/Board";
+import { GameConfig, useGame } from "../viewmodel/useGame";
+import { Board } from "../view/Board";
 
 export default function App() {
   const params = new URLSearchParams(window.location.search);

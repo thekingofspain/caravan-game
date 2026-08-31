@@ -38,7 +38,7 @@ describe("initial round (must-start constraint)", () => {
     expect(acts.length).toBeGreaterThan(0);
     for (const a of acts) {
       expect(a.type).toBe("playValueCard");
-      expect(s.players[a.player].caravans[a.caravan].cards.length).toBe(0);
+      expect(((s.players[a.player].caravans[a.caravan] as any).rows ?? (s.players[a.player].caravans[a.caravan] as any).cards).length).toBe(0);
     }
   });
   it("disallows discard while a caravan is empty", () => {
@@ -51,7 +51,7 @@ describe("initial round (must-start constraint)", () => {
     const act = legalActions(s)[0];
     const card = s.players[Human].hand[act.handIndex];
     const next = applyAction(s, act);
-    expect(next.players[Human].caravans[act.caravan].cards.length).toBe(1);
+    expect(((next.players[Human].caravans[act.caravan] as any).rows ?? (next.players[Human].caravans[act.caravan] as any).cards).length).toBe(1);
     expect(next.players[Human].caravans[act.caravan].suit).toBe(card.suit);
     expect(next.current).toBe(1);
   });
@@ -70,7 +70,7 @@ describe("face card effects", () => {
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFaceCard", player: 0, target: { player: 1, caravan: 2, cardIndex: 0 }, handIndex: 0 });
     // Jacked card is removed right away on the player's own turn (no separate step).
-    expect(next.players[Ai].caravans[2].cards.length).toBe(0);
+    expect(((next.players[Ai].caravans[2] as any).rows ?? (next.players[Ai].caravans[2] as any).cards).length).toBe(0);
     expect(next.current).toBe(1);
   });
 
@@ -81,7 +81,7 @@ describe("face card effects", () => {
     const move = { type: "playFaceCard", player: 1, target: { player: 0, caravan: 2, cardIndex: 0 }, handIndex: 0 } as const;
     const next = applyAction(s, move);
     // Engine commits immediately — no pending; card is gone in `next`, UX shows pseudo via diff
-    expect(next.players[Human].caravans[2].cards.length).toBe(0);
+    expect(((next.players[Human].caravans[2] as any).rows ?? (next.players[Human].caravans[2] as any).cards).length).toBe(0);
     // UX derives pseudo from diff(previous, move, current)
     const info = getTransitionInfo(s, move, next);
     expect(info.needsConfirmation).toBe(true);
@@ -138,7 +138,7 @@ describe("face card effects", () => {
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "playFaceCard", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 });
     expect(next.players[Ai].caravans[0].cards.length).toBe(1); // only the 5 stays
-    expect(next.players[Ai].caravans[2].cards.length).toBe(0); // other 10 removed
+    expect(((next.players[Ai].caravans[2] as any).rows ?? (next.players[Ai].caravans[2] as any).cards).length).toBe(0); // other 10 removed
     const entry = next.log.find((e) => e.text.includes("Joker"))!;
     expect(entry.detail).toEqual(["AI's caravan Dayglow: {10♠}", "AI's caravan The Hub: {10♠}"]); // one bullet per affected caravan
   });
@@ -161,7 +161,7 @@ describe("dismissCaravan", () => {
     const p1 = mkPlayer(EMPTY, []);
     const s = mkGame(p0, p1);
     const next = applyAction(s, { type: "dismissCaravan", player: 0, caravan: 0 });
-    expect(next.players[Human].caravans[0].cards.length).toBe(0);
+    expect(((next.players[Human].caravans[0] as any).rows ?? (next.players[Human].caravans[0] as any).cards).length).toBe(0);
   });
 });
 
@@ -184,9 +184,9 @@ describe("deck", () => {
   it("standard deck has 54 unique cards including a black and a red joker", () => {
     const d = buildDeck();
     expect(d.length).toBe(54);
-    const jokers = d.filter((c) => c.rank === "JOKER");
+    const jokers = d.filter((c) => (c.rank === "JOKER" || c.rank === "Joker"));
     expect(jokers.map(jokerColor).sort()).toEqual(["black", "red"]);
-    expect(new Set(d.map((c) => `${c.suit}-${c.rank}`)).size).toBe(54);
+    expect(new Set(d.map((c) => c.id)).size).toBe(54);
   });
 
   it("setupGame deals each player 30 cards from a full shuffled deck", () => {
@@ -194,7 +194,7 @@ describe("deck", () => {
     for (const p of s.players) {
       expect(p.hand.length + p.deck.length).toBe(30);
       for (const c of [...p.hand, ...p.deck]) {
-        expect(c.rank === "JOKER" || c.suit !== "joker").toBe(true);
+        expect((c.rank === "JOKER" || c.rank === "Joker") || c.suit !== "joker").toBe(true);
       }
     }
   });

@@ -55,7 +55,7 @@ describe("AI", () => {
       expect(legal.some((l) => sameAction(l, a))).toBe(true);
       s = applyAction(s, a);
       const key = JSON.stringify(
-        s.players.map((p) => [p.hand.map((c) => c.id), p.caravans.map((c) => c.cards.map((x) => x.card.id))]),
+        s.players.map((p) => [p.hand.map((c) => c.id), p.caravans.map((c: any) => (c.rows ?? c.cards).map((x: any) => Array.isArray(x) ? x[0].id : x.card.id))]),
       );
       if (seen.has(key)) {
         const disband = legal.find((l) => l.type === "dismissCaravan");

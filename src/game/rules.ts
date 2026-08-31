@@ -1,40 +1,27 @@
-import { baseValue, Caravan, Card, GameState, PlacedCard, TargetRef } from "./types";
-
-export function isJacked(p: PlacedCard): boolean {
-  return p.attachments.some((c) => c.rank === "J");
+export * from "../model/rules/caravanCardRules";
+import { calculateScore, isSellable, canPlaceCard, calculateCaravanRowValue } from "../model/rules/caravanCardRules";
+import { baseValue } from "../model/types";
+export const caravanTotal = calculateScore;
+export const isInRange = isSellable;
+export const isJacked = (row: any) => {
+  if (Array.isArray(row)) return row.slice(1).some((c: any) => c.rank === "J");
+  return row.attachments && row.attachments.some((c: any) => c.rank === "J");
+};
+export const canPlayValueCard = canPlaceCard;
+export function placedValue(p: any): number {
+  if (p.attachments) {
+    if (p.attachments.some((c: any) => c.rank === "J")) return 0;
+    if (p.kingCount !== undefined) {
+      return baseValue(p.card) * Math.pow(2, p.kingCount);
+    }
+    return calculateCaravanRowValue([p.card, ...(p.attachments || [])].filter(Boolean) as any);
+  }
+  if (p.card) {
+    return baseValue(p.card) * Math.pow(2, p.kingCount || 0);
+  }
+  return calculateCaravanRowValue(p as any);
 }
-
-export function placedValue(p: PlacedCard): number {
-  if (isJacked(p)) return 0;
-  return baseValue(p.card) * Math.pow(2, p.kingCount);
-}
-
-export function caravanTotal(c: Caravan): number {
-  return c.cards.reduce((sum, p) => sum + placedValue(p), 0);
-}
-
-export function activeCards(c: Caravan): PlacedCard[] {
-  return c.cards.filter((p) => !isJacked(p));
-}
-
-export function isInRange(total: number): boolean {
-  return total >= 21 && total <= 26;
-}
-
-export function canPlayValueCard(card: Card, caravan: Caravan): boolean {
-  const actives = activeCards(caravan);
-  if (actives.length === 0) return true;
-  const prev = actives[actives.length - 1];
-  if (card.rank === prev.card.rank) return false;
-  if (caravan.direction === null) return true;
-  const cv = baseValue(card);
-  const pv = baseValue(prev.card);
-  const continues = caravan.direction === "asc" ? cv > pv : cv < pv;
-  const matchesSuit = card.suit === prev.card.suit;
-  return continues || matchesSuit;
-}
-
-export function isValidTarget(state: GameState, target: TargetRef): boolean {
-  const car = state.players[target.player].caravans[target.caravan];
-  return !!car && target.cardIndex >= 0 && target.cardIndex < car.cards.length;
+export function activeCards(c: any): any[] {
+  if ((c as any).rows) return (c as any).rows;
+  return (c as any).cards || [];
 }

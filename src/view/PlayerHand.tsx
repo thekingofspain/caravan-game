@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { cardClassName, cardLabel } from "../game/cards";
-import { Human, PlayerId, PlayerState } from "../game/types";
+import { cardClassName, cardLabel } from "../model/cards";
+import { Human, PlayerId, PlayerState } from "../model/types";
 
 const SLOT_KEYS = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"];
 
@@ -44,7 +44,7 @@ function PlayerHandImpl({
                 aria-pressed={selectedHandIndex === i}
               >
                 <div
-                  className={`${cardClassName(card)} ${selectedHandIndex === i ? "is-selected" : ""}`}
+                  className={`${cardClassName("card", card)} ${selectedHandIndex === i ? "is-selected" : ""}`}
                   role="img"
                   aria-label={cardLabel(card)}
                 />

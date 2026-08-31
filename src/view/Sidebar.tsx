@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import { LogEntry } from "../game/types";
-import { CARAVAN_NAMES } from "../game/names";
+import { LogEntry } from "../model/types";
+import { CARAVAN_NAMES } from "../model/names";
 
 const CARAVAN_NAME_ALT = Object.values(CARAVAN_NAMES).flat().join("|");
 const RE_WHO = new RegExp(

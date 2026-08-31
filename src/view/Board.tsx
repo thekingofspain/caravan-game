@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { GameStore, isHumanTurn, handSelectable } from "../state/useGame";
-import { Ai, Human, PlayerId, TargetRef, isValueCard } from "../game/types";
-import { pairWinner } from "../game/scoring";
-import { caravanName } from "../game/names";
+import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
+import { Ai, Human, PlayerId, TargetRef, isValueCard } from "../model/types";
+import { pairWinner } from "../model/scoring";
+import { calculateCaravanState } from "../model/rules/caravanCardRules";
+import { caravanName } from "../model/names";
 import { Caravan, CaravanScore } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
 import { CardView } from "./CardView";
 import { Sidebar } from "./Sidebar";
-import { useBoardSelection } from "./useBoardSelection";
-
-function targetKey(t: TargetRef): string {
-  return `${t.player}-${t.caravan}-${t.cardIndex}`;
-}
+import { useBoardSelection } from "../viewmodel/useBoardSelection";
+import { targetKey } from "../viewmodel/transition";
 
 const noop = () => {};
 export function Board({ store, confirm = typeof window !== "undefined" ? window.confirm.bind(window) : () => true }: { store: GameStore; confirm?: (msg: string) => boolean }) {
@@ -39,8 +37,8 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     const cloned: typeof base = JSON.parse(JSON.stringify(base));
     const { card, at } = transition.addedTemp;
     const caravan = cloned.players[at.player].caravans[at.caravan];
-    const pc = caravan.cards[at.cardIndex];
-    if (pc) pc.attachments = [...pc.attachments, card];
+    const row = caravan.rows[at.cardIndex];
+    if (row) row.push(card);
     return cloned;
   }, [state, transition, store.previous]);
   const { legalCaravans, targetSet, canDiscard, pendingKeys } = useBoardSelection(sel, legal, transition);
@@ -49,7 +47,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
   const humanPlayer = displayedState.players[Human];
   const aiPlayer = displayedState.players[Ai];
   const canDisbandAny =
-    human && !blocked && sel === null && humanPlayer.caravans.every((c) => c.cards.length > 0);
+    human && !blocked && sel === null && humanPlayer.caravans.every((c) => c.rows.length > 0);
 
   const selectableIndices = useMemo(() => {
     const set = new Set<number>();
@@ -95,7 +93,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
 
       if (target.player === Human) {
         if (isValueCard(card)) {
-          const caravanLen = humanPlayer.caravans[target.caravan].cards.length;
+          const caravanLen = humanPlayer.caravans[target.caravan].rows.length;
           const isTop = target.cardIndex === caravanLen - 1;
           if (legalCaravans.includes(target.caravan) && isTop) {
             try { act({ type: "playValueCard", player: Human, caravan: target.caravan, handIndex: sel }); } catch (e) { setToast(e instanceof Error ? e.message : String(e)); }
@@ -216,8 +214,9 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 {[0, 1, 2].map((ci) => {
                   const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
                   const side = "ai";
+                  const sold = calculateCaravanState(aiPlayer.caravans[ci]).status === "sellable";
                   return (
-                    <div className="caravan-col" key={ci}>
+                    <div className={sold ? "caravan-col is-sold" : "caravan-col"} key={ci}>
                       <div className={`caravan-col__header caravan-col__header--${side}`}>
                           <CaravanScore
                             caravan={aiPlayer.caravans[ci]}
@@ -247,8 +246,9 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 {[0, 1, 2].map((ci) => {
                   const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
                   const side = "human";
+                  const sold = calculateCaravanState(humanPlayer.caravans[ci]).status === "sellable";
                   return (
-                    <div className="caravan-col" key={ci}>
+                    <div className={sold ? "caravan-col is-sold" : "caravan-col"} key={ci}>
                       <div className={`caravan-col__header caravan-col__header--${side}`}>
                           <CaravanScore
                             caravan={humanPlayer.caravans[ci]}

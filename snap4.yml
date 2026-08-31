@@ -1,0 +1,63 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic:
+          - generic: "0"
+          - generic: Dayglow
+        - button [ref=e12] [cursor=pointer]
+      - generic [ref=e13]:
+        - generic:
+          - generic: "0"
+          - generic: New Reno
+        - button [ref=e15] [cursor=pointer]
+      - generic [ref=e16]:
+        - generic:
+          - generic: "0"
+          - generic: The Hub
+        - button [ref=e18] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic:
+          - generic: "0"
+          - generic: Boneyard
+        - button [ref=e23] [cursor=pointer]
+      - generic [ref=e24]:
+        - generic:
+          - generic: "0"
+          - generic: Redding
+        - button [ref=e26] [cursor=pointer]
+      - generic [ref=e27]:
+        - generic:
+          - generic: "0"
+          - generic: Shady Sands
+        - button [ref=e29] [cursor=pointer]
+  - generic [ref=e30]:
+    - generic [ref=e31]:
+      - button "AI deck, 22 cards remaining. View the deck." [ref=e32] [cursor=pointer]:
+        - generic [ref=e34]: "22"
+      - region "AI hand, 8 cards" [ref=e35]
+    - generic [ref=e53]:
+      - button "New game" [ref=e54] [cursor=pointer]
+      - button "Activity" [ref=e55] [cursor=pointer]
+    - generic [ref=e56]:
+      - region "You hand, 8 cards" [ref=e57]:
+        - generic [ref=e58]:
+          - button "6 of hearts, playable" [ref=e59] [cursor=pointer]:
+            - img "6 of hearts" [ref=e60]
+          - button "J of clubs" [ref=e61] [cursor=pointer]:
+            - img "J of clubs" [ref=e62]
+          - button "6 of spades, playable" [ref=e63] [cursor=pointer]:
+            - img "6 of spades" [ref=e64]
+          - button "A of clubs, playable" [ref=e65] [cursor=pointer]:
+            - img "A of clubs" [ref=e66]
+          - button "7 of diamonds, playable" [ref=e67] [cursor=pointer]:
+            - img "7 of diamonds" [ref=e68]
+          - button "Black Joker" [ref=e69] [cursor=pointer]:
+            - img "Black Joker" [ref=e70]
+          - button "K of clubs" [ref=e71] [cursor=pointer]:
+            - img "K of clubs" [ref=e72]
+          - button "4 of spades, playable" [ref=e73] [cursor=pointer]:
+            - img "4 of spades" [ref=e74]
+      - button "Your deck, 22 cards remaining. Click to discard the selected card and draw a new one, or view the deck." [ref=e75] [cursor=pointer]:
+        - generic [ref=e77]: "22"
