@@ -32,93 +32,69 @@ export function useGame(initial: GameConfig): GameStore {
   const [cfg, setCfg] = useState<GameConfig>(initial);
   const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: Human }));
   const [thinking, setThinking] = useState(false);
-  const [previous, setPrevious] = useState<GameState | null>(null);
-  const [lastMove, setLastMove] = useState<Move | null>(null);
-  const [transition, setTransition] = useState<TransitionInfo | null>(null);
-  const [stagedNext, setStagedNext] = useState<GameState | null>(null);
-  const [pendingMove, setPendingMove] = useState<Move | null>(null);
+  const [ui, setUi] = useState<{
+    previous: GameState | null;
+    lastMove: Move | null;
+    transition: TransitionInfo | null;
+    stagedNext: GameState | null;
+    pendingMove: Move | null;
+  }>({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
 
   // Test harness: allow e2e to program particular hand/deck/ops
   if (typeof window !== "undefined") {
-    const w = window as unknown as { __setCaravanState?: (s: GameState)=>void; __caravanDispatch?: (a: ReducerMove)=>void };
+    const w = window as unknown as { __setCaravanState?: (s: GameState) => void; __caravanDispatch?: (a: ReducerMove) => void };
     w.__setCaravanState = (s: GameState) => dispatch({ type: "__setState", state: s });
     w.__caravanDispatch = dispatch;
   }
 
+  const commitOrStage = useCallback(
+    (prev: GameState, move: Move, next: GameState) => {
+      const info = getTransitionInfo(prev, move, next);
+      if (info.needsConfirmation && info.confirmer === Human) {
+        setUi({ previous: prev, lastMove: move, transition: info, stagedNext: next, pendingMove: move });
+      } else {
+        setUi({ previous: prev, lastMove: move, transition: null, stagedNext: null, pendingMove: null });
+        dispatch(move);
+      }
+    },
+    [],
+  );
+
+  const { previous, lastMove, transition, stagedNext, pendingMove } = ui;
+
   useEffect(() => {
     if (state.phase === "over" || state.current !== Ai) return;
-    // If UX is waiting for human ack, don't let AI play
     if (transition?.needsConfirmation && transition.confirmer === Human) return;
     setThinking(true);
     const t = setTimeout(() => {
       const a = determineBestMove(state, Ai);
       const next = applyMove(state, a);
-      const info = getTransitionInfo(state, a, next);
-      if (info.needsConfirmation && info.confirmer === Human) {
-        // Hold for human ack — keep previous displayed grey until ack
-        setPrevious(state);
-        setLastMove(a);
-        setTransition(info);
-        setStagedNext(next);
-        setPendingMove(a);
-      } else {
-        setPrevious(state);
-        setLastMove(a);
-        setTransition(null);
-        dispatch(a);
-      }
+      commitOrStage(state, a, next);
       setThinking(false);
     }, 650);
     return () => clearTimeout(t);
-  }, [state, transition]);
+  }, [state, transition, commitOrStage]);
 
   const act = useCallback(
     (a: Move) => {
       const next = applyMove(state, a);
-      const info = getTransitionInfo(state, a, next);
-      // Only hold for display + require human ack when AI removed cards (confirmer===Human)
-      // Human's own Jack/Joker (confirmer===Ai) commits immediately — no ack, per spec: "since the human made the move, there is not acknowledgement"
-      if (info.needsConfirmation && info.confirmer === Human) {
-        setPrevious(state);
-        setLastMove(a);
-        setTransition(info);
-        setStagedNext(next);
-        setPendingMove(a);
-        return;
-      }
-      // Immediate commit — no pending grey
-      setPrevious(state);
-      setLastMove(a);
-      setTransition(null);
-      dispatch(a);
+      commitOrStage(state, a, next);
     },
-    [state],
+    [state, commitOrStage],
   );
   const reset = useCallback((c: GameConfig) => {
     setCfg(c);
-    setPrevious(null);
-    setLastMove(null);
-    setTransition(null);
-    setStagedNext(null);
-    setPendingMove(null);
+    setUi({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
     dispatch({ type: "reset", config: c });
   }, []);
   const acknowledge = useCallback(() => {
-    if (stagedNext && pendingMove) {
-      // Commit the held move's resulting state
-      dispatch(pendingMove);
-      setPrevious(null);
-      setLastMove(null);
-      setTransition(null);
-      setStagedNext(null);
-      setPendingMove(null);
+    if (ui.stagedNext && ui.pendingMove) {
+      dispatch(ui.pendingMove);
+      setUi({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
       return;
     }
-    // Fallback: just clear transition if no staged move (e.g., forced via __act)
-    setTransition(null);
-    setPrevious(null);
-    setLastMove(null);
-  }, [stagedNext, pendingMove]);
+    setUi((prev) => ({ ...prev, transition: null, previous: null, lastMove: null }));
+  }, [ui.stagedNext, ui.pendingMove]);
 
   const legal = useMemo(() => legalMoves(state), [state]);
   return { state, legal, act, reset, thinking, transition, previous, lastMove, acknowledge };

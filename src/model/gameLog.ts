@@ -1,9 +1,8 @@
-import { hasJackAttached } from "./rules/caravanCardRules";
+import { calculateCaravanRowValue, hasJackAttached } from "./rules/caravanCardRules";
 import { caravanName } from "./names";
-import { Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, baseValue, isJokerCard, isPlaceholderCard } from "./types";
+import { Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard, isPlaceholderCard } from "./types";
 
 let logId = 0;
-
 export function resetLogIds(): void {
   logId = 0;
 }
@@ -24,17 +23,9 @@ export function formatOwnerLabel(p: PlayerId): string {
 }
 
 export function formatFinalScore(state: GameState): string {
-  const scores = state.players.map((pl) => {
-    const t = pl.caravans.reduce((s, c) => {
-      const total = c.rows.reduce((sum, row) => {
-        if (hasJackAttached(row)) return sum;
-        const kingCount = row.slice(1).filter((x) => x.rank === "K").length;
-        return sum + baseValue(row[0]) * Math.pow(2, kingCount);
-      }, 0);
-      return s + total;
-    }, 0);
-    return t;
-  });
+  const scores = state.players.map((pl) =>
+    pl.caravans.reduce((s, c) => s + c.rows.reduce((sum, row) => sum + (hasJackAttached(row) ? 0 : calculateCaravanRowValue(row)), 0), 0),
+  );
   return `(${scores[0]} vs ${scores[1]})`;
 }
 

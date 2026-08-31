@@ -15,13 +15,11 @@ const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 
 function decorateWho(text: string, keyBase: string): ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const re = RE_WHO;
-  re.lastIndex = 0;
   let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(text.slice(last, m.index));
+  for (const m of text.matchAll(RE_WHO)) {
+    const idx = m.index ?? 0;
+    if (idx > last) nodes.push(text.slice(last, idx));
     const key = `${keyBase}-${k++}`;
       if (m[2] !== undefined) {
         const side = m[2] === "AI's" ? "ai" : "human";
@@ -50,8 +48,7 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
         </span>,
       );
     }
-    last = re.lastIndex;
-    m = re.exec(text);
+    last = idx + m[0].length;
   }
   if (last < text.length) nodes.push(text.slice(last));
   return nodes;
@@ -59,13 +56,11 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
 
 function decorateCardTokens(text: string, keyBase: string | number): ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const re = RE_CARD;
-  re.lastIndex = 0;
   let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(...decorateLog(text.slice(last, m.index), `${keyBase}-${k++}`));
+  for (const m of text.matchAll(RE_CARD)) {
+    const idx = m.index ?? 0;
+    if (idx > last) nodes.push(...decorateLog(text.slice(last, idx), `${keyBase}-${k++}`));
     const red = /♥|♦|Red/.test(m[1]);
     let cls = "log__card--black";
     if (red && !/♦/.test(m[1])) cls = "log__card--red";
@@ -76,8 +71,7 @@ function decorateCardTokens(text: string, keyBase: string | number): ReactNode[]
         {m[1]}
       </span>,
     );
-    last = re.lastIndex;
-    m = re.exec(text);
+    last = idx + m[0].length;
   }
   if (last < text.length) nodes.push(...decorateLog(text.slice(last), `${keyBase}-${k++}`));
   return nodes;
@@ -86,18 +80,15 @@ function decorateCardTokens(text: string, keyBase: string | number): ReactNode[]
 function decorateLog(text: string, keyBase: string | number = 0): ReactNode[] {
   if (text.includes("{")) return decorateCardTokens(text, keyBase);
   const nodes: React.ReactNode[] = [];
-  const re = RE_STYLE;
-  re.lastIndex = 0;
   let last = 0;
-  let m: RegExpExecArray | null = re.exec(text);
   let k = 0;
-  while (m !== null) {
-    if (m.index > last) nodes.push(...decorateWho(text.slice(last, m.index), `${keyBase}w${k}`));
+  for (const m of text.matchAll(RE_STYLE)) {
+    const idx = m.index ?? 0;
+    if (idx > last) nodes.push(...decorateWho(text.slice(last, idx), `${keyBase}w${k}`));
     if (m[1] !== undefined) nodes.push(<span key={`${keyBase}s${k}`} className="log__sold">{m[1]}</span>);
     else nodes.push(<span key={`${keyBase}s${k}`} className="log__sellable">{m[2]}</span>);
     k += 1;
-    last = re.lastIndex;
-    m = re.exec(text);
+    last = idx + m[0].length;
   }
   if (last < text.length) nodes.push(...decorateWho(text.slice(last), `${keyBase}w${k}`));
   return nodes;

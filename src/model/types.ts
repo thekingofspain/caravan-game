@@ -29,9 +29,6 @@ export type Card = StandardCard | JokerCard | PlaceholderCard;
 export function isJokerCard(card: Card): card is JokerCard {
   return card.rank === "Joker";
 }
-export function isStandardCard(card: Card): card is StandardCard {
-  return card.rank !== "Joker" && card.rank !== "PLACEHOLDER";
-}
 export function isPlaceholderCard(card: Card): card is PlaceholderCard {
   return card.rank === "PLACEHOLDER";
 }
@@ -110,12 +107,6 @@ export class IllegalMoveError extends Error {
     this.name = "IllegalMoveError";
   }
 }
-export class IllegalActionError extends IllegalMoveError {
-  constructor(message: string) {
-    super(message);
-    this.name = "IllegalActionError";
-  }
-}
 export function isValueCard(card: Card): boolean {
   if (isPlaceholderCard(card)) return false;
   return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "Joker";
@@ -140,7 +131,6 @@ export interface SelectionState {
   legalCaravans: number[];
   targetSet: Set<string>;
   pendingRemovalSet: Set<string>;
-  greyedSet: Set<string>;
   removingSet: Set<string>;
   canDiscard: boolean;
 }

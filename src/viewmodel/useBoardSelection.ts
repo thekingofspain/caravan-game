@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import type { Move, TargetRef } from "../model/types";
-import type { TransitionInfo } from "./transition";
+import { targetKey, type TransitionInfo } from "./transition";
 
-function targetKey(t: TargetRef): string {
-  return `${t.player}-${t.caravan}-${t.cardIndex}`;
-}
 
 export function useBoardSelection(sel: number | null, legal: Move[], transition: TransitionInfo | null) {
   const { legalCaravans, targetSet, canDiscard } = useMemo(() => {

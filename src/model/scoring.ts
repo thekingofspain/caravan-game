@@ -18,7 +18,3 @@ export function gameWinner(state: GameState): PlayerId | null {
   const wins0 = w.filter((x) => x === Human).length;
   return wins0 >= 2 ? Human : Ai;
 }
-
-export function allSold(state: GameState): boolean {
-  return Array.from({length: CARAVAN_COUNT}, (_,i)=> i as 0|1|2).every((i) => pairWinner(state, i) !== null);
-}

@@ -50,7 +50,6 @@ function CaravanImpl({
     const isTarget = selection.targetSet.has(key);
     const classes = [cardClassName("card", head)];
     if (isTarget) classes.push("is-target");
-    if (selection.greyedSet?.has(key)) classes.push("isDimmed");
     if (selection.removingSet?.has(key)) classes.push("is-pending-remove");
     return classes.join(" ");
   }
@@ -66,9 +65,13 @@ function CaravanImpl({
         const removable = selection.pendingRemovalSet.has(targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k }));
         const attachments = caravanRow.slice(1);
         const sorted = sortAttachments(attachments);
-        const lastKingIndex = sorted.reduce((last, c, i) => (c.rank === "K" ? i : last), -1);
-        const jackIdx = sorted.findIndex((c) => c.rank === "J");
-        const kingCount = attachments.filter((c) => c.rank === "K").length;
+        let lastKingIndex = -1;
+        let jackIdx = -1;
+        let kingCount = 0;
+        sorted.forEach((c, i) => {
+          if (c.rank === "K") { kingCount += 1; lastKingIndex = i; }
+          if (c.rank === "J" && jackIdx === -1) jackIdx = i;
+        });
         const kingBadge = kingCount > 0 ? `×${Math.pow(2, kingCount)}` : "";
         return (
           <button key={head.id} type="button" className={getCardClasses(caravanRow, k)} data-index={k} style={getCardStyle(k)} onClick={handleCardClick} onKeyDown={handleCardKeyDown}>

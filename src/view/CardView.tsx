@@ -7,9 +7,8 @@ interface CardViewProps {
   className?: string;
 }
 
-function CardView({ card, className }: CardViewProps) {
+export const CardView = memo(function CardView({ card, className }: CardViewProps) {
   return <div className={cardClassName(className ?? "card", card)} />;
-}
+});
 
-export default memo(CardView);
-export { CardView };
+export default CardView;

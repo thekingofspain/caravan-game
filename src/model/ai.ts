@@ -1,4 +1,4 @@
-import { CARAVAN_COUNT, GameState, Human, Ai, PlayerId, Move } from "./types";
+import { CARAVAN_COUNT, GameState, Human, Ai, PlayerId, Move, CaravanState } from "./types";
 import { applyMove, legalMoves } from "./engine";
 import { calculateCaravanState } from "./rules/caravanCardRules";
 
@@ -7,11 +7,11 @@ const EVAL_SOLD_WEIGHT = 100;
 const EVAL_BUST_WEIGHT = 80;
 const EVAL_TIE_WEIGHT = 20;
 
-function calculateCaravanAdvantage(current: any, opposing: any): number {
+function calculateCaravanAdvantage(current: CaravanState, opposing: CaravanState): number {
   const currentSellable = current.status === "sellable";
   const opposingSellable = opposing.status === "sellable";
-  const currentTotal = current.total ?? 0;
-  const opposingTotal = opposing.total ?? 0;
+  const currentTotal = current.status === "empty" ? 0 : current.total;
+  const opposingTotal = opposing.status === "empty" ? 0 : opposing.total;
   if (currentSellable && opposingSellable) {
     if (currentTotal > opposingTotal) return EVAL_SOLD_WEIGHT + (currentTotal - 21);
     if (currentTotal < opposingTotal) return -EVAL_SOLD_WEIGHT - (26 - opposingTotal);

@@ -60,8 +60,9 @@ export function getTransitionInfo(
 }
 
 export function getDisplayedState(previous: GameState | null, current: GameState, transition: TransitionInfo | null): GameState {
-  if (!transition || !transition.needsConfirmation || !previous || !transition.addedTemp) return current;
-  const cloned: GameState = JSON.parse(JSON.stringify(previous));
+  if (!transition?.needsConfirmation || !previous) return current;
+  if (!transition.addedTemp) return previous;
+  const cloned: GameState = structuredClone(previous);
   const { card, at } = transition.addedTemp;
   const caravan = cloned.players[at.player].caravans[at.caravan];
   const row = caravan.rows[at.cardIndex];

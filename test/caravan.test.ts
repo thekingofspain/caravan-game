@@ -17,7 +17,6 @@ function createSelection(overrides: Partial<SelectionState> = {}): SelectionStat
     legalCaravans: [],
     targetSet: new Set(),
     pendingRemovalSet: new Set(),
-    greyedSet: new Set(),
     removingSet: new Set(),
     canDiscard: false,
     ...overrides,

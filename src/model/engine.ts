@@ -25,6 +25,7 @@ import {
   isValueCard,
   baseValue,
 } from "./types";
+import type { CaravanRow } from "./types";
 
 function emptyCaravan(): Caravan {
   return { rows: [], direction: null, suit: null };
@@ -198,124 +199,91 @@ function handleDismissCaravan(next: GameState, action: Extract<Move, { type: "di
     throw new IllegalMoveError("dismissCaravan: cannot disband before all caravans started");
   player.caravans[action.caravan] = emptyCaravan();
 }
-export function applyMove(state: GameState, action: Move): GameState {
+export function cloneAndApply(state: GameState, action: Move): { next: GameState; jokerDetail: Nullable<string[]> } {
   if (state.phase === "over") throw new IllegalMoveError("game over");
   if (action.player !== state.current) throw new IllegalMoveError("not current player");
-
   const next: GameState = structuredClone(state);
   let jokerDetail: Nullable<string[]> = null;
-
-  if (action.type === "playValueCard") {
-    handlePlayValueCard(next, action);
-  } else if (action.type === "playFaceCard") {
-    jokerDetail = handlePlayFaceCard(next, action);
-  } else if (action.type === "discardCard") {
-    handleDiscardCard(next, action);
-  } else if (action.type === "dismissCaravan") {
-    handleDismissCaravan(next, action);
-  }
-
-  const text = describe(action, state);
-  if (text !== null) {
-    const entry = log(text);
-    if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
-    next.log = [...next.log, entry];
-  }
-
+  if (action.type === "playValueCard") handlePlayValueCard(next, action);
+  else if (action.type === "playFaceCard") jokerDetail = handlePlayFaceCard(next, action);
+  else if (action.type === "discardCard") handleDiscardCard(next, action);
+  else if (action.type === "dismissCaravan") handleDismissCaravan(next, action);
+  return { next, jokerDetail };
+}
+export function appendActionLog(next: GameState, action: Move, prev: GameState, jokerDetail: Nullable<string[]>): void {
+  const text = describe(action, prev);
+  if (text === null) return;
+  const entry = log(text);
+  if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
+  next.log = [...next.log, entry];
+}
+export function resolveTerminal(next: GameState): void {
   const winner = gameWinner(next);
   if (winner !== null) {
     next.phase = "over";
     next.winner = winner;
-    next.log = [
-      ...next.log,
-      log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${formatFinalScore(next)}`),
-    ];
-  } else {
-    next.current = next.current === Human ? Ai : Human;
-    if (legalMoves(next).length === 0) {
-      const loser = next.current;
-      next.phase = "over";
-      next.winner = loser === Human ? Ai : Human;
-      next.log = [
-        ...next.log,
-        log(
-          `${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${formatFinalScore(next)}`,
-        ),
-      ];
-    }
+    next.log = [...next.log, log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${formatFinalScore(next)}`)];
+    return;
   }
+  next.current = next.current === Human ? Ai : Human;
+  if (legalMoves(next).length === 0) {
+    const loser = next.current;
+    next.phase = "over";
+    next.winner = loser === Human ? Ai : Human;
+    next.log = [...next.log, log(`${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${formatFinalScore(next)}`)];
+  }
+}
+export function applyMove(state: GameState, action: Move): GameState {
+  const { next, jokerDetail } = cloneAndApply(state, action);
+  appendActionLog(next, action, state, jokerDetail);
+  resolveTerminal(next);
   return next;
 }
-
+function isBlockedByJack(row: CaravanRow, rank: string): boolean {
+  return (rank === "J" || rank === "K") && hasJackAttached(row);
+}
+function faceCardTargets(state: GameState, pid: PlayerId, handIndex: number): Move[] {
+  const card = state.players[pid].hand[handIndex];
+  if (!card || (!isFaceCard(card) && !isJokerCard(card))) return [];
+  const out: Move[] = [];
+  for (const p of PLAYERS) for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
+    const targetCar = state.players[p].caravans[ci as CaravanIndex];
+    for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
+      const row = targetCar.rows[cidx];
+      if (isBlockedByJack(row, card.rank)) continue;
+      out.push({ type: "playFaceCard", player: pid, target: { player: p, caravan: ci as CaravanIndex, cardIndex: cidx }, handIndex });
+    }
+  }
+  return out;
+}
+function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boolean): Move[] {
+  const out: Move[] = [];
+  for (let ci = 0; ci < player.caravans.length; ci++) {
+    const car = player.caravans[ci];
+    if (filterEmptyOnly && car.rows.length !== 0) continue;
+    for (let hi = 0; hi < player.hand.length; hi++) {
+      const card = player.hand[hi];
+      if (!isValueCard(card)) continue;
+      if (!filterEmptyOnly && !canPlaceCard(card, car)) continue;
+      out.push({ type: "playValueCard", player: pid, caravan: ci as CaravanIndex, handIndex: hi });
+    }
+  }
+  return out;
+}
 export function legalMoves(state: GameState): Move[] {
   if (state.phase === "over") return [];
   const pid = state.current;
   const player = state.players[pid];
-  const actions: Move[] = [];
   const hasEmpty = player.caravans.some((c) => c.rows.length === 0);
-
   if (hasEmpty) {
-    for (let ci = 0; ci < player.caravans.length; ci++) {
-      const car = player.caravans[ci];
-      if (car.rows.length !== 0) continue;
-      for (let hi = 0; hi < player.hand.length; hi++) {
-        const card = player.hand[hi];
-        if (isValueCard(card)) actions.push({ type: "playValueCard", player: pid, caravan: ci as CaravanIndex, handIndex: hi });
-      }
-    }
-    for (let hi = 0; hi < player.hand.length; hi++) {
-      const card = player.hand[hi];
-      if (!isFaceCard(card) && !isJokerCard(card)) continue;
-      for (const p of PLAYERS) {
-        for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-          const targetCar = state.players[p].caravans[ci];
-          for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
-            const tgt: TargetRef = { player: p, caravan: ci as CaravanIndex, cardIndex: cidx };
-            const row = targetCar.rows[cidx];
-            if (card.rank === "J" && hasJackAttached(row)) continue;
-            if (card.rank === "K" && hasJackAttached(row)) continue;
-            actions.push({ type: "playFaceCard", player: pid, target: tgt, handIndex: hi });
-          }
-        }
-      }
-    }
-    for (let hi = 0; hi < player.hand.length; hi++) {
-      const card = player.hand[hi];
-      if (isPlaceholderCard(card)) actions.push({ type: "discardCard", player: pid, handIndex: hi });
-    }
-    return actions;
+    const discards: Move[] = [];
+    for (let hi = 0; hi < player.hand.length; hi++) if (isPlaceholderCard(player.hand[hi]!)) discards.push({ type: "discardCard", player: pid, handIndex: hi });
+    return [...valueCardMoves(player, pid, true), ...player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi)), ...discards];
   }
-
-  for (let ci = 0; ci < player.caravans.length; ci++) {
-    const car = player.caravans[ci];
-    for (let hi = 0; hi < player.hand.length; hi++) {
-      const card = player.hand[hi];
-      if (isValueCard(card) && canPlaceCard(card, car)) {
-        actions.push({ type: "playValueCard", player: pid, caravan: ci as CaravanIndex, handIndex: hi });
-      }
-    }
-  }
-  for (let hi = 0; hi < player.hand.length; hi++) {
-    const card = player.hand[hi];
-    if (!isFaceCard(card) && !isJokerCard(card)) continue;
-    for (const p of PLAYERS) {
-      for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-        const targetCar = state.players[p].caravans[ci];
-        for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
-          const tgt: TargetRef = { player: p, caravan: ci as CaravanIndex, cardIndex: cidx };
-          const row = targetCar.rows[cidx];
-          if (card.rank === "J" && hasJackAttached(row)) continue;
-          if (card.rank === "K" && hasJackAttached(row)) continue;
-          actions.push({ type: "playFaceCard", player: pid, target: tgt, handIndex: hi });
-        }
-      }
-    }
-  }
-  for (let hi = 0; hi < player.hand.length; hi++) {
-    actions.push({ type: "discardCard", player: pid, handIndex: hi });
-  }
-  for (let ci = 0; ci < player.caravans.length; ci++) {
-    actions.push({ type: "dismissCaravan", player: pid, caravan: ci as CaravanIndex });
-  }
-  return actions;
+  return [
+    ...valueCardMoves(player, pid, false),
+    ...player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi)),
+    ...player.hand.map((_, hi) => ({ type: "discardCard", player: pid, handIndex: hi } as Move)),
+    ...([0, 1, 2] as CaravanIndex[]).map((ci) => ({ type: "dismissCaravan", player: pid, caravan: ci } as Move)),
+  ];
 }

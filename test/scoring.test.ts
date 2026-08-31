@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
-import { pairWinner, gameWinner, allSold } from "../src/model/scoring";
+import { pairWinner, gameWinner } from "../src/model/scoring";
 import { Caravan, GameState, PlayerState, Human, Ai } from "../src/model/types";
 import { CaravanRow } from "../src/model/types";
 
@@ -43,12 +43,12 @@ describe("pairWinner", () => {
 });
 
 describe("allSold / gameWinner", () => {
-  it("allSold false until every pair resolved", () => {
+  it("not all pairs resolved until every pair has winner", () => {
     const g = mkGame(
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9"]), caravanOf(["10"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "8"]), caravanOf(["9"])],
     );
-    expect(allSold(g)).toBe(false);
+    expect([0, 1, 2].every((i) => pairWinner(g, i as 0 | 1 | 2) !== null)).toBe(false);
   });
 
   it("a player with 2+ sold caravans wins", () => {
@@ -56,7 +56,7 @@ describe("allSold / gameWinner", () => {
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "4"]), caravanOf(["10", "9", "7"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "9", "6"]), caravanOf(["10", "9", "2"])],
     );
-    expect(allSold(g)).toBe(true);
+    expect([0, 1, 2].every((i) => pairWinner(g, i as 0 | 1 | 2) !== null)).toBe(true);
     expect(gameWinner(g)).toBe(Human);
   });
 
