@@ -508,7 +508,7 @@ body {
   flex-direction: column;
   flex: 1;
   min-height: calc(var(--card-h) + var(--caravan-pad));
-  width: var(--card-w);
+  width: var(--caravan-w);
   position: relative;
   isolation: isolate;
   align-items: center;
@@ -747,6 +747,14 @@ body {
   z-index: 10;
   padding: 0;
 }
+.jack-remove--row {
+  top: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+  transform: none;
+  z-index: 20;
+}
+
 /* draw the × as two centered bars so it is perfectly centered in the circle */
 .jack-remove::before,
 .jack-remove::after {

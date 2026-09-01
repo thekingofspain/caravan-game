@@ -81,19 +81,14 @@ function CaravanImpl({
               return (
                 <div key={a.id} className={`${cardClassName("card", a)}${isShowX ? " showXButton is-remove-src" : ""}`} style={{ "--c": j + 1 } as CSSProperties}>
                   {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
-                  {jackedCard && j === jackIdx && removable && (
-                    <span role="button" className="jack-remove" tabIndex={0} aria-label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
-                      ×
-                    </span>
-                  )}
-                  {isJokerCard(a) && removable && (
-                    <span role="button" className="jack-remove" tabIndex={0} aria-label={`Acknowledge and remove joker ${a.rank}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
-                      ×
-                    </span>
-                  )}
                 </div>
               );
             })}
+            {removable && (
+              <span role="button" className="jack-remove jack-remove--row" tabIndex={0} aria-label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
+                ×
+              </span>
+            )}
           </button>
         );
       })}
