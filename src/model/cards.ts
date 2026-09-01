@@ -1,6 +1,7 @@
 import { Card, JokerType, JOKER_TYPES, Nullable, Rank, Suit, SUITS, STANDARD_RANKS, SuitedRank, isJokerCard, isPlaceholderCard } from "./types";
 
 let placeholderId=0;
+export function resetPlaceholderIds(): void { placeholderId=0; }
 export function makePlaceholderCard(): Card {
   placeholderId+=1;
   return { id: `placeholder-${placeholderId}`, rank: "PLACEHOLDER", suit: null, isPlaceholder:true } as Card;
