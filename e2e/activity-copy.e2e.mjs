@@ -13,11 +13,11 @@ await page.waitForTimeout(300);
 
 // Open activity
 await page.locator(".btn", { hasText: "Activity" }).click();
-await page.waitForSelector(".activity-flyout");
+await page.waitForSelector(".activity");
 await page.waitForTimeout(200);
 
 // Click Copy
-const copyBtn = page.locator(".activity-flyout__copy");
+const copyBtn = page.locator(".activity .copy");
 await copyBtn.waitFor({ state: "visible" });
 await copyBtn.click();
 await page.waitForTimeout(300);

@@ -23,20 +23,20 @@ function PlayerHandImpl({
   const label = isHuman ? "You" : "AI";
 
   return (
-    <section className={`hand-zone ${isHuman ? "hand-zone--human" : "hand-zone--ai"}`} aria-label={`${label} hand, ${player.hand.length} cards`}>
-      <div className="hand-zone__cards" style={{ "--fan-count": player.hand.length } as React.CSSProperties}>
+    <section className={`hand ${isHuman ? "human" : "ai"}`} aria-label={`${label} hand, ${player.hand.length} cards`}>
+      <div className="cards" style={{ "--fan-count": player.hand.length } as React.CSSProperties}>
         {SLOT_KEYS.map((slotKey) => {
           const i = Number(slotKey.slice(1));
           const card = player.hand[i];
           const slotStyle = { "--i": i } as React.CSSProperties;
           if (!card) {
-            return <div key={slotKey} className="hand__slot" style={slotStyle} aria-hidden="true" />;
+            return <div key={slotKey} className="slot" style={slotStyle} aria-hidden="true" />;
           }
           if (isHuman) {
             return (
               <button
                 type="button"
-                className={`hand__slot ${selectableIndices.has(i) ? "is-selectable" : ""} ${selectedHandIndex === i ? "is-selected" : ""}`}
+                className={`slot ${selectableIndices.has(i) ? "selectable" : ""} ${selectedHandIndex === i ? "selected" : ""}`}
                 key={card.id}
                 style={slotStyle}
                 onClick={() => onCardClick(i)}
@@ -44,7 +44,7 @@ function PlayerHandImpl({
                 aria-pressed={selectedHandIndex === i}
               >
                 <div
-                  className={`${cardClassName("card", card)} ${selectedHandIndex === i ? "is-selected" : ""}`}
+                  className={`${cardClassName("card", card)} ${selectedHandIndex === i ? "selected" : ""}`}
                   role="img"
                   aria-label={cardLabel(card)}
                 />
@@ -52,8 +52,8 @@ function PlayerHandImpl({
             );
           }
           return (
-            <div key={card.id} className="hand__slot hand__slot--ai" style={slotStyle} aria-hidden="true">
-              <div className={`card card--back card--deck${isHuman ? 1 : 2}`} />
+            <div key={card.id} className="slot ai" style={slotStyle} aria-hidden="true">
+              <div className="card back deck2" />
             </div>
           );
         })}

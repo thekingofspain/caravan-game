@@ -17,9 +17,9 @@ async function getCounts(page) {
 }
 async function getDomCounts(page) {
   return await page.evaluate(() => {
-    const handCards = document.querySelectorAll(".hand-zone--human .hand__slot .card").length;
-    const handSlots = document.querySelectorAll(".hand-zone--human .hand__slot").length;
-    const deckCount = document.querySelector(".deck-pile .deck-pile__count")?.textContent;
+    const handCards = document.querySelectorAll(".hand.human .slot .card").length;
+    const handSlots = document.querySelectorAll(".hand.human .slot").length;
+    const deckCount = document.querySelector(".deck .count")?.textContent;
     const caravanCards = document.querySelectorAll(".caravan .card").length;
     return { handCards, handSlots, deckCount, caravanCards };
   });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
 import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model/types";
 import { pairWinner } from "../model/scoring";
@@ -40,12 +40,12 @@ function CaravanColumn({
         const caravan = caravans[ci];
         const sold = calculateCaravanState(caravan).status === "sellable";
         return (
-          <div className={sold ? "caravan-col is-sold" : "caravan-col"} key={ci}>
-            <div className={`caravan-col__header caravan-col__header--${side}`}>
-              <CaravanScore caravan={caravan} highestSold={pairWinnerPlayer === playerId} />
-              <span className="caravan-col__title">{caravanName(playerId, ci)}</span>
-              <span className="caravan-col__dir" data-dir={caravan.direction} aria-hidden="true" />
-            </div>
+          <div className={`caravan ${side} ${sold ? "sold" : ""}`} key={ci}>
+            <header>
+              <CaravanScore caravan={caravan} highestSold={pairWinnerPlayer === playerId} playerId={playerId} />
+              <span className="title">{caravanName(playerId, ci)}</span>
+              <span className="direction" data-dir={caravan.direction} aria-hidden="true" />
+            </header>
             <Caravan
               caravan={caravan}
               caravanIndex={ci}
@@ -264,16 +264,16 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
           {toast}
         </div>
       )}
-      <div className="playfield">
-        <div className="board-cols">
-          <div className="board-col board-col--caravans">
-            <div className="play-row play-row--ai">
-              <div className="caravans-row">
+      <div className="field">
+        <div className="columns">
+          <div className="column caravans">
+            <div className="play-row ai">
+              <div className="caravans">
                 <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} state={state} onCardClick={onCardClick} onPlaceholderClick={() => {}} onAcknowledge={onAcknowledge} />
               </div>
             </div>
-            <div className="play-row play-row--human">
-              <div className="caravans-row">
+            <div className="play-row human">
+              <div className="caravans">
                 <CaravanColumn
                   playerId={Human}
                   caravans={humanPlayer.caravans}
@@ -284,7 +284,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                   onAcknowledge={onAcknowledge}
                   childrenFor={(ci) =>
                     canDisbandAny ? (
-                      <button type="button" className="caravan__disband" onClick={() => onDisband(ci)} aria-label={`Disband your ${caravanName(Human, ci)}`}>
+                      <button type="button" className="disband" onClick={() => onDisband(ci)} aria-label={`Disband your ${caravanName(Human, ci)}`}>
                         Disband
                       </button>
                     ) : null
@@ -294,16 +294,16 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
             </div>
           </div>
 
-          <div className="board-col board-col--hands">
+          <div className="column hands">
             <div className="hand-half">
               <button
                 type="button"
-                className="deck-pile deck-pile--ai"
+                className={`deck ai ${aiPlayer.deck.length === 0 ? "empty" : ""}`}
                 onClick={() => setViewDeck(Ai)}
                 aria-label={`AI deck, ${aiPlayer.deck.length} cards remaining. View the deck.`}
               >
-                <div className="card card--back card--deck2" />
-                <span className="deck-pile__count">{aiPlayer.deck.length}</span>
+                {aiPlayer.deck.length === 0 ? <div className="empty" aria-hidden="true" /> : <div className="card back deck2" />}
+                <span className="count">{aiPlayer.deck.length}</span>
               </button>
               <PlayerHand
                 playerId={Ai}
@@ -314,7 +314,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               />
             </div>
 
-            <div className="play-controls">
+            <div className="controls">
               <button type="button" className="btn" onClick={onNewGame}>
                 New game
               </button>
@@ -328,7 +328,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               </button>
             </div>
 
-            <div className="hand-half hand-half--human">
+            <div className="hand-half human">
               <PlayerHand
                 playerId={Human}
                 player={humanPlayer}
@@ -338,12 +338,12 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               />
               <button
                 type="button"
-                className="deck-pile"
+                className={`deck ${humanPlayer.deck.length === 0 ? "empty" : ""}`}
                 onClick={onDeckClick}
                 aria-label={`Your deck, ${humanPlayer.deck.length} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`}
               >
-                <div className="card card--back card--deck1" />
-                <span className="deck-pile__count">{humanPlayer.deck.length}</span>
+                {humanPlayer.deck.length === 0 ? <div className="empty" aria-hidden="true" /> : <div className="card back deck1" />}
+                <span className="count">{humanPlayer.deck.length}</span>
               </button>
             </div>
           </div>
@@ -351,43 +351,43 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
       </div>
 
       {activityOpen && (
-        <div className="activity-flyout" role="dialog" aria-label="Activity log">
-          <div className="activity-flyout__header">
+        <div className="activity" role="dialog" aria-label="Activity log">
+          <header>
             <span>Activity</span>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="button" className="activity-flyout__copy" onClick={onCopyActivity} aria-label="Copy activity log and debug info">
+              <button type="button" className="copy" onClick={onCopyActivity} aria-label="Copy activity log and debug info">
                 Copy
               </button>
               <button
                 type="button"
-                className="activity-flyout__close"
+                className="close"
                 onClick={() => setActivityOpen(false)}
                 aria-label="Close activity log"
               >
                 ×
               </button>
             </div>
-          </div>
-          <Sidebar log={state.log} />
+          </header>
+          <Sidebar log={state.log} state={state} />
         </div>
       )}
 
       {viewDeck !== null && (
-        <div className="deck-overlay" role="dialog" aria-label={`${viewDeck === Human ? "Your" : "AI"} remaining deck`}>
-          <div className="deck-overlay__header">
+        <div className="overlay" role="dialog" aria-label={`${viewDeck === Human ? "Your" : "AI"} remaining deck`}>
+          <header>
             <span>
               {viewDeck === Human ? "Your" : "AI"} deck — {state.players[viewDeck].deck.length} cards
             </span>
             <button
               type="button"
-              className="deck-overlay__close"
+              className="close"
               onClick={() => setViewDeck(null)}
               aria-label="Close deck view"
             >
               ×
             </button>
-          </div>
-          <div className="deck-overlay__cards">
+          </header>
+          <div className="cards">
             {state.players[viewDeck].deck.map((c) => (
               <CardView key={c.id} card={c} />
             ))}

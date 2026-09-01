@@ -5,8 +5,8 @@ export const JOKER_TYPES = ["Red", "Black"] as const;
 export type JokerType = typeof JOKER_TYPES[number];
 
 export const STANDARD_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"] as const;
-export type Rank = typeof STANDARD_RANKS[number] | "PLACEHOLDER";
-export type SuitedRank = Exclude<Rank, "Joker" | "PLACEHOLDER">;
+export type Rank = typeof STANDARD_RANKS[number];
+export type SuitedRank = Exclude<Rank, "Joker">;
 
 export type Nullable<T> = T | null;
 export type Direction = "asc" | "desc";
@@ -21,16 +21,12 @@ export const SUIT_SYMBOL: Record<Suit, string> = {
   clubs: "♣",
 };
 
-export type StandardCard = { id: string; rank: SuitedRank; suit: Suit; jokerType?: never; isPlaceholder?: never };
-export type JokerCard = { id: string; rank: "Joker"; suit: null; jokerType: JokerType; isPlaceholder?: never };
-export type PlaceholderCard = { id: string; rank: "PLACEHOLDER"; suit: null; jokerType?: never; isPlaceholder: true };
-export type Card = StandardCard | JokerCard | PlaceholderCard;
+export type StandardCard = { id: string; rank: SuitedRank; suit: Suit; jokerType?: never };
+export type JokerCard = { id: string; rank: "Joker"; suit: null; jokerType: JokerType };
+export type Card = StandardCard | JokerCard;
 
 export function isJokerCard(card: Card): card is JokerCard {
   return card.rank === "Joker";
-}
-export function isPlaceholderCard(card: Card): card is PlaceholderCard {
-  return card.rank === "PLACEHOLDER";
 }
 
 export type CaravanRow = Card[];
@@ -108,17 +104,14 @@ export class IllegalMoveError extends Error {
   }
 }
 export function isValueCard(card: Card): boolean {
-  if (isPlaceholderCard(card)) return false;
   return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "Joker";
 }
 
 export function isFaceCard(card: Card): boolean {
-  if (isPlaceholderCard(card)) return false;
   return card.rank === "J" || card.rank === "Q" || card.rank === "K";
 }
 
 export function baseValue(card: Card): number {
-  if (isPlaceholderCard(card)) return 0;
   if (card.rank === "A") return 1;
   if (isJokerCard(card)) return 0;
   const n = Number(card.rank);

@@ -15,11 +15,11 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 8000 });
+  await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
 }
 
 async function clearSelection() {
-  const sel = page.locator(".hand__slot.is-selected");
+  const sel = page.locator(".slot.selected");
   if (await sel.count() > 0) {
     await sel.first().click({ force: true, position: { x: 3, y: 3 } });
     await page.waitForTimeout(60);
@@ -27,11 +27,11 @@ async function clearSelection() {
 }
 
 function isValueCardClass(cls) {
-  return !/card--jack|card--queen|card--king|card--joker/.test(cls || "");
+  return !/jack|queen|king|joker/.test(cls || "");
 }
 
 async function valueSlots() {
-  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
+  const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
   const out = [];
   for (let i = 0; i < n; i++) {
@@ -43,8 +43,8 @@ async function valueSlots() {
 
 // Place a value card on the human caravan column `ci` (real user click).
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".player-human .caravan").nth(ci);
-  const ph = stack.locator(".caravan__empty");
+  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
   } else {
@@ -67,7 +67,7 @@ for (let ci = 0; ci < 3; ci++) {
 
 // Each caravan should now hold exactly one card.
 for (let ci = 0; ci < 3; ci++) {
-  const n = await page.locator(".player-human .caravan").nth(ci).locator(".card").count();
+  const n = await page.locator(".play-row.human .caravan").nth(ci).locator(".card").count();
   assert.equal(n, 1, `caravan ${ci + 1} should have 1 card after filling its placeholder, got ${n}`);
 }
 console.log("  all 3 placeholders filled (1 card each)");
@@ -86,7 +86,7 @@ for (const slot of candidates) {
   await slot.click({ force: true, position: { x: 3, y: 3 } });
   await page.waitForTimeout(100);
 
-  const stacks = page.locator(".player-human .caravan");
+  const stacks = page.locator(".play-row.human .caravan");
   const stackCount = await stacks.count();
   let targetCi = -1;
   for (let ci = 0; ci < stackCount; ci++) {

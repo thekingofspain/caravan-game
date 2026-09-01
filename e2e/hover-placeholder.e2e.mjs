@@ -13,23 +13,23 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 8000 });
+  await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
 }
 
 async function valueSlots() {
-  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
+  const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
   const out = [];
   for (let i = 0; i < n; i++) {
     const cls = await slots.nth(i).locator(".card").getAttribute("class");
-    if (!/card--jack|card--queen|card--king|card--joker/.test(cls || "")) out.push(slots.nth(i));
+    if (!/jack|queen|king|joker/.test(cls || "")) out.push(slots.nth(i));
   }
   return out;
 }
 
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".player-human .caravan").nth(ci);
-  const ph = stack.locator(".caravan__empty");
+  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
   } else {
@@ -52,7 +52,7 @@ for (let ci = 0; ci < 3; ci++) {
 await waitHumanTurn();
 
 function isFaceClass(cls) {
-  return /card--jack|card--queen|card--king|card--joker/.test(cls || "");
+  return /jack|queen|king|joker/.test(cls || "");
 }
 
 // ── LEGAL move -> green temporary placeholder ──
@@ -62,7 +62,7 @@ assert.ok(vSlots.length > 0, "no value card selectable");
 await vSlots[0].click({ force: true, position: { x: 3, y: 3 } });
 await page.waitForTimeout(120);
 
-const selectableStack = page.locator(".player-human .caravan.is-selectable").first();
+const selectableStack = page.locator(".play-row.human .caravan.selectable").first();
 assert.ok((await selectableStack.count()) > 0, "expected a selectable human caravan for the chosen value card");
 const legalWrap = selectableStack.locator(".card").last();
 await legalWrap.hover();
@@ -74,7 +74,7 @@ console.log("  PASS: legal hover is green");
 // ── ILLEGAL move -> red temporary placeholder ──
 console.log("TEST: hovering an opponent caravan card with a value card shows a red placeholder");
 // value cards cannot be played on the opponent's caravans -> always illegal
-const aiWrap = page.locator(".player-ai .caravan .card").first();
+const aiWrap = page.locator(".play-row.ai .caravan .card").first();
 assert.ok((await aiWrap.count()) > 0, "expected an AI caravan card to hover (opponent must have played)");
 await aiWrap.hover();
 await page.waitForTimeout(150);

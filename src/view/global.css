@@ -13,112 +13,47 @@
   --c-human-rgb: 138, 180, 248;
   --c-ai-rgb: 255, 138, 138;
   --c-brown: #8b4513;
-
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
   --sp-4: 1rem;
   --sp-5: 1.5rem;
-
   --radius: 0.375rem;
   --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-
-  /* card height is vh/7 on normal/landscape screens, but also capped by a
-     width budget (100vw/9) so the 3 caravans + hand column actually fit on a
-     narrow phone instead of overflowing past the felt */
   --card-h: min(100vh / 7, 100vw / 9);
   --card-w: calc(var(--card-h) * 212 / 329);
-
-  /* ---- card-on-card offsets (tweak in ONE place) ----
-     --card-offset-x : horizontal step when a face card sits on a value card.
-                       drives the "up to 3 face cards in a row" fan (c * offset-x)
-     --card-offset-y : vertical overlap step when value cards stack on each other */
   --card-offset-x: calc(var(--card-w) * 0.275);
   --card-offset-y: calc(var(--card-h) * 0.28);
-
-  /* intrinsic caravan width: value card + up to 3 face cards fanned right
-     (2 steps of --card-offset-x). The confirm/remove button hangs off the left
-     edge into the gap, so it is NOT part of the in-flow width. */
   --caravan-w: calc(var(--card-w) + 2 * var(--card-offset-x));
-  /* horizontal footprint of the confirm / remove (Disband) button, used only
-     for its left offset position */
   --confirm-x-w: 5rem;
-
-  /* the hand is a fan-fold: 8 cards pivot from a point below them, so its
-     width comes from the fan geometry, not from stacking card widths */
   --fan-count: 8;
   --fan-step: 5.5deg;
-  --fan-pivot: 1.67;            /* transform-origin y (167%) as multiples of card-h */
+  --fan-pivot: 1.67;
   --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
-  /* fan-fold hand width, validated incl. the 3deg hand skew.
-     The two extreme upper corners are symmetric about x=0 at the same height,
-     so skewing about the fixed bottom-center pivot only scales their separation
-     by cos(skew):  W = W0 · cosα,  where
-     W0 = cw·cosθ + 2·fan-pivot·ch·sinθ
-          (pivot is transform-origin 167% from top = 0.67·ch below the bottom
-           edge = (fan-pivot − 1)·ch below center → lever arm 2·fan-pivot·ch) */
   --hand-skew: 3deg;
-  --hand-w: calc(
-    (
-      var(--card-w) * cos(var(--fan-outer-angle))
-      + 2 * var(--fan-pivot) * var(--card-h) * sin(var(--fan-outer-angle))
-    ) * cos(var(--hand-skew))
-  );
-
+  --hand-w: calc((var(--card-w) * cos(var(--fan-outer-angle)) + 2 * var(--fan-pivot) * var(--card-h) * sin(var(--fan-outer-angle))) * cos(var(--hand-skew)));
   --caravan-pad: calc(var(--card-h) / 8);
   --card-border: 0.1875rem dashed var(--c-dim);
   --transition-fast: 0.15s ease;
-
-  /* one "relief" gap for BOTH axes (page padding + every in-board gap), so the
-     board stays symmetric with its center on 50vh. Card-derived target,
-     clamped to [rem|vmin .. rem|vmax]. */
   --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
 }
 
 * { box-sizing: border-box; }
 
-html,
-body,
-#root {
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-}
+html, body, #root { height: 100%; margin: 0; overflow: hidden; }
 
-body {
-  background: var(--c-felt);
-  color: var(--c-fg);
-  font: 0.875rem/1.4 var(--font-base);
-  letter-spacing: 0.02em;
-}
+body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--font-base); letter-spacing: 0.02em; }
 
-/* ---------- App ---------- */
-.app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+/* App */
+.app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
-.start {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  min-height: 0;
-}
+.start { flex: 1; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); min-height: 0; }
 
-.start__intro {
-  margin: 0;
-  color: var(--c-dim);
-  line-height: 1.5;
-}
+.start .intro { margin: 0; color: var(--c-dim); line-height: 1.5; }
 
-.start__intro b,
-.rules b { color: var(--c-fg); }
+.start .intro b, .rules b { color: var(--c-fg); }
 
-/* ---------- Card ---------- */
+/* Card — base: .card, modifiers: suit/rank as simple classes */
 .card {
   width: var(--card-w);
   height: var(--card-h);
@@ -130,10 +65,10 @@ body {
   outline: none;
 }
 
-.card.is-hidden { visibility: hidden; }
-.card.is-selectable { cursor: pointer; }
+.card.hidden { visibility: hidden; }
+.card.selectable { cursor: pointer; }
 
-/* ---------- Board ---------- */
+/* Board */
 .board {
   position: relative;
   display: flex;
@@ -155,7 +90,7 @@ body {
   flex-shrink: 0;
 }
 
-.playfield {
+.board .field {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -173,8 +108,7 @@ body {
   min-height: 0;
 }
 
-/* two-column board: caravans on the left, hands/cards on the right */
-.board-cols {
+.board .columns {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -182,24 +116,13 @@ body {
   justify-content: center;
 }
 
-.board-col {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
+.board .column { display: flex; flex-direction: column; min-height: 0; }
 
-.board-col--caravans {
-  flex: 1 1 auto;
-  min-width: 0;
-}
+.board .column.caravans { flex: 1 1 auto; min-width: 0; }
 
-.board-col--hands {
-  flex: 0 0 auto;
-  width: var(--hand-w);
-  align-items: center;
-}
+.board .column.hands { flex: 0 0 auto; width: var(--hand-w); align-items: center; }
 
-.play-controls {
+.board .controls {
   display: flex;
   justify-content: flex-end;
   gap: var(--sp-2);
@@ -208,17 +131,9 @@ body {
   z-index: 20;
 }
 
-.play-row--ai {
-  align-items: stretch;
-}
+.play-row.ai { align-items: stretch; }
+.play-row.human { align-items: stretch; }
 
-.play-row--human {
-  align-items: stretch;
-}
-
-/* each player's hand + deck stacked vertically, deck on the outer edge and
-   hand next to the controls, so the column reads: ai deck / ai hand /
-   buttons / human hand / human deck */
 .hand-half {
   display: flex;
   flex-direction: column;
@@ -229,28 +144,12 @@ body {
   min-height: 0;
 }
 
-.hand-half--human {
-  transform: translateY(var(--hand-lift, 0rem));
-  transition: transform 120ms ease;
-}
+.hand-half.human { transform: translateY(var(--hand-lift, 0rem)); transition: transform 120ms ease; }
 
-.hand-half .hand-zone {
-  flex: 0 0 auto;
-  width: var(--hand-w);
-  overflow: visible;
-}
+.hand-half .hand { flex: 0 0 auto; width: var(--hand-w); overflow: visible; }
 
-/* ---------- Player sections ---------- */
-.player-ai,
-.player-human {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-/* ---------- Hand zones ---------- */
-.hand-zone {
+/* Hand — base: .hand */
+.hand {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
@@ -258,8 +157,47 @@ body {
   overflow-x: auto;
 }
 
+.hand .cards {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  position: relative;
+  --fan-center: calc((var(--fan-count) - 1) / 2);
+  --hand-rot: 3deg;
+  transform: rotate(var(--hand-rot));
+  transform-origin: center bottom;
+  height: calc(var(--card-h) * 1.4);
+}
 
-.deck-pile {
+.hand.ai .cards { --hand-rot: 3deg; }
+
+.hand .slot {
+  border-radius: var(--radius);
+  cursor: pointer;
+  appearance: none;
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: var(--card-w);
+  z-index: var(--i);
+  transform-origin: 50% 167%;
+  transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)));
+  background: none;
+  border: 0;
+  padding: 0;
+  transition: transform 0.12s ease;
+}
+
+.hand .slot.ai { cursor: default; }
+
+.hand .slot.selected {
+  transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step))) translateY(-25%);
+}
+
+.hand.human { margin-top: auto; }
+
+/* Deck — base: .deck */
+.deck {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -270,18 +208,20 @@ body {
   cursor: pointer;
 }
 
-.deck-pile .card {
+.deck .card { width: var(--card-w); height: var(--card-h); }
+
+.deck .empty {
   width: var(--card-w);
   height: var(--card-h);
+  border: var(--card-border);
+  border-radius: var(--radius);
+  background: transparent;
+  opacity: 0.5;
 }
 
-.deck-pile__count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--c-fg);
-}
+.deck .count { font-size: 0.75rem; font-weight: 700; color: var(--c-fg); }
 
-.deck-overlay {
+.overlay {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -293,7 +233,7 @@ body {
   z-index: 50;
 }
 
-.deck-overlay__header {
+.overlay header {
   display: flex;
   align-items: center;
   gap: var(--sp-4);
@@ -301,7 +241,7 @@ body {
   font-weight: 700;
 }
 
-.deck-overlay__close {
+.overlay .close {
   background: none;
   border: none;
   color: var(--c-fg);
@@ -310,7 +250,7 @@ body {
   cursor: pointer;
 }
 
-.deck-overlay__cards {
+.overlay .cards {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
@@ -320,60 +260,8 @@ body {
   overflow-y: auto;
 }
 
-.sidebar .hand-zone--human {
-  margin-top: auto;
-}
-
-.hand-zone__label {
-  color: var(--c-dim);
-  font-size: 0.625rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  flex-shrink: 0;
-  writing-mode: vertical-rl;
-}
-
-.hand-zone__cards {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  position: relative;
-  /* fan-fold hand: 8 fixed slots pivoting from a point below the cards.
-     Pure rotation around a low pivot gives ~90% overlap at the bottom
-     edges and ~75% at the top edges. --fan-count / --fan-step come from :root. */
-  --fan-center: calc((var(--fan-count) - 1) / 2);
-  --hand-rot: 3deg;
-  transform: rotate(var(--hand-rot));
-  transform-origin: center bottom;
-  height: calc(var(--card-h) * 1.4);
-}
-
-/* AI hand tilts the opposite way for visual balance */
-.hand-zone--ai .hand-zone__cards {
-  --hand-rot: 3deg;
-}
-
-.hand-zone__cards .hand__slot {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: var(--card-w);
-  z-index: var(--i);
-  transform-origin: 50% 167%;
-  transform:
-    translateX(-50%)
-    rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)));
-}
-
-.hand-zone__cards .hand__slot.is-selected {
-  transform:
-    translateX(-50%)
-    rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)))
-    translateY(-25%);
-}
-
-/* ---------- Caravans ---------- */
-.caravans-row {
+/* Caravans wrapper */
+.caravans {
   flex: 1;
   display: flex;
   justify-content: center;
@@ -383,23 +271,19 @@ body {
   padding-right: 0;
 }
 
-.caravan-col {
+/* Caravan — base: .caravan (outer column) */
+.caravan {
   display: flex;
   flex-direction: column;
   gap: var(--relief);
   flex: 1 1 0;
-  /* widest a caravan ever gets (in-flow): value card + up to 3 face cards
-     fanned right (2 * --card-offset-x) = --caravan-w.
-     the confirm/remove button hangs off the left edge into the gap. */
   min-width: var(--caravan-w);
   min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
   position: relative;
   align-items: center;
 }
 
-/* rounded background that surrounds the score and the entire caravan area.
-   Fills the column so the visible gap between caravan boxes equals --relief. */
-.caravan-col::before {
+.caravan::before {
   content: "";
   position: absolute;
   top: 0.125rem;
@@ -413,50 +297,25 @@ body {
   pointer-events: none;
 }
 
-.play-row--human .caravan-col::before {
-  border-color: rgba(var(--c-human-rgb), 0.28);
-  background: rgba(var(--c-human-rgb), 0.06);
-}
+.play-row.human .caravan::before { border-color: rgba(var(--c-human-rgb), 0.28); background: rgba(var(--c-human-rgb), 0.06); }
 
-.play-row--ai .caravan-col::before {
-  border-color: rgba(var(--c-ai-rgb), 0.28);
-  background: rgba(var(--c-ai-rgb), 0.06);
-}
-/* sold (21-26) — bigger/brighter border/background, no SOLD word */
-.caravan-col.is-sold::before {
-  border-width: 0.1875rem;
-}
-.play-row--human .caravan-col.is-sold::before {
-  border-color: rgba(var(--c-human-rgb), 0.85);
-  background: rgba(var(--c-human-rgb), 0.16);
-  box-shadow: 0 0 0.75rem rgba(var(--c-human-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-human-rgb), 0.14);
-}
-.play-row--ai .caravan-col.is-sold::before {
-  border-color: rgba(var(--c-ai-rgb), 0.85);
-  background: rgba(var(--c-ai-rgb), 0.16);
-  box-shadow: 0 0 0.75rem rgba(var(--c-ai-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-ai-rgb), 0.14);
-}
+.play-row.ai .caravan::before { border-color: rgba(var(--c-ai-rgb), 0.28); background: rgba(var(--c-ai-rgb), 0.06); }
 
+.caravan.sold::before { border-width: 0.1875rem; }
 
+.play-row.human .caravan.sold::before { border-color: rgba(var(--c-human-rgb), 0.85); background: rgba(var(--c-human-rgb), 0.16); box-shadow: 0 0 0.75rem rgba(var(--c-human-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-human-rgb), 0.14); }
 
-.caravan-col__score {
-  flex: 1;
+.play-row.ai .caravan.sold::before { border-color: rgba(var(--c-ai-rgb), 0.85); background: rgba(var(--c-ai-rgb), 0.16); box-shadow: 0 0 0.75rem rgba(var(--c-ai-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-ai-rgb), 0.14); }
+
+.caravan header {
+  width: 100%;
   height: 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  font-weight: 700;
+  justify-content: space-between;
 }
 
-.caravan-col__header--human .caravan-col__score {
-  color: var(--c-human);
-}
-
-.caravan-col__header--ai .caravan-col__score {
-  color: var(--c-ai);
-}
-
-.caravan-col__title {
+.caravan .title {
   flex: 0 0 auto;
   width: calc(var(--card-w) * 1.5);
   display: flex;
@@ -470,18 +329,29 @@ body {
   white-space: nowrap;
 }
 
-.caravan-col__header {
-  width: 100%;
+.caravan .score {
+  flex: 1;
   height: 1.5rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5ch;
+  text-align: right;
 }
 
-/* the direction arrow sits on the opposite side of the name from the score,
-   sized like the score so the title stays centered over the placeholder.
-   the arrow glyph itself is generated from the data-dir attribute in CSS */
-.caravan-col__dir {
+.caravan .score.unsellable { color: #1a1a1a; font-weight: 400; }
+
+.caravan.human .score.sellable { color: var(--c-human); }
+
+.caravan.ai .score.sellable { color: var(--c-ai); }
+
+.caravan .score.sold, .caravan .score.bold { font-weight: 700; }
+
+.caravan .total { min-width: 2.5ch; text-align: right; display: inline-block; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.caravan .direction {
   flex: 1;
   display: flex;
   align-items: center;
@@ -492,18 +362,16 @@ body {
   font-weight: 700;
 }
 
-.caravan-col__dir[data-dir="asc"]::before { content: "\25B2"; }
-.caravan-col__dir[data-dir="desc"]::before { content: "\25BC"; }
-.play-row--ai .caravan-col {
-  flex-direction: column-reverse;
-}
+.caravan .direction[data-dir="asc"]::before { content: "\25B2"; }
 
-.play-row--human .caravan-col {
-  flex-direction: column;
-}
+.caravan .direction[data-dir="desc"]::before { content: "\25BC"; }
 
-/* ---------- Caravan ---------- */
-.caravan {
+.play-row.ai .caravan { flex-direction: column-reverse; }
+
+.play-row.human .caravan { flex-direction: column; }
+
+/* Track — inner caravan stack, base: .caravan .track */
+.caravan .track {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -514,50 +382,22 @@ body {
   align-items: center;
 }
 
-/* human: stack grows down from the top, anchored at start */
-.caravan--human {
-  justify-content: flex-start;
-  padding-top: var(--caravan-pad);
-}
+.caravan .track.human { justify-content: flex-start; padding-top: var(--caravan-pad); }
 
-/* ai: stack grows up from the bottom, anchored at end */
-.caravan--ai {
-  flex-direction: column-reverse;
-  padding-bottom: var(--caravan-pad);
-}
+.caravan .track.ai { flex-direction: column-reverse; padding-bottom: var(--caravan-pad); }
 
-/* ---------- Card stacking ---------- */
-/* use child combinators so this only stacks the top-level value cards in a
-   caravan, not the face-card attachments (which also carry the .card class
-   and would otherwise get pulled up by the negative margin when there is more
-   than one attachment on a single value card) */
-.caravan--human > .card + .card {
-  margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-}
+.caravan .track.human > .card + .card { margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y))); }
 
-.caravan--ai > .card + .card {
-  margin-top: 0;
-  margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-}
-/* pending ack: lift above later rows so red × is not occluded */
-.caravan > .card.is-pending {
-  z-index: 50 !important;
-}
-.caravan > .card.is-pending-remove {
-  z-index: 51 !important;
-}
+.caravan .track.ai > .card + .card { margin-top: 0; margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y))); }
 
+.caravan .track > .card.pending { z-index: 50 !important; }
 
-/* ---------- Card states ---------- */
-/* is-target has no persistent outline — hover rules below show green/red */
+.caravan .track > .card.pending-remove { z-index: 51 !important; }
 
-.caravan .card.is-jacked {
-  filter: grayscale(0.3);
-}
+/* Card states */
+.caravan .card.jacked { filter: grayscale(0.3); }
 
-/* dim the jacked card without dimming its remove-X (a descendant), since
-   parent opacity would also fade the X. Use a transparent overlay instead. */
-.caravan .card.is-jacked::after {
+.caravan .card.jacked::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -567,17 +407,9 @@ body {
   pointer-events: none;
 }
 
-/* Placed cards: no button styling */
-.caravan button.card {
-  cursor: default;
-  background-color: transparent;
-}
+.caravan button.card { cursor: default; background-color: transparent; }
 
-/* ---------- Face cards ---------- */
-/* value cards anchor their attachments */
-.caravan > .card {
-  position: relative;
-}
+.caravan .track > .card { position: relative; }
 
 .caravan .card > .card {
   position: absolute;
@@ -587,33 +419,14 @@ body {
   pointer-events: none;
 }
 
-/* The Jack/Joker attachment carries the acknowledge ×; lift it above the grey
-   overlay so the × stays bright and clickable (the rest of the card greys).
-   confirmation-symbol is the unified class for both jack and joker (based on
-   confirmationSymbol), jack-remove kept for compatibility. */
-.caravan .card > .card.is-confirmation-src,
-.caravan .card > .card.is-remove-src {
-  z-index: 7;
-}
+.caravan .card > .card.confirmation-src, .caravan .card > .card.remove-src { z-index: 7; }
 
-.caravan .card > .card .confirmation-symbol,
-.caravan .card > .card .jack-remove {
-  pointer-events: auto;
-}
+.caravan .card > .card .confirm { pointer-events: auto; }
 
-/* ai side only: attach face cards to the left of the value card (mirroring the
-   human side where they sit to the right); overlap amount and z-order unchanged */
-/* on the ai side the face card sits to the left of the value card, so the
-   remove-X belongs on the left edge of the face card (mirroring the human
-   side's top-right X) rather than the right */
-.caravan--ai .jack-remove,
-.caravan--ai .confirmation-symbol {
-  right: auto;
-  left: -0.6875rem;
-}
+.caravan .track.ai .confirm { right: auto; left: -0.6875rem; }
 
-/* ---------- Caravan empty ---------- */
-.caravan__empty {
+/* Empty placeholder */
+.caravan .empty {
   position: absolute;
   left: 50%;
   width: var(--card-w);
@@ -627,11 +440,12 @@ body {
   padding: 0;
 }
 
-.caravan--human .caravan__empty { top: var(--caravan-pad); }
-.caravan--ai .caravan__empty { top: auto; bottom: var(--caravan-pad); }
+.caravan .track.human .empty { top: var(--caravan-pad); }
 
-/* ---------- Disband (human caravans) ---------- */
-.caravan__disband {
+.caravan .track.ai .empty { top: auto; bottom: var(--caravan-pad); }
+
+/* Disband */
+.caravan .disband {
   order: 1;
   margin-top: auto;
   font: inherit;
@@ -646,51 +460,15 @@ body {
   padding: 0.0625rem 0.4375rem;
   cursor: pointer;
 }
-.caravan__disband:hover { background: #a93226; }
-.caravan__disband:focus-visible { outline: 0.125rem solid #fff; outline-offset: 0.0625rem; }
 
-/* hover — selected card drives placeholder outline */
-.board:has(.hand__slot.is-selected) .caravan__empty.is-selectable:hover {
-  border-color: var(--c-good);
-  opacity: 0.9;
-}
+.caravan .disband:hover { background: #a93226; }
 
-/* ---------- Scores (rendered inside .caravan-col__header) ---------- */
-.caravan-col__icon {
-  font-size: 0.875rem;
-}
+.caravan .disband:focus-visible { outline: 0.125rem solid #fff; outline-offset: 0.0625rem; }
 
-.caravan-col__dollar {
-  color: var(--c-accent);
-  font-size: 1.25rem;
-  font-weight: 400;
-  margin-right: -0.125rem;
-}
+.board:has(.slot.selected) .caravan .empty.selectable:hover { border-color: var(--c-good); opacity: 0.9; }
 
-.caravan-col__dollar.is-highest { font-weight: 700; }
-
-.caravan-col__total {
-  white-space: nowrap;
-}
-
-/* ---------- Hand slots ---------- */
-.hand__slot {
-  border-radius: var(--radius);
-  cursor: pointer;
-  appearance: none;
-  position: relative;
-  transition: transform 0.12s ease;
-  background: none;
-  border: 0;
-  padding: 0;
-}
-
-.hand__slot--ai {
-  cursor: default;
-}
-
-/* ---------- Badges ---------- */
-.card__badge {
+/* Badges */
+.card .badge {
   position: absolute;
   top: -0.5rem;
   left: -0.5rem;
@@ -708,35 +486,14 @@ body {
   z-index: 3;
 }
 
-.card__badge--king {
-  background: #ffd60a;
-  color: #1a160c;
-  border-color: #b38f00;
-}
+.card .badge.king { background: #ffd60a; color: #1a160c; border-color: #b38f00; }
 
-/* When the card is slated for removal, grey the King ×N to match the greyed card */
-.caravan .card.is-pending .card__badge--king {
-  background: #c8c8c8;
-  color: #1a160c;
-  border-color: #8f8f8f;
-}
+.caravan .card.pending .badge.king { background: #c8c8c8; color: #1a160c; border-color: #8f8f8f; }
 
-/* On the AI side, the King ×N badge sits on the bottom edge, nudged up so it
-   is vertically centered on the bottom edge, at the left */
-.caravan--ai .card__badge--king {
-  top: auto;
-  bottom: -0.5625rem;
-  left: -0.6875rem;
-  transform: none;
-}
-/* ---------- Jack remove / Confirmation symbol ---------- */
-/* confirmation-symbol is the unified acknowledge × for both Jack and Joker,
-   derived from confirmationSymbol in Caravan.tsx. jack-remove is kept as
-   alias so existing tests/selectors still work. Pure CSS fix: same position
-   (right -0.6875 top 50%) — do not move, just ensure it displays above grey
-   overlay via z-index. */
-.jack-remove,
-.confirmation-symbol {
+.caravan .track.ai .badge.king { top: auto; bottom: -0.5625rem; left: -0.6875rem; transform: none; }
+
+/* Confirm X */
+.confirm {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -747,24 +504,17 @@ body {
   border-radius: 50%;
   border: 0.0625rem solid #1a160c;
   background: var(--c-bad);
-  color: transparent; /* the X is drawn with pseudo-elements for exact centering */
+  color: transparent;
   cursor: pointer;
   z-index: 10;
   padding: 0;
 }
-.jack-remove--row {
-  top: 0.5rem;
-  right: 0.5rem;
-  left: auto;
-  transform: none;
-  z-index: 20;
-}
 
-/* draw the × as two centered bars so it is perfectly centered in the circle */
-.jack-remove::before,
-.jack-remove::after,
-.confirmation-symbol::before,
-.confirmation-symbol::after {
+.confirm.row { top: 0.5rem; right: 0.5rem; left: auto; transform: none; z-index: 20; }
+
+.confirm.portal { position: fixed; right: auto; left: auto; top: auto; transform: none; z-index: 9999; margin: 0; }
+
+.confirm::before, .confirm::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -775,23 +525,14 @@ body {
   border-radius: 0.0625rem;
   transform: translate(-50%, -50%) rotate(45deg);
 }
-.jack-remove::after,
-.confirmation-symbol::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
-}
-.jack-remove:hover,
-.confirmation-symbol:hover { background: #a93226; }
 
+.confirm::after { transform: translate(-50%, -50%) rotate(-45deg); }
 
-/* when the X is pressed, fade + shrink the card group before it is removed */
-.caravan .card.is-removing {
-  animation: cardRemove 0.28s ease forwards;
-  pointer-events: none;
-}
+.confirm:hover { background: #a93226; }
 
-/* while a card in a caravan is being removed, darken every card in that
-   caravan row */
-.caravan.is-row-removing .card::after {
+.caravan .card.removing { animation: cardRemove 0.28s ease forwards; pointer-events: none; }
+
+.caravan .track.removing .card::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -801,17 +542,9 @@ body {
   pointer-events: none;
 }
 
-@keyframes cardRemove {
-  to {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-}
+@keyframes cardRemove { to { opacity: 0; transform: scale(0.85); } }
 
-/* cards slated for removal (awaiting acknowledgment): grey them out.
-   z-index above the attachment layer (5) so the value card AND its King
-   attachment both grey together. */
-.caravan .card.is-pending::after {
+.caravan .card.pending::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -821,12 +554,9 @@ body {
   pointer-events: none;
 }
 
-/* cards a Joker is about to remove: grey then fade out before they vanish */
-.caravan .card.is-pending-remove {
-  animation: cardRemove 0.32s ease forwards;
-  pointer-events: none;
-}
-.caravan .card.is-pending-remove::after {
+.caravan .card.pending-remove { animation: cardRemove 0.32s ease forwards; pointer-events: none; }
+
+.caravan .card.pending-remove::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -836,12 +566,8 @@ body {
   pointer-events: none;
 }
 
-/* ---------- Controls / log ---------- */
-.controls {
-  display: flex;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-}
+/* Controls / buttons */
+.controls { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
 .btn {
   font: 700 0.75rem var(--font-base);
@@ -855,16 +581,11 @@ body {
   cursor: pointer;
 }
 
-.btn:hover {
-  background: #e6c34d;
-  border-color: #e6c34d;
-}
+.btn:hover { background: #e6c34d; border-color: #e6c34d; }
 
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Log — base: .log */
 .log {
   flex: 1;
   min-height: 0;
@@ -880,8 +601,39 @@ body {
   counter-reset: log-line;
 }
 
-/* ---------- Activity flyout ---------- */
-.activity-flyout {
+.log .gameover { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+
+.log .scores { display: flex; flex-direction: column; gap: 0.125rem; }
+
+.log .row { display: flex; align-items: baseline; gap: 0.5rem; font-variant-numeric: tabular-nums; }
+
+.log .player { flex: 0 0 2.5rem; font-weight: 700; font-size: 0.75rem; }
+
+.log .row.human .player { color: var(--c-human); filter: brightness(0.7); }
+
+.log .row.ai .player { color: var(--c-ai); filter: brightness(0.7); }
+
+.log .caravans { flex: 1; display: flex; align-items: baseline; justify-content: flex-end; gap: 0.375rem; font-size: 0.75rem; }
+
+.log .score { min-width: 2.75ch; text-align: right; display: inline-block; font-variant-numeric: tabular-nums; font-weight: 400; }
+
+.log .score.unsellable { color: #1a1a1a; }
+
+.log .row.human .score.sellable { color: var(--c-human); filter: brightness(0.85); }
+
+.log .row.ai .score.sellable { color: var(--c-ai); filter: brightness(0.85); }
+
+.log .score.sold, .log .score.bold { font-weight: 700; }
+
+.log .sep { color: #8f8f8f; font-weight: 400; }
+
+.log .wins { flex: 0 0 2ch; text-align: right; font-weight: 700; font-size: 0.75rem; color: #1a160c; }
+
+.log .win-title { display: block; font-weight: 700; margin-bottom: 0.125rem; color: #1a160c; }
+
+.log .line.win { background: rgba(212, 175, 55, 0.12); border-radius: 0.25rem; padding: 0.375rem 0.5rem; margin: 0.25rem 0; }
+
+.activity {
   position: absolute;
   right: var(--sp-3);
   top: 50%;
@@ -897,7 +649,7 @@ body {
   z-index: 50;
 }
 
-.activity-flyout__header {
+.activity header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -907,7 +659,7 @@ body {
   border-bottom: 0.0625rem solid var(--c-line);
 }
 
-.activity-flyout__copy {
+.activity .copy {
   background: transparent;
   border: 0.0625rem solid var(--c-line);
   color: var(--c-fg);
@@ -917,10 +669,10 @@ body {
   padding: 0.25rem 0.5rem;
   border-radius: 0.25rem;
 }
-.activity-flyout__copy:hover {
-  background: var(--c-line);
-}
-.activity-flyout__close {
+
+.activity .copy:hover { background: var(--c-line); }
+
+.activity .close {
   background: transparent;
   border: none;
   color: var(--c-fg);
@@ -929,13 +681,10 @@ body {
   cursor: pointer;
   padding: 0 var(--sp-1);
 }
-.activity-flyout .log {
-  margin: var(--sp-2);
-  flex: 1;
-  min-height: 0;
-}
 
-.log__line {
+.activity .log { margin: var(--sp-2); flex: 1; min-height: 0; }
+
+.log .line {
   counter-increment: log-line;
   display: flex;
   align-items: baseline;
@@ -943,7 +692,7 @@ body {
   contain-intrinsic-size: auto 1.6em;
 }
 
-.log__line::before {
+.log .line::before {
   content: counter(log-line) ".";
   flex: none;
   min-width: 2ch;
@@ -951,100 +700,50 @@ body {
   margin-right: var(--sp-1);
 }
 
-.log__text {
-  min-width: 0;
-  white-space: pre-wrap;
-}
-.log__line.is-key { color: var(--c-fg); }
+.log .text { min-width: 0; white-space: pre-wrap; }
 
-.log__sellable,
-.log__sold { color: var(--c-accent); }
-.log__sold { font-weight: 700; }
+.log .line.key { color: var(--c-fg); }
 
-/* player identity via icons, not colored text */
-.log__who {
-  white-space: nowrap;
-  font-size: 1rem;
-  line-height: 1;
-}
+.log .sellable, .log .sold { color: var(--c-accent); }
 
-/* tighten gap after the player icon and after the horse icon */
-.log__caravan {
-  margin-left: -0.25em;
-}
+.log .sold { font-weight: 700; }
 
-/* caravan reference: @caravan# */
-.log__who-ref {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--c-brown);
-  margin-left: -0.25em;
-}
+.log .who { white-space: nowrap; font-size: 1rem; line-height: 1; }
 
-/* card names colored by suit on the white log panel (only used inside .log) */
-.log__card--red,
-.log__card--black,
-.log__card--diamonds,
-.log__card--clubs {
-  font-weight: 700;
-  font-size: 0.875rem;
-}
-.log__card--red { color: #b3261e; }
-.log__card--black { color: #1a1a1a; }
+.log .caravan-ref { margin-left: -0.25em; }
 
-.log__card--diamonds { color: blue; }
-.log__card--clubs { color: green; }
+.log .who-ref { font-size: 0.6875rem; font-weight: 700; color: var(--c-brown); margin-left: -0.25em; }
 
-/* sub-lines under a log entry (e.g. cards removed by a Joker) */
-.log__bullets {
-  margin: 0.125rem 0 0.25rem;
-  padding-left: 1.4em;
-  list-style: disc;
-}
+.log .card-name.red, .log .card-name.black, .log .card-name.diamonds, .log .card-name.clubs { font-weight: 700; font-size: 0.875rem; }
 
-.log__bullets li {
-  margin: 0;
-}
+.log .card-name.red { color: #b3261e; }
 
-/* ---------- Selection hover outlines ---------- */
-/* red: hover any card while a hand card is selected */
-.board:has(.hand__slot.is-selected) .caravan .card:hover {
-  outline: 0.1875rem solid var(--c-bad);
-  outline-offset: 0.125rem;
-}
+.log .card-name.black { color: #1a1a1a; }
 
-/* green: valid placements — top card of a selectable caravan (value cards),
-   or any is-target card (face cards) */
-.board:has(.hand__slot.is-selected) .caravan.is-selectable .card:last-child:hover,
-.board:has(.hand__slot.is-selected) .caravan .card.is-target:hover {
-  outline-color: var(--c-good);
-}
+.log .card-name.diamonds { color: blue; }
 
-/* ---------- Focus ---------- */
-.hand__slot:focus-visible,
-.btn:focus-visible {
-  outline: 0.1875rem solid var(--c-fg);
-  outline-offset: 0.125rem;
-}
+.log .card-name.clubs { color: green; }
 
-.caravan:focus-visible {
-  outline: 0.1875rem solid var(--c-accent);
-  outline-offset: 0.125rem;
-}
+.log .bullets { margin: 0.125rem 0 0.25rem; padding-left: 1.4em; list-style: disc; }
 
-/* ---------- Reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .hand__slot,
-  .btn { transition: none; }
-}
+.log .bullets li { margin: 0; }
 
-/* ---------- High contrast ---------- */
-@media (forced-colors: active) {
-  .card { border: 0.125rem solid ButtonText; }
-  .hand__slot.is-selected { outline: 0.1875rem solid Highlight; }
-}
+/* Selection hover outlines */
+.board:has(.slot.selected) .caravan .card:hover { outline: 0.1875rem solid var(--c-bad); outline-offset: 0.125rem; }
 
-/* ---------- Modal ---------- */
+.board:has(.slot.selected) .caravan .track.selectable .card:last-child:hover,
+.board:has(.slot.selected) .caravan .card.target:hover { outline-color: var(--c-good); }
+
+/* Focus */
+.hand .slot:focus-visible, .btn:focus-visible { outline: 0.1875rem solid var(--c-fg); outline-offset: 0.125rem; }
+
+.caravan .track:focus-visible { outline: 0.1875rem solid var(--c-accent); outline-offset: 0.125rem; }
+
+@media (prefers-reduced-motion: reduce) { .hand .slot, .btn { transition: none; } }
+
+@media (forced-colors: active) { .card { border: 0.125rem solid ButtonText; } .hand .slot.selected { outline: 0.1875rem solid Highlight; } }
+
+/* Modal — base: .modal */
 .modal {
   position: fixed;
   inset: 0;
@@ -1056,7 +755,7 @@ body {
   z-index: 10;
 }
 
-.modal__panel {
+.modal .panel {
   max-width: 35rem;
   width: 100%;
   border: 0.0625rem solid var(--c-accent);
@@ -1066,74 +765,65 @@ body {
   box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
 }
 
-.modal__title {
-  color: var(--c-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-top: 0;
-}
+.modal .title { color: var(--c-accent); text-transform: uppercase; letter-spacing: 0.15em; margin-top: 0; }
 
-.rules {
-  color: var(--c-dim);
-  line-height: 1.5;
-}
+.rules { }
 
-/* CARDS:START */
-.card--spades.card--ace{background-image:url("/cards/AS.svg")}
-.card--spades.card--2{background-image:url("/cards/2S.svg")}
-.card--spades.card--3{background-image:url("/cards/3S.svg")}
-.card--spades.card--4{background-image:url("/cards/4S.svg")}
-.card--spades.card--5{background-image:url("/cards/5S.svg")}
-.card--spades.card--6{background-image:url("/cards/6S.svg")}
-.card--spades.card--7{background-image:url("/cards/7S.svg")}
-.card--spades.card--8{background-image:url("/cards/8S.svg")}
-.card--spades.card--9{background-image:url("/cards/9S.svg")}
-.card--spades.card--ten{background-image:url("/cards/TS.svg")}
-.card--spades.card--jack{background-image:url("/cards/JS.svg")}
-.card--spades.card--queen{background-image:url("/cards/QS.svg")}
-.card--spades.card--king{background-image:url("/cards/KS.svg")}
-.card--hearts.card--ace{background-image:url("/cards/AH.svg")}
-.card--hearts.card--2{background-image:url("/cards/2H.svg")}
-.card--hearts.card--3{background-image:url("/cards/3H.svg")}
-.card--hearts.card--4{background-image:url("/cards/4H.svg")}
-.card--hearts.card--5{background-image:url("/cards/5H.svg")}
-.card--hearts.card--6{background-image:url("/cards/6H.svg")}
-.card--hearts.card--7{background-image:url("/cards/7H.svg")}
-.card--hearts.card--8{background-image:url("/cards/8H.svg")}
-.card--hearts.card--9{background-image:url("/cards/9H.svg")}
-.card--hearts.card--ten{background-image:url("/cards/TH.svg")}
-.card--hearts.card--jack{background-image:url("/cards/JH.svg")}
-.card--hearts.card--queen{background-image:url("/cards/QH.svg")}
-.card--hearts.card--king{background-image:url("/cards/KH.svg")}
-.card--diamonds.card--ace{background-image:url("/cards/AD.svg")}
-.card--diamonds.card--2{background-image:url("/cards/2D.svg")}
-.card--diamonds.card--3{background-image:url("/cards/3D.svg")}
-.card--diamonds.card--4{background-image:url("/cards/4D.svg")}
-.card--diamonds.card--5{background-image:url("/cards/5D.svg")}
-.card--diamonds.card--6{background-image:url("/cards/6D.svg")}
-.card--diamonds.card--7{background-image:url("/cards/7D.svg")}
-.card--diamonds.card--8{background-image:url("/cards/8D.svg")}
-.card--diamonds.card--9{background-image:url("/cards/9D.svg")}
-.card--diamonds.card--ten{background-image:url("/cards/TD.svg")}
-.card--diamonds.card--jack{background-image:url("/cards/JD.svg")}
-.card--diamonds.card--queen{background-image:url("/cards/QD.svg")}
-.card--diamonds.card--king{background-image:url("/cards/KD.svg")}
-.card--clubs.card--ace{background-image:url("/cards/AC.svg")}
-.card--clubs.card--2{background-image:url("/cards/2C.svg")}
-.card--clubs.card--3{background-image:url("/cards/3C.svg")}
-.card--clubs.card--4{background-image:url("/cards/4C.svg")}
-.card--clubs.card--5{background-image:url("/cards/5C.svg")}
-.card--clubs.card--6{background-image:url("/cards/6C.svg")}
-.card--clubs.card--7{background-image:url("/cards/7C.svg")}
-.card--clubs.card--8{background-image:url("/cards/8C.svg")}
-.card--clubs.card--9{background-image:url("/cards/9C.svg")}
-.card--clubs.card--ten{background-image:url("/cards/TC.svg")}
-.card--clubs.card--jack{background-image:url("/cards/JC.svg")}
-.card--clubs.card--queen{background-image:url("/cards/QC.svg")}
-.card--clubs.card--king{background-image:url("/cards/KC.svg")}
-.card--joker.card--black{background-image:url('/cards/2J.svg')}
-.card--joker.card--red{background-image:url('/cards/1J.svg')}
-.card--back.card--deck1{background-image:url('/cards/1B.svg')}
-.card--back.card--deck2{background-image:url('/cards/2B.svg')}
-.card--back{background-image:url('/cards/1B.svg')}
-/* CARDS:END */
+/* Cards — semantic suit/rank */
+.card.spades.ace{background-image:url("/cards/AS.svg")}
+.card.spades.two{background-image:url("/cards/2S.svg")}
+.card.spades.three{background-image:url("/cards/3S.svg")}
+.card.spades.four{background-image:url("/cards/4S.svg")}
+.card.spades.five{background-image:url("/cards/5S.svg")}
+.card.spades.six{background-image:url("/cards/6S.svg")}
+.card.spades.seven{background-image:url("/cards/7S.svg")}
+.card.spades.eight{background-image:url("/cards/8S.svg")}
+.card.spades.nine{background-image:url("/cards/9S.svg")}
+.card.spades.ten{background-image:url("/cards/TS.svg")}
+.card.spades.jack{background-image:url("/cards/JS.svg")}
+.card.spades.queen{background-image:url("/cards/QS.svg")}
+.card.spades.king{background-image:url("/cards/KS.svg")}
+.card.hearts.ace{background-image:url("/cards/AH.svg")}
+.card.hearts.two{background-image:url("/cards/2H.svg")}
+.card.hearts.three{background-image:url("/cards/3H.svg")}
+.card.hearts.four{background-image:url("/cards/4H.svg")}
+.card.hearts.five{background-image:url("/cards/5H.svg")}
+.card.hearts.six{background-image:url("/cards/6H.svg")}
+.card.hearts.seven{background-image:url("/cards/7H.svg")}
+.card.hearts.eight{background-image:url("/cards/8H.svg")}
+.card.hearts.nine{background-image:url("/cards/9H.svg")}
+.card.hearts.ten{background-image:url("/cards/TH.svg")}
+.card.hearts.jack{background-image:url("/cards/JH.svg")}
+.card.hearts.queen{background-image:url("/cards/QH.svg")}
+.card.hearts.king{background-image:url("/cards/KH.svg")}
+.card.diamonds.ace{background-image:url("/cards/AD.svg")}
+.card.diamonds.two{background-image:url("/cards/2D.svg")}
+.card.diamonds.three{background-image:url("/cards/3D.svg")}
+.card.diamonds.four{background-image:url("/cards/4D.svg")}
+.card.diamonds.five{background-image:url("/cards/5D.svg")}
+.card.diamonds.six{background-image:url("/cards/6D.svg")}
+.card.diamonds.seven{background-image:url("/cards/7D.svg")}
+.card.diamonds.eight{background-image:url("/cards/8D.svg")}
+.card.diamonds.nine{background-image:url("/cards/9D.svg")}
+.card.diamonds.ten{background-image:url("/cards/TD.svg")}
+.card.diamonds.jack{background-image:url("/cards/JD.svg")}
+.card.diamonds.queen{background-image:url("/cards/QD.svg")}
+.card.diamonds.king{background-image:url("/cards/KD.svg")}
+.card.clubs.ace{background-image:url("/cards/AC.svg")}
+.card.clubs.two{background-image:url("/cards/2C.svg")}
+.card.clubs.three{background-image:url("/cards/3C.svg")}
+.card.clubs.four{background-image:url("/cards/4C.svg")}
+.card.clubs.five{background-image:url("/cards/5C.svg")}
+.card.clubs.six{background-image:url("/cards/6C.svg")}
+.card.clubs.seven{background-image:url("/cards/7C.svg")}
+.card.clubs.eight{background-image:url("/cards/8C.svg")}
+.card.clubs.nine{background-image:url("/cards/9C.svg")}
+.card.clubs.ten{background-image:url("/cards/TC.svg")}
+.card.clubs.jack{background-image:url("/cards/JC.svg")}
+.card.clubs.queen{background-image:url("/cards/QC.svg")}
+.card.clubs.king{background-image:url("/cards/KC.svg")}
+.card.joker.black{background-image:url('/cards/2J.svg')}
+.card.joker.red{background-image:url('/cards/1J.svg')}
+.card.back.deck1{background-image:url('/cards/1B.svg')}
+.card.back.deck2{background-image:url('/cards/2B.svg')}
+.card.back{background-image:url('/cards/1B.svg')}

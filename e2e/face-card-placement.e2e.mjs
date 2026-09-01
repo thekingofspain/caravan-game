@@ -13,31 +13,31 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 8000 });
+  await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
 }
 
 function faceType(cls) {
-  if (/card--jack/.test(cls)) return "jack";
-  if (/card--queen/.test(cls)) return "queen";
-  if (/card--king/.test(cls)) return "king";
-  if (/card--joker/.test(cls)) return "joker";
+  if (/jack/.test(cls)) return "jack";
+  if (/queen/.test(cls)) return "queen";
+  if (/king/.test(cls)) return "king";
+  if (/joker/.test(cls)) return "joker";
   return null;
 }
 
 async function valueSlots() {
-  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
+  const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
   const out = [];
   for (let i = 0; i < n; i++) {
     const cls = await slots.nth(i).locator(".card").getAttribute("class");
-    if (!/card--jack|card--queen|card--king|card--joker/.test(cls || "")) out.push(slots.nth(i));
+    if (!/jack|queen|king|joker/.test(cls || "")) out.push(slots.nth(i));
   }
   return out;
 }
 
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".player-human .caravan").nth(ci);
-  const ph = stack.locator(".caravan__empty");
+  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
   } else {
@@ -61,7 +61,7 @@ await waitHumanTurn();
 
 // ── Find a face card with at least one valid target ──
 console.log("TEST: face card placement and rendering");
-const handSlots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
+const handSlots = page.locator(".hand.human .slot.selectable");
 const handCount = await handSlots.count();
 let chosen = -1;
 let chosenType = null;
@@ -71,36 +71,36 @@ for (let i = 0; i < handCount; i++) {
   if (!t) continue;
   await handSlots.nth(i).click({ force: true, position: { x: 3, y: 3 } });
   await page.waitForTimeout(100);
-  const targets = await page.locator(".card.is-target").count();
+  const targets = await page.locator(".card.target").count();
   if (targets > 0) {
     chosen = i;
     chosenType = t;
     break;
   }
   // not this one; deselect
-  await page.locator(".hand__slot.is-selected").first().click({ force: true, position: { x: 3, y: 3 } });
+  await page.locator(".slot.selected").first().click({ force: true, position: { x: 3, y: 3 } });
   await page.waitForTimeout(60);
 }
 assert.ok(chosen >= 0, "no face card in hand has a valid target to play");
 console.log(`  selected a ${chosenType} with valid targets`);
 
 const wrapsBefore = await page.locator(".card").count();
-const facesBefore = await page.locator(".placed-face").count();
+const facesBefore = await page.locator(".card").count();
 
-const target = page.locator(".card.is-target").first();
+const target = page.locator(".card.target").first();
 await target.click({ force: true });
 await page.waitForTimeout(250);
 
 const wrapsAfter = await page.locator(".card").count();
-const facesAfter = await page.locator(".placed-face").count();
+const facesAfter = await page.locator(".card").count();
 
 if (chosenType === "jack") {
-  // Jack jacks the targeted value card -> wraps unchanged, one more attachment, row becomes is-jacked with removable X
+  // Jack jacks the targeted value card -> wraps unchanged, one more attachment, row becomes jacked with removable X
   assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked, not removed) (${wrapsBefore} -> ${wrapsAfter})`);
   assert.equal(facesAfter, facesBefore + 1, `Jack should render as 1 attachment (${facesBefore} -> ${facesAfter})`);
-  const jackedRows = await page.locator(".card.is-jacked").count();
-  assert.ok(jackedRows > 0, "jacked row should have is-jacked class");
-  const jackedFace = await page.locator(".card.is-jacked .placed-face .card--jack").count();
+  const jackedRows = await page.locator(".card.jacked").count();
+  assert.ok(jackedRows > 0, "jacked row should have jacked class");
+  const jackedFace = await page.locator(".card.jacked .card .jack").count();
   assert.ok(jackedFace > 0, "jacked attachment should render as Jack face");
   console.log("  PASS: Jack jacked the targeted card (removable, dimmed, with X)");
 } else {
@@ -115,7 +115,7 @@ const backs = await page.evaluate(() => {
   const out = [];
   for (const el of document.querySelectorAll(".caravan .card")) {
     const bg = getComputedStyle(el).backgroundImage;
-    if (el.className.includes("card--back") || bg.includes("back.svg")) out.push(el.className);
+    if (el.className.includes("back") || bg.includes("back.svg")) out.push(el.className);
   }
   return out;
 });

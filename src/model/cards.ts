@@ -1,11 +1,4 @@
-import { Card, JokerType, JOKER_TYPES, Nullable, Rank, Suit, SUITS, STANDARD_RANKS, SuitedRank, isJokerCard, isPlaceholderCard } from "./types";
-
-let placeholderId=0;
-export function resetPlaceholderIds(): void { placeholderId=0; }
-export function makePlaceholderCard(): Card {
-  placeholderId+=1;
-  return { id: `placeholder-${placeholderId}`, rank: "PLACEHOLDER", suit: null, isPlaceholder:true } as Card;
-}
+import { Card, JokerType, JOKER_TYPES, Nullable, Rank, Suit, SUITS, STANDARD_RANKS, SuitedRank, isJokerCard } from "./types";
 
 function cardId(deckId: number, rank: Rank, suit: Nullable<Suit>, jokerType: Nullable<JokerType>): string {
   const prefix = `D${deckId}-`;
@@ -29,7 +22,6 @@ export function makeCard(deckId: number, rank: Rank, x: Suit | JokerType): Card 
   }
 }
 export function cardLabel(card: Card): string {
-  if (isPlaceholderCard(card)) return "Placeholder";
   if (isJokerCard(card)) return `${card.jokerType} Joker`;
   return `${card.rank} of ${card.suit}`;
 }
@@ -41,27 +33,24 @@ export function buildDeck(deckId: number): Card[] {
   out.push(makeCard(deckId, "Joker", JOKER_TYPES[0]));
   return out;
 }
-
 const RANK_CLASS: Record<Rank, string> = {
   A: "ace",
-  "2": "2",
-  "3": "3",
-  "4": "4",
-  "5": "5",
-  "6": "6",
-  "7": "7",
-  "8": "8",
-  "9": "9",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
   "10": "ten",
   J: "jack",
   Q: "queen",
   K: "king",
   Joker: "joker",
-  PLACEHOLDER: "placeholder",
 };
 export function cardClassName(base: string, card: Card): string {
-  if (isPlaceholderCard(card)) return [base, "card--placeholder"].join(" ");
-  if (isJokerCard(card)) return [base, `card--${RANK_CLASS[card.rank]}`, `card--${card.jokerType.toLowerCase()}`].join(" ");
-  const classes = [base, `card--${RANK_CLASS[card.rank]}`, `card--${card.suit}`];
+  if (isJokerCard(card)) return [base, RANK_CLASS[card.rank], card.jokerType.toLowerCase()].join(" ");
+  const classes = [base, RANK_CLASS[card.rank], card.suit!];
   return classes.join(" ");
 }

@@ -32,7 +32,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil: "
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
-await page.waitForSelector(".play-row--human .caravan--human", { timeout: 5000 });
+await page.waitForSelector(".play-row.human .track.human", { timeout: 5000 });
 await page.waitForTimeout(600);
 
 // Pre-final state: Human to play 6♥ on Shady to make 26 and win 2-1

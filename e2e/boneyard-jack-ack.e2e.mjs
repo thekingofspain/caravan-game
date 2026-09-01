@@ -27,7 +27,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row--human .caravan--human", {timeout:5000});
+await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
 await page.waitForTimeout(600);
 
 // Program the exact board just before the final human Jack:
@@ -75,10 +75,10 @@ let beforeInfo = await page.evaluate(()=>{
   const boneyard = s.players[0].caravans[0];
   return {
     boneyard: boneyard.cards.map((c,i)=> ({idx:i, rank:c.card.rank, suit:c.card.suit, kc:c.kingCount, att:c.attachments.map(a=>a.rank)})),
-    html: document.querySelector(".play-row--human .caravan--human")?.innerHTML.slice(0,800),
-    boneyardCards: document.querySelector(".play-row--human .caravan--human")?.querySelectorAll(".card").length,
-    badge: document.querySelector(".card__badge--king")?.textContent,
-    pendingBefore: document.querySelectorAll(".card.is-pending").length,
+    html: document.querySelector(".play-row.human .track.human")?.innerHTML.slice(0,800),
+    boneyardCards: document.querySelector(".play-row.human .track.human")?.querySelectorAll(".card").length,
+    badge: document.querySelector(".badge.king")?.textContent,
+    pendingBefore: document.querySelectorAll(".card.pending").length,
   };
 });
 console.log(" before:", JSON.stringify(beforeInfo, null,2));
@@ -103,11 +103,11 @@ let after = await page.evaluate(()=>{
     boneyard: s.players[0].caravans[0].cards.map(c=> ({rank:c.card.rank, kc:c.kingCount})),
     current: s.current,
     transition: t,
-    html: document.querySelector(".play-row--human .caravan--human")?.innerHTML.slice(0,800),
-    pending: document.querySelectorAll(".card.is-pending, .card.is-pending-remove").length,
-    badgeAfter: document.querySelector(".play-row--human .caravan--human .card__badge--king")?.textContent || null,
-    boneyardCardCount: document.querySelector(".play-row--human .caravan--human")?.querySelectorAll(".card").length,
-    boneyardEmpty: document.querySelector(".play-row--human .caravan--human .caravan__empty") ? 1 : 0,
+    html: document.querySelector(".play-row.human .track.human")?.innerHTML.slice(0,800),
+    pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
+    badgeAfter: document.querySelector(".play-row.human .track.human .badge.king")?.textContent || null,
+    boneyardCardCount: document.querySelector(".play-row.human .track.human")?.querySelectorAll(".card").length,
+    boneyardEmpty: document.querySelector(".play-row.human .track.human .empty") ? 1 : 0,
   };
 });
 console.log(" after:", JSON.stringify(after, null,2));
@@ -121,18 +121,18 @@ assert.equal(after.transition, null, "no pending transition for human Jack (conf
 assert.equal(after.badgeAfter, null, "2x badge should be gone with the 8♠");
 
 // Verify no half-greyed 2x remains
-let badgeCount = await page.locator(".play-row--human .caravan--human .card__badge--king").count();
+let badgeCount = await page.locator(".play-row.human .track.human .badge.king").count();
 console.log(` badge count after: ${badgeCount} (expect 0)`);
 assert.equal(badgeCount, 0, "half greyed 2x should be gone");
 
 // Verify human not blocked, can play again when it's human's turn? But now it's AI's turn, so human should not be selectable, AI will play
-let humanSelectable = await page.locator(".hand__slot.is-selectable").count();
+let humanSelectable = await page.locator(".slot.selectable").count();
 console.log(` human selectable after Jack (now AI turn): ${humanSelectable} (expect 0 while AI turn)`);
 assert.equal(after.current, Ai, "still AI turn");
 
 // Let AI play one move then check human unblocked
 await page.waitForTimeout(1000); // AI auto 650ms
-let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".hand__slot.is-selectable").length }));
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length }));
 console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel}`);
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

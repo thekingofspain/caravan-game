@@ -12,32 +12,32 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 const vh = 900;
-const cardH = await page.locator(".player-human .hand-zone .card").first().evaluate((el) => el.getBoundingClientRect().height);
+const cardH = await page.locator(".hand.human .card").first().evaluate((el) => el.getBoundingClientRect().height);
 assert.ok(Math.abs(cardH - vh / 8) < vh / 8 * 0.2, `card height ${cardH} not ~vh/8`);
 console.log("card height OK:", Math.round(cardH));
 
 async function waitHumanTurn() {
-  await page.waitForSelector(".player-human .hand-zone .hand__slot.is-selectable", { timeout: 6000 });
+  await page.waitForSelector(".hand.human .slot.selectable", { timeout: 6000 });
 }
 
 async function doHumanAction() {
-  const slots = page.locator(".player-human .hand-zone .hand__slot.is-selectable");
+  const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
   let picked = 0;
   for (let i = 0; i < n; i++) {
     const cls = await slots.nth(i).locator(".card").getAttribute("class");
-    if (!/card--jack|card--queen|card--king|card--joker/.test(cls)) { picked = i; break; }
+    if (!/jack|queen|king|joker/.test(cls)) { picked = i; break; }
   }
   await slots.nth(picked).click({ force: true, position: { x: 3, y: 3 } });
   await page.waitForTimeout(100);
-  const tgt = page.locator(".card.is-target").first();
+  const tgt = page.locator(".card.target").first();
   if (await tgt.count() > 0) {
     await tgt.click({ force: true });
   } else {
-    const ownCount = await page.locator(".player-human .caravan.is-selectable").count();
+    const ownCount = await page.locator(".play-row.human .caravan.selectable").count();
     if (ownCount > 0) {
       await page.evaluate(() => {
-        const btn = document.querySelector(".player-human .caravan.is-selectable");
+        const btn = document.querySelector(".play-row.human .caravan.selectable");
         if (btn) btn.click();
       });
     } else {
@@ -52,7 +52,7 @@ async function backCards() {
     const out = [];
     for (const el of document.querySelectorAll(".card")) {
       const bg = getComputedStyle(el).backgroundImage;
-      if (el.className.includes("card--back") || bg === "none" || bg.includes("back.svg")) {
+      if (el.className.includes("back") || bg === "none" || bg.includes("back.svg")) {
         out.push({ cls: el.className, bg });
       }
     }
@@ -66,7 +66,7 @@ for (let move = 0; move < 150; move++) {
   try { await waitHumanTurn(); } catch { break; }
   await doHumanAction();
   await page.waitForTimeout(100);
-  const placed = await page.evaluate(() => document.querySelectorAll(".player-human .caravan .card").length);
+  const placed = await page.evaluate(() => document.querySelectorAll(".play-row.human .caravan .card").length);
   if (placed > placedMax) placedMax = placed;
   const b = await backCards();
   if (b.length) { backs = b; break; }

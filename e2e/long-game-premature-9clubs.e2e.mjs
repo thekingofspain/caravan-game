@@ -25,7 +25,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if(await btn.count()>0) await btn.first().click({force:true});
-await page.waitForSelector(".play-row--human .caravan--human", {timeout:5000});
+await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
 await page.waitForTimeout(600);
 
 // State BEFORE final 9♣ (after AI A♣ to The Hub, step 32)
@@ -79,8 +79,8 @@ let after = await page.evaluate(()=>{
     hShaRows:s.players[0].caravans[2].rows.map(r=>r.map(c=>c.rank+c.suit[0]).join("+")),
     logLast:s.log[s.log.length-1]?.text,
     // check sold styling
-    soldCols: document.querySelectorAll(".caravan-col.is-sold").length,
-    hasSoldText: document.querySelectorAll(".caravan-col__sold").length,
+    soldCols: document.querySelectorAll(".caravan.sold").length,
+    hasSoldText: document.querySelectorAll(".sold-word").length,
   };
 });
 console.log("after", after);

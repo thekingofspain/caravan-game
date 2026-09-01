@@ -30,7 +30,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil: "
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
-await page.waitForSelector(".play-row--human .caravan--human", { timeout: 5000 });
+await page.waitForSelector(".play-row.human .track.human", { timeout: 5000 });
 await page.waitForTimeout(600);
 
 const hBoneyard = caravanOf([[makeCard(1, "5", "hearts"), makeCard(1, "Q", "clubs")]]);
@@ -61,7 +61,7 @@ await page.waitForTimeout(800);
 let afterAI = await page.evaluate(() => {
   const s = window.__caravanStore.state;
   const t = window.__caravanStore.transition;
-  const ackEl = document.querySelector(".jack-remove");
+  const ackEl = document.querySelector(".confirm");
   return {
     phase: s.phase,
     current: s.current,
@@ -69,13 +69,13 @@ let afterAI = await page.evaluate(() => {
     transition: t,
     hasAck: !!ackEl,
     impactedLen: t ? t.impacted.length : 0,
-    jackRemoveCount: document.querySelectorAll(".jack-remove").length,
+    jackRemoveCount: document.querySelectorAll(".confirm").length,
     hBoneyardRows: s.players[0].caravans[0].rows.length,
   };
 });
 console.log("After AI Joker:", JSON.stringify(afterAI, null, 2));
 assert.equal(afterAI.impactedLen, 5, "Joker should impact 5 rows (4 queens + Ace)");
-assert.ok(afterAI.hasAck, "should be awaiting human ack via jack-remove X");
+assert.ok(afterAI.hasAck, "should be awaiting human ack via confirm X");
 
 console.log("Log detail:", afterAI.logLast?.detail);
 if (afterAI.logLast?.detail) {
@@ -85,8 +85,8 @@ if (afterAI.logLast?.detail) {
   assert.match(detailStr, /Redding.*7/, "Redding detail should have 7");
 }
 
-console.log("Clicking jack-remove X to acknowledge...");
-const ackEl = page.locator(".jack-remove").first();
+console.log("Clicking confirm X to acknowledge...");
+const ackEl = page.locator(".confirm").first();
 assert.ok((await ackEl.count()) > 0, "ack X should be present");
 await ackEl.click({ force: true });
 await page.waitForTimeout(800);
@@ -94,7 +94,7 @@ await page.waitForTimeout(800);
 let afterAck = await page.evaluate(() => {
   const s = window.__caravanStore.state;
   const t = window.__caravanStore.transition;
-  const ackBtn2 = document.querySelector(".jack-remove");
+  const ackBtn2 = document.querySelector(".confirm");
   return {
     phase: s.phase,
     current: s.current,

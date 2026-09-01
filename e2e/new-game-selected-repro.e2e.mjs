@@ -8,19 +8,19 @@ const page = await browser.newPage();
 await page.goto(`${BASE}?seed=123`, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 await page.waitForTimeout(300);
-await page.waitForSelector(".hand-zone--human .hand__slot.is-selectable", {timeout: 5000});
+await page.waitForSelector(".hand.human .slot.selectable", {timeout: 5000});
 const beforeSel = await page.evaluate(() => window.__caravanStore?.state.players[0].hand.map(c=>c.id));
 console.log("before hand ids", beforeSel.slice(0,3));
-const selectable = page.locator(".hand-zone--human .hand__slot.is-selectable").first();
+const selectable = page.locator(".hand.human .slot.selectable").first();
 await selectable.click({ force: true });
 await page.waitForTimeout(200);
-let selCount = await page.locator(".hand-zone--human .hand__slot.is-selected").count();
+let selCount = await page.locator(".hand.human .slot.selected").count();
 console.log("selected count after click", selCount);
 assert.equal(selCount, 1, "should have 1 selected before reset");
 
 // Also open deck and activity to test they get closed on reset
 await page.evaluate(() => {
-  const aiDeck = document.querySelector(".deck-pile--ai");
+  const aiDeck = document.querySelector(".deck.ai");
   if (aiDeck) aiDeck.click();
 });
 await page.waitForTimeout(300);
@@ -43,12 +43,12 @@ const after = await page.evaluate(() => {
   return {
     hand: s.players[0].hand.map(c=>c.id),
     deckLen: s.players[0].deck.length,
-    selDom: document.querySelectorAll(".hand-zone--human .hand__slot.is-selected").length,
-    selAria: document.querySelectorAll(".hand-zone--human .hand__slot[aria-pressed='true']").length,
+    selDom: document.querySelectorAll(".hand.human .slot.selected").length,
+    selAria: document.querySelectorAll(".hand.human .slot[aria-pressed='true']").length,
     toast: document.querySelector(".toast")?.textContent || null,
-    pendingRemove: document.querySelectorAll(".is-pending-remove, .is-remove-src").length,
-    viewDeckOpen: document.querySelectorAll(".deck-overlay").length,
-    activityOpen: document.querySelectorAll(".activity-flyout").length,
+    pendingRemove: document.querySelectorAll(".pending-remove, .is-remove-src").length,
+    viewDeckOpen: document.querySelectorAll(".overlay").length,
+    activityOpen: document.querySelectorAll(".activity").length,
     previous: store.previous,
     transition: store.transition,
     lastMove: store.lastMove,

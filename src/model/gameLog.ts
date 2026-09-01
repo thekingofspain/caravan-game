@@ -1,7 +1,7 @@
 import { calculateCaravanState, calculateCaravanRowValue, hasJackAttached } from "./rules/caravanCardRules";
 import { pairWinner } from "./scoring";
 import { caravanName } from "./names";
-import { Ai, Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard, isPlaceholderCard } from "./types";
+import { Ai, Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard } from "./types";
 
 let logId = 0;
 export function resetLogIds(): void {
@@ -14,7 +14,6 @@ export function log(text: string): LogEntry {
 }
 
 export function formatCardLog(card: Card): string {
-  if (isPlaceholderCard(card)) return `{Placeholder}`;
   if (isJokerCard(card)) return `{${card.jokerType} Joker}`;
   return `{${card.rank}${SUIT_SYMBOL[card.suit as NonNullable<typeof card.suit>]}}`;
 }

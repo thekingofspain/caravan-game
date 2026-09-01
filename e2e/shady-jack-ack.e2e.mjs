@@ -25,7 +25,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row--human .caravan--human", {timeout:5000});
+await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
 await page.waitForTimeout(600);
 
 // Program the exact board before turn 15 (human Jack on 2♥)
@@ -84,8 +84,8 @@ let before = await page.evaluate(()=>{
     shady: shady.cards.map((c,i)=> ({idx:i, rank:c.card.rank, suit:c.card.suit, kc:c.kingCount})),
     shadyCount: shady.cards.length,
     current: s.current,
-    pending: document.querySelectorAll(".card.is-pending").length,
-    html: document.querySelectorAll(".play-row--human .caravan--human")[2]?.innerHTML.slice(0,600),
+    pending: document.querySelectorAll(".card.pending").length,
+    html: document.querySelectorAll(".play-row.human .track.human")[2]?.innerHTML.slice(0,600),
   };
 });
 console.log(" before:", JSON.stringify(before, null,2));
@@ -110,9 +110,9 @@ let after = await page.evaluate(()=>{
     shadyCount: shady.cards.length,
     current: s.current,
     transition: t,
-    pending: document.querySelectorAll(".card.is-pending, .card.is-pending-remove").length,
-    ackBtn: document.querySelectorAll(".ack-btn, .jack-remove").length,
-    selectable: document.querySelectorAll(".hand__slot.is-selectable").length,
+    pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
+    ackBtn: document.querySelectorAll(".ack-btn, .confirm").length,
+    selectable: document.querySelectorAll(".slot.selectable").length,
   };
 });
 console.log(" after:", JSON.stringify(after, null,2));
@@ -127,13 +127,13 @@ assert.equal(after.transition, null, "no pending transition for human Jack (conf
 assert.equal(after.shady.length, 4);
 
 // Human should not be blocked, but it's AI turn so human selectable is 0, AI will play
-let humanSelAfter = await page.locator(".hand__slot.is-selectable").count();
+let humanSelAfter = await page.locator(".slot.selectable").count();
 console.log(` human selectable after Jack (now AI turn): ${humanSelAfter} (expect 0)`);
 assert.equal(after.current, Ai, "still AI turn");
 
 // Let AI play one move to ensure human unblocked after
 await page.waitForTimeout(1000);
-let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".hand__slot.is-selectable").length }));
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length }));
 console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel}`);
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

@@ -16,7 +16,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row--human .caravan--human", {timeout:5000});
+await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
 await page.waitForTimeout(600);
 // Program deterministic state: AI caravans have cards, placeholder should be gone (user bug was placeholder gone but card not visible)
 const humanCaravans = [caravanOf(["9"],"hearts"), caravanOf(["3"],"clubs"), caravanOf(["7"],"spades")];
@@ -29,11 +29,11 @@ console.log("Programming deterministic AI caravans with cards (placeholder shoul
 await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(500);
 console.log("Checking AI caravans — placeholder should be gone, cards visible (per user report)...");
-const aiCaravansLoc = page.locator(".play-row--ai .caravan--ai");
+const aiCaravansLoc = page.locator(".play-row.ai .track.ai");
 assert.equal(await aiCaravansLoc.count(), 3, "3 AI caravans");
 for(let ci=0; ci<3; ci++){
   const caravan = aiCaravansLoc.nth(ci);
-  const emptyCount = await caravan.locator(".caravan__empty").count();
+  const emptyCount = await caravan.locator(".empty").count();
   const cardCount = await caravan.locator(".card").count();
   console.log(` AI ${ci}: empty=${emptyCount} cards=${cardCount}`);
   assert.equal(emptyCount, 0, `AI ${ci} placeholder should be gone after card placed (user bug: placeholder goes away but card not visible)`);
@@ -56,7 +56,7 @@ await page.evaluate(()=>{
   if(idx!==-1) window.__act({ type:"playValueCard", player:0, caravan:0, handIndex: idx });
 });
 await page.waitForTimeout(600);
-let totalAi = await page.locator(".play-row--ai .caravan--ai .card").count();
+let totalAi = await page.locator(".play-row.ai .track.ai .card").count();
 console.log(` total AI cards after human move: ${totalAi} (should still be 3)`);
 assert.equal(totalAi, 3, "AI cards should remain visible after human move");
 assert.equal(errors.length, 0, `console errors ${errors.join(" | ")}`);

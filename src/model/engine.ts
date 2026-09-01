@@ -1,8 +1,8 @@
-import { buildDeck, makePlaceholderCard, resetPlaceholderIds } from "./cards";
+import { buildDeck } from "./cards";
 import { canPlaceCard, hasJackAttached, isValidCardIndex } from "./rules/caravanCardRules";
 import { gameWinner } from "./scoring";
 import { mulberry32, shuffle } from "./rng";
-import { describe, formatFinalScore, log, removalDetail, resetLogIds } from "./gameLog";
+import { describe, log, removalDetail, resetLogIds } from "./gameLog";
 import {
   Move,
   Ai,
@@ -21,7 +21,6 @@ import {
   TargetRef,
   isFaceCard,
   isJokerCard,
-  isPlaceholderCard,
   isValueCard,
   baseValue,
 } from "./types";
@@ -41,7 +40,6 @@ function makePlayer(rng: () => number, deckId: number): PlayerState {
 }
 export function setupGame(opts: SetupOptions): GameState {
   resetLogIds();
-  resetPlaceholderIds();
   const rng = mulberry32(opts.seed ?? 1);
   return {
     players: [makePlayer(rng, 1), makePlayer(rng, 2)],
@@ -56,11 +54,8 @@ function draw(player: PlayerState): void {
   if (player.deck.length > 0) {
     const c = player.deck.shift()!;
     player.hand.push(c);
-  } else {
-    player.hand.push(makePlaceholderCard());
   }
 }
-
 function normalizeCaravan(car: Caravan): void {
   if (car.rows.length === 0) {
     car.direction = null;
@@ -187,9 +182,7 @@ function handlePlayFaceCard(
 
 function handleDiscardCard(next: GameState, action: Extract<Move, { type: "discardCard" }>): void {
   const player = next.players[action.player];
-  const card = player.hand[action.handIndex];
-  const isPlaceholder = card && isPlaceholderCard(card);
-  if (!isPlaceholder && player.caravans.some((c) => c.rows.length === 0))
+  if (player.caravans.some((c) => c.rows.length === 0))
     throw new IllegalMoveError("discardCard: cannot discard before all caravans started");
   if (!player.hand[action.handIndex]) throw new IllegalMoveError("discardCard: invalid hand index");
   player.hand.splice(action.handIndex, 1);
@@ -225,7 +218,7 @@ export function resolveTerminal(next: GameState): void {
   if (winner !== null) {
     next.phase = "over";
     next.winner = winner;
-    next.log = [...next.log, log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."} ${formatFinalScore(next)}`)];
+    next.log = [...next.log, log(`${winner === Human ? "You win the caravan!" : "AI wins the caravan."}`)];
     return;
   }
   next.current = next.current === Human ? Ai : Human;
@@ -233,7 +226,7 @@ export function resolveTerminal(next: GameState): void {
     const loser = next.current;
     next.phase = "over";
     next.winner = loser === Human ? Ai : Human;
-    next.log = [...next.log, log(`${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"} ${formatFinalScore(next)}`)];
+    next.log = [...next.log, log(`${loser === Human ? "You ran out of moves — AI wins." : "AI ran out of moves — you win!"}`)];
   }
 }
 export function applyMove(state: GameState, action: Move): GameState {
@@ -279,9 +272,7 @@ export function legalMoves(state: GameState): Move[] {
   const player = state.players[pid];
   const hasEmpty = player.caravans.some((c) => c.rows.length === 0);
   if (hasEmpty) {
-    const discards: Move[] = [];
-    for (let hi = 0; hi < player.hand.length; hi++) if (isPlaceholderCard(player.hand[hi]!)) discards.push({ type: "discardCard", player: pid, handIndex: hi });
-    return [...valueCardMoves(player, pid, true), ...player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi)), ...discards];
+    return [...valueCardMoves(player, pid, true), ...player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi))];
   }
   return [
     ...valueCardMoves(player, pid, false),
