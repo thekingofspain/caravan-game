@@ -84,6 +84,7 @@ export function useGame(initial: GameConfig): GameStore {
   );
   const reset = useCallback((c: GameConfig) => {
     setCfg(c);
+    setThinking(false);
     setUi({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
     dispatch({ type: "reset", config: c });
   }, []);
