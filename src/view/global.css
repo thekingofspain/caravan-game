@@ -539,6 +539,14 @@ body {
   margin-top: 0;
   margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
 }
+/* pending ack: lift above later rows so red × is not occluded */
+.caravan > .card.is-pending {
+  z-index: 50 !important;
+}
+.caravan > .card.is-pending-remove {
+  z-index: 51 !important;
+}
+
 
 /* ---------- Card states ---------- */
 /* is-target has no persistent outline — hover rules below show green/red */
@@ -736,7 +744,7 @@ body {
   background: var(--c-bad);
   color: transparent; /* the X is drawn with pseudo-elements for exact centering */
   cursor: pointer;
-  z-index: 5;
+  z-index: 10;
   padding: 0;
 }
 /* draw the × as two centered bars so it is perfectly centered in the circle */

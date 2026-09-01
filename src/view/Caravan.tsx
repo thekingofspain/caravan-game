@@ -50,6 +50,7 @@ function CaravanImpl({
     const isTarget = selection.targetSet.has(key);
     const classes = [cardClassName("card", head)];
     if (isTarget) classes.push("is-target");
+    if (selection.pendingRemovalSet.has(key)) classes.push("is-pending");
     if (selection.removingSet?.has(key)) classes.push("is-pending-remove");
     return classes.join(" ");
   }
@@ -78,7 +79,7 @@ function CaravanImpl({
             {sorted.map((a, j) => {
               const isShowX = (a.rank === "J" || isJokerCard(a)) && removable;
               return (
-                <div key={a.id} className={`${cardClassName("card", a)}${isShowX ? " showXButton" : ""}`} style={{ "--c": j + 1 } as CSSProperties}>
+                <div key={a.id} className={`${cardClassName("card", a)}${isShowX ? " showXButton is-remove-src" : ""}`} style={{ "--c": j + 1 } as CSSProperties}>
                   {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
                   {jackedCard && j === jackIdx && removable && (
                     <span role="button" className="jack-remove" tabIndex={0} aria-label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
