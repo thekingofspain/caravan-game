@@ -78,6 +78,17 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
+  // Reset all UI state on new game (state with empty log + empty caravans)
+  useEffect(() => {
+    const isNewGame = state.log.length === 0 && state.players.every((p) => p.caravans.every((c) => c.rows.length === 0));
+    if (isNewGame) {
+      setSel(null);
+      setPendingRemove(new Set());
+      setToast(null);
+      setViewDeck(null);
+      setActivityOpen(false);
+    }
+  }, [state]);
   // Displayed state is previous + addedTemp when pending AI removal (human must ack)
   const displayedState = useMemo(() => {
     if (!transition?.needsConfirmation || transition.confirmer !== Human) return state;
@@ -161,10 +172,14 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     if (d) { tryAct(d as Move); setSel(null); }
   }, [sel, legal, tryAct]);
 
-  const onNewGame = useCallback(
-    () => store.reset({ seed: Math.floor(Math.random() * 1e9) }),
-    [store.reset],
-  );
+  const onNewGame = useCallback(() => {
+    setSel(null);
+    setPendingRemove(new Set());
+    setToast(null);
+    setViewDeck(null);
+    setActivityOpen(false);
+    store.reset({ seed: Math.floor(Math.random() * 1e9) });
+  }, [store.reset]);
 
   const onDeckClick = useCallback(() => {
     if (sel !== null && canDiscard) onDiscard();
