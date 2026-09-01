@@ -74,21 +74,24 @@ function CaravanImpl({
           if (c.rank === "J" && jackIdx === -1) jackIdx = i;
         });
         const kingBadge = kingCount > 0 ? `×${Math.pow(2, kingCount)}` : "";
+        const confirmationSymbol = removable ? "×" : null;
         return (
           <button key={head.id} type="button" className={getCardClasses(caravanRow, k)} data-index={k} style={getCardStyle(k)} onClick={handleCardClick} onKeyDown={handleCardKeyDown}>
             {sorted.map((a, j) => {
-              const isShowX = (a.rank === "J" || isJokerCard(a)) && removable;
+              const isJackConfirm = a.rank === "J" && j === jackIdx && !!confirmationSymbol;
+              const isJokerConfirm = isJokerCard(a) && !!confirmationSymbol;
+              const showConfirmation = isJackConfirm || isJokerConfirm;
               return (
-                <div key={a.id} className={`${cardClassName("card", a)}${isShowX ? " showXButton is-remove-src" : ""}`} style={{ "--c": j + 1 } as CSSProperties}>
+                <div key={a.id} className={`${cardClassName("card", a)}${showConfirmation ? " is-confirmation-src is-remove-src" : ""}`} style={{ "--c": j + 1 } as CSSProperties}>
                   {j === lastKingIndex && kingBadge && <span className="card__badge card__badge--king">{kingBadge}</span>}
+                  {showConfirmation && confirmationSymbol && (
+                    <span role="button" className="confirmation-symbol jack-remove" tabIndex={0} aria-label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
+                      {confirmationSymbol}
+                    </span>
+                  )}
                 </div>
               );
             })}
-            {removable && (
-              <span role="button" className="jack-remove jack-remove--row" tabIndex={0} aria-label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} onClick={(e) => { e.stopPropagation(); onAcknowledge(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onAcknowledge(); } }}>
-                ×
-              </span>
-            )}
           </button>
         );
       })}

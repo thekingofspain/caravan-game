@@ -588,26 +588,26 @@ body {
 }
 
 /* The Jack/Joker attachment carries the acknowledge ×; lift it above the grey
-   overlay so the × stays bright and clickable (the rest of the card greys). */
+   overlay so the × stays bright and clickable (the rest of the card greys).
+   confirmation-symbol is the unified class for both jack and joker (based on
+   confirmationSymbol), jack-remove kept for compatibility. */
+.caravan .card > .card.is-confirmation-src,
 .caravan .card > .card.is-remove-src {
   z-index: 7;
 }
 
+.caravan .card > .card .confirmation-symbol,
 .caravan .card > .card .jack-remove {
   pointer-events: auto;
 }
 
 /* ai side only: attach face cards to the left of the value card (mirroring the
    human side where they sit to the right); overlap amount and z-order unchanged */
-.caravan--ai .card > .card {
-  left: auto;
-  right: calc(var(--c, 0) * var(--card-offset-x));
-}
-
 /* on the ai side the face card sits to the left of the value card, so the
    remove-X belongs on the left edge of the face card (mirroring the human
    side's top-right X) rather than the right */
-.caravan--ai .jack-remove {
+.caravan--ai .jack-remove,
+.caravan--ai .confirmation-symbol {
   right: auto;
   left: -0.6875rem;
 }
@@ -729,9 +729,14 @@ body {
   left: -0.6875rem;
   transform: none;
 }
-
-/* ---------- Jack remove ---------- */
-.jack-remove {
+/* ---------- Jack remove / Confirmation symbol ---------- */
+/* confirmation-symbol is the unified acknowledge × for both Jack and Joker,
+   derived from confirmationSymbol in Caravan.tsx. jack-remove is kept as
+   alias so existing tests/selectors still work. Pure CSS fix: same position
+   (right -0.6875 top 50%) — do not move, just ensure it displays above grey
+   overlay via z-index. */
+.jack-remove,
+.confirmation-symbol {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -757,7 +762,9 @@ body {
 
 /* draw the × as two centered bars so it is perfectly centered in the circle */
 .jack-remove::before,
-.jack-remove::after {
+.jack-remove::after,
+.confirmation-symbol::before,
+.confirmation-symbol::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -768,11 +775,12 @@ body {
   border-radius: 0.0625rem;
   transform: translate(-50%, -50%) rotate(45deg);
 }
-.jack-remove::after {
+.jack-remove::after,
+.confirmation-symbol::after {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
-.jack-remove:hover { background: #a93226; }
-
+.jack-remove:hover,
+.confirmation-symbol:hover { background: #a93226; }
 
 
 /* when the X is pressed, fade + shrink the card group before it is removed */

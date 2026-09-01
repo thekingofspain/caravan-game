@@ -44,10 +44,9 @@ export function getTransitionInfo(
     } else {
       forEachCaravanRow(previous, (row, ref) => {
         const carCurr = current.players[ref.player].caravans[ref.caravan];
-        const stillExists = carCurr.rows[ref.cardIndex];
-        const stillId = stillExists?.[0]?.id;
         const rowId = row[0]?.id;
-        if (!stillExists || stillId !== rowId) impacted.push(ref);
+        const stillExists = carCurr.rows.some(r => r[0]?.id === rowId);
+        if (!stillExists) impacted.push(ref);
       });
       const card = previous.players[move.player].hand[move.handIndex];
       if (card) addedTemp = { card, at: move.target };
