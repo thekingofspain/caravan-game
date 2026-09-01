@@ -1,4 +1,4 @@
-import { buildDeck, makePlaceholderCard } from "./cards";
+import { buildDeck, makePlaceholderCard, resetPlaceholderIds } from "./cards";
 import { canPlaceCard, hasJackAttached, isValidCardIndex } from "./rules/caravanCardRules";
 import { gameWinner } from "./scoring";
 import { mulberry32, shuffle } from "./rng";
@@ -33,12 +33,15 @@ function emptyCaravan(): Caravan {
 
 function makePlayer(rng: () => number, deckId: number): PlayerState {
   const deck = shuffle(buildDeck(deckId), rng).slice(0, 30);
+  if (deck.length !== 30) throw new Error(`makePlayer: deck slice expected 30 got ${deck.length}`);
   const hand = deck.slice(0, 8);
   const rest = deck.slice(8);
+  if (hand.length !== 8 || rest.length !== 22) throw new Error(`makePlayer: hand/deck expected 8/22 got ${hand.length}/${rest.length}`);
   return { deck: rest, hand, caravans: [emptyCaravan(), emptyCaravan(), emptyCaravan()] };
 }
 export function setupGame(opts: SetupOptions): GameState {
   resetLogIds();
+  resetPlaceholderIds();
   const rng = mulberry32(opts.seed ?? 1);
   return {
     players: [makePlayer(rng, 1), makePlayer(rng, 2)],

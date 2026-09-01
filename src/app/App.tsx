@@ -1,10 +1,13 @@
+import { useMemo } from "react";
 import { GameConfig, useGame } from "../viewmodel/useGame";
 import { Board } from "../view/Board";
 
 export default function App() {
-  const params = new URLSearchParams(window.location.search);
-  const seedParam = params.get("seed");
-  const seed = seedParam ? Number(seedParam) : Math.floor(Math.random() * 1e9);
+  const seed = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const seedParam = params.get("seed");
+    return seedParam ? Number(seedParam) : Math.floor(Math.random() * 1e9);
+  }, []);
   return <Game config={{ seed }} />;
 }
 
