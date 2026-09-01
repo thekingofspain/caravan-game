@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Move, TargetRef } from "../model/types";
+import type { Move } from "../model/types";
 import { targetKey, type TransitionInfo } from "./transition";
 
 
@@ -16,7 +16,7 @@ export function useBoardSelection(sel: number | null, legal: Move[], transition:
       if (a.handIndex !== sel) continue;
       if (a.type === "playValueCard") caravans.push(a.caravan);
       else if (a.type === "playFaceCard") targets.add(targetKey(a.target));
-      else if (a.type === "discardCard") discard = true;
+      else discard = true;
     }
     return { legalCaravans: caravans, targetSet: targets, canDiscard: discard };
   }, [sel, legal]);

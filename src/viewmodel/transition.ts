@@ -9,7 +9,7 @@ export interface TransitionInfo {
 }
 
 export function targetKey(t: TargetRef): string {
-  return `${t.player}-${t.caravan}-${t.cardIndex}`;
+  return `${String(t.player)}-${String(t.caravan)}-${String(t.cardIndex)}`;
 }
 
 function forEachCaravanRow(state: GameState, fn: (row: CaravanRow, ref: TargetRef) => void): void {
@@ -30,7 +30,7 @@ export function getTransitionInfo(
   move: Move,
   current: GameState
 ): TransitionInfo {
-  let impacted: TargetRef[] = [];
+  const impacted: TargetRef[] = [];
   let addedTemp: { card: Card; at: TargetRef } | null = null;
   let needsConfirmation = false;
   let confirmer: PlayerId | null = null;
@@ -39,8 +39,8 @@ export function getTransitionInfo(
     const prevCar = previous.players[move.target.player].caravans[move.target.caravan];
     const currCar = current.players[move.target.player].caravans[move.target.caravan];
     if (prevCar.rows.length === currCar.rows.length) {
-      const card = current.players[move.player].hand[move.handIndex] ?? previous.players[move.player].hand[move.handIndex];
-      addedTemp = { card: card as Card, at: move.target };
+      const card = current.players[move.player].hand.at(move.handIndex) ?? previous.players[move.player].hand.at(move.handIndex);
+      if (card !== undefined) addedTemp = { card: card, at: move.target };
     } else {
       forEachCaravanRow(previous, (row, ref) => {
         const carCurr = current.players[ref.player].caravans[ref.caravan];
@@ -48,8 +48,8 @@ export function getTransitionInfo(
         const stillExists = carCurr.rows.some(r => r[0]?.id === rowId);
         if (!stillExists) impacted.push(ref);
       });
-      const card = previous.players[move.player].hand[move.handIndex];
-      if (card) addedTemp = { card, at: move.target };
+      const card = previous.players[move.player].hand.at(move.handIndex);
+      if (card !== undefined) addedTemp = { card, at: move.target };
       needsConfirmation = true;
       confirmer = move.player === 0 ? 1 : 0;
     }
@@ -62,10 +62,10 @@ export function getDisplayedState(previous: GameState | null, current: GameState
   if (!transition?.needsConfirmation || !previous) return current;
   if (!transition.addedTemp) return previous;
   const cloned: GameState = structuredClone(previous);
-  const { card, at } = transition.addedTemp;
-  const caravan = cloned.players[at.player].caravans[at.caravan];
-  const row = caravan.rows[at.cardIndex];
-  if (row) row.push(card as Card);
+  const { card, at: target } = transition.addedTemp;
+  const caravan = cloned.players[target.player].caravans[target.caravan];
+  const row = caravan.rows.at(target.cardIndex);
+  if (row !== undefined) row.push(card);
   return cloned;
 }
 

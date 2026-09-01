@@ -444,7 +444,8 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
 
 .caravan .track.ai .empty { top: auto; bottom: var(--caravan-pad); }
 
-/* Disband */
+/* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
+.caravan.is-empty { }
 .caravan .disband {
   order: 1;
   margin-top: auto;

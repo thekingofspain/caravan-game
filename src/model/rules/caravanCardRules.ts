@@ -4,7 +4,7 @@ export const MIN_SELLABLE = 21;
 export const MAX_SELLABLE = 26;
 
 export function calculateCaravanRowValue(row: CaravanRow): number {
-  if (!row || row.length === 0) return 0;
+  if (row.length === 0) return 0;
   const kingCount = row.slice(1).filter((c) => c.rank === "K").length;
   return baseValue(row[0]) * Math.pow(2, kingCount);
 }
@@ -19,7 +19,7 @@ export function isSellable(caravan: Caravan): boolean {
 }
 
 export function calculateCaravanState(caravan: Caravan): CaravanState {
-  if (caravan.rows.length === 0) return { status: "empty" };
+  if (caravan.rows.length === 0) return { status: "unsellable", total: 0 };
   if (isSellable(caravan)) return { status: "sellable", total: calculateScore(caravan) };
   const total = calculateScore(caravan);
   if (total > MAX_SELLABLE) return { status: "busted", total };
@@ -30,7 +30,6 @@ export function canPlaceCard(card: Card, caravan: Caravan): boolean {
   if (caravan.rows.length === 0) return true;
   const prevRow = caravan.rows[caravan.rows.length - 1];
   const prev = prevRow[0];
-  if (!prev) return true;
   if (card.rank === prev.rank) return false;
   if (caravan.direction === null) return true;
   const cv = baseValue(card);
@@ -41,7 +40,7 @@ export function canPlaceCard(card: Card, caravan: Caravan): boolean {
 }
 
 export function isValidCardIndex(caravan: Caravan, cardIndex: number): boolean {
-  return !!caravan && cardIndex >= 0 && cardIndex < caravan.rows.length;
+  return cardIndex >= 0 && cardIndex < caravan.rows.length;
 }
 
 export function hasJackAttached(row: CaravanRow): boolean {

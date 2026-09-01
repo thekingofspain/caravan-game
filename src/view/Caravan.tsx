@@ -3,17 +3,17 @@ import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../model/cards";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
-import { CaravanRow, Caravan as CaravanType, Human, PlayerId, SelectionState, TargetRef, isJokerCard } from "../model/types";
+import { CaravanRow, Caravan as CaravanType, Human, PlayerId, SelectionState, TargetRef, isJokerCard, CaravanIndex } from "../model/types";
 import { sortAttachments, targetKey } from "../viewmodel/transition";
 
 interface CaravanProps {
   caravan: CaravanType;
-  caravanIndex: number;
+  caravanIndex: CaravanIndex;
   playerId: PlayerId;
   highestSold: boolean;
   selection: SelectionState;
   onCardClick: (target: TargetRef) => void;
-  onPlaceholderClick: (caravanIndex: number) => void;
+  onPlaceholderClick: (caravanIndex: CaravanIndex) => void;
   onAcknowledge: () => void;
   children?: ReactNode;
 }
@@ -67,7 +67,7 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
           onAcknowledge();
         }
       }}
-      style={{ position: "fixed", left: pos.left, top: pos.top, margin: 0, transform: "none", zIndex: 9999 } as React.CSSProperties}
+      style={{ position: "fixed", left: pos.left, top: pos.top, margin: 0, transform: "none", zIndex: 9999 }}
     >
       {symbol}
     </span>,
@@ -86,7 +86,7 @@ function CaravanImpl({
   children,
 }: CaravanProps) {
   const isHuman = playerId === Human;
-  const caravanIdx = caravanIndex as 0 | 1 | 2;
+  const caravanIdx = caravanIndex;
   function handleCardClick(e: React.MouseEvent) {
     const wrap = (e.target as HTMLElement).closest("[data-index]");
     if (!wrap) return;
@@ -109,12 +109,12 @@ function CaravanImpl({
     const classes = [cardClassName("card", head)];
     if (isTarget) classes.push("target");
     if (selection.pendingRemovalSet.has(key)) classes.push("pending");
-    if (selection.removingSet?.has(key)) classes.push("pending-remove");
+    if (selection.removingSet.has(key)) classes.push("pending-remove");
     if (caravanRow.slice(1).some((c) => c.rank === "J")) classes.push("jacked");
     return classes.join(" ");
   }
   function getCardStyle(index: number): CSSProperties {
-    return { zIndex: index + 1 } as CSSProperties;
+    return { zIndex: index + 1 };
   }
   return (
     <div className={`track ${isHuman ? "human" : "ai"} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`}>
@@ -136,7 +136,7 @@ function CaravanImpl({
         />
       ))}
       {caravan.rows.length === 0 ? (
-        <button type="button" className={`empty ${selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`} onClick={() => onPlaceholderClick(caravanIndex)} />
+        <button type="button" className={`empty ${selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`} onClick={() => { onPlaceholderClick(caravanIndex); }} />
       ) : null}
     </div>
   );
@@ -181,7 +181,7 @@ function CaravanRowButton({
     }
     if (c.rank === "J" && jackIdx === -1) jackIdx = i;
   });
-  const kingBadge = kingCount > 0 ? `×${Math.pow(2, kingCount)}` : "";
+  const kingBadge = kingCount > 0 ? `×${String(Math.pow(2, kingCount))}` : "";
   const confirmationSymbol = removable ? "×" : null;
   const anchorRef = useRef<HTMLDivElement>(null);
   return (
@@ -201,14 +201,14 @@ function CaravanRowButton({
           </div>
         );
       })}
-      {removable && confirmationSymbol && <PortalRemove anchorRef={anchorRef} isHuman={isHuman} onAcknowledge={onAcknowledge} label={`Acknowledge and remove card ${head.rank} of ${head.suit}`} symbol={confirmationSymbol} />}
+      {removable && confirmationSymbol && <PortalRemove anchorRef={anchorRef} isHuman={isHuman} onAcknowledge={onAcknowledge} label={`Acknowledge and remove card ${head.rank} of ${String(head.suit)}`} symbol={confirmationSymbol} />}
     </button>
   );
 }
-export function CaravanScore({ caravan, highestSold, playerId }: { caravan: CaravanType; highestSold: boolean; playerId?: PlayerId }) {
+export function CaravanScore({ caravan, highestSold }: { caravan: CaravanType; highestSold: boolean; playerId?: PlayerId }) {
   const state = calculateCaravanState(caravan);
   const isSellable = state.status === "sellable";
-  const total = state.status === "empty" ? 0 : state.total;
+  const total = state.total;
   const isSold = isSellable && highestSold;
   return (
     <span className={`score ${isSellable ? "sellable" : "unsellable"} ${isSold ? "sold bold" : ""} ${highestSold ? "highest" : ""}`} data-total={total} data-sellable={isSellable ? "1" : "0"}>

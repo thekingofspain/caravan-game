@@ -23,13 +23,13 @@ function PlayerHandImpl({
   const label = isHuman ? "You" : "AI";
 
   return (
-    <section className={`hand ${isHuman ? "human" : "ai"}`} aria-label={`${label} hand, ${player.hand.length} cards`}>
+    <section className={`hand ${isHuman ? "human" : "ai"}`} aria-label={`${label} hand, ${String(player.hand.length)} cards`}>
       <div className="cards" style={{ "--fan-count": player.hand.length } as React.CSSProperties}>
         {SLOT_KEYS.map((slotKey) => {
           const i = Number(slotKey.slice(1));
-          const card = player.hand[i];
+          const card = player.hand.at(i);
           const slotStyle = { "--i": i } as React.CSSProperties;
-          if (!card) {
+          if (card === undefined) {
             return <div key={slotKey} className="slot" style={slotStyle} aria-hidden="true" />;
           }
           if (isHuman) {
@@ -39,7 +39,7 @@ function PlayerHandImpl({
                 className={`slot ${selectableIndices.has(i) ? "selectable" : ""} ${selectedHandIndex === i ? "selected" : ""}`}
                 key={card.id}
                 style={slotStyle}
-                onClick={() => onCardClick(i)}
+                onClick={() => { onCardClick(i); }}
                 aria-label={`${cardLabel(card)}${selectedHandIndex === i ? ", selected" : ""}${selectableIndices.has(i) ? ", playable" : ""}`}
                 aria-pressed={selectedHandIndex === i}
               >

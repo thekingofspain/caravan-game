@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { Move, Ai, GameState, Human, PlayerId } from "../model/types";
+import { Move, Ai, GameState, Human } from "../model/types";
 import { applyMove, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
@@ -40,12 +40,15 @@ export function useGame(initial: GameConfig): GameStore {
     pendingMove: Move | null;
   }>({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
 
-  // Test harness: allow e2e to program particular hand/deck/ops
-  if (typeof window !== "undefined") {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const w = window as unknown as { __setCaravanState?: (s: GameState) => void; __caravanDispatch?: (a: ReducerMove) => void };
-    w.__setCaravanState = (s: GameState) => dispatch({ type: "__setState", state: s });
+    w.__setCaravanState = (s: GameState) => {
+      dispatch({ type: "__setState", state: s });
+    };
     w.__caravanDispatch = dispatch;
-  }
+  }, [dispatch]);
+
 
   const commitOrStage = useCallback(
     (prev: GameState, move: Move, next: GameState) => {
@@ -60,19 +63,24 @@ export function useGame(initial: GameConfig): GameStore {
     [],
   );
 
-  const { previous, lastMove, transition, stagedNext, pendingMove } = ui;
+  const { previous, lastMove, transition } = ui;
 
   useEffect(() => {
     if (state.phase === "over" || state.current !== Ai) return;
     if (transition?.needsConfirmation && transition.confirmer === Human) return;
-    setThinking(true);
-    const t = setTimeout(() => {
+    const thinkingTimer = window.setTimeout(() => {
+      setThinking(true);
+    }, 0);
+    const t = window.setTimeout(() => {
       const a = determineBestMove(state, Ai);
       const next = applyMove(state, a);
       commitOrStage(state, a, next);
       setThinking(false);
     }, 650);
-    return () => clearTimeout(t);
+    return () => {
+      window.clearTimeout(thinkingTimer);
+      window.clearTimeout(t);
+    };
   }, [state, transition, commitOrStage]);
 
   const act = useCallback(
@@ -108,7 +116,7 @@ export function handSelectable(state: GameState, legal: Move[], handIndex: numbe
   return legal.some(
     (a) =>
       (a.type === "playValueCard" || a.type === "playFaceCard" || a.type === "discardCard") &&
-      a.player === (state.current as PlayerId) &&
+      a.player === (state.current) &&
       a.handIndex === handIndex,
   );
 }

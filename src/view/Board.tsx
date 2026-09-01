@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
 import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model/types";
-import { pairWinner } from "../model/scoring";
+import type { Caravan as CaravanModel, GameState, SelectionState } from "../model/types";
+import { caravanSeller } from "../model/scoring";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
 import { cardLabel } from "../model/cards";
@@ -11,7 +12,6 @@ import { CardView } from "./CardView";
 import { Sidebar } from "./Sidebar";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
-import type { SelectionState } from "../model/types";
 
 function CaravanColumn({
   playerId,
@@ -24,23 +24,26 @@ function CaravanColumn({
   childrenFor,
 }: {
   playerId: PlayerId;
-  caravans: import("../model/types").Caravan[];
+  caravans: CaravanModel[];
   selection: SelectionState;
-  state: import("../model/types").GameState;
+  state: GameState;
   onCardClick: (t: TargetRef) => void;
   onPlaceholderClick: (ci: number) => void;
   onAcknowledge: () => void;
   childrenFor?: (ci: number) => React.ReactNode;
 }) {
   const side = playerId === Human ? "human" : "ai";
+
   return (
     <>
       {[0, 1, 2].map((ci) => {
-        const pairWinnerPlayer = pairWinner(state, ci as 0 | 1 | 2);
+        const pairWinnerPlayer = caravanSeller(state, ci as 0 | 1 | 2);
         const caravan = caravans[ci];
-        const sold = calculateCaravanState(caravan).status === "sellable";
+        const st = calculateCaravanState(caravan);
+        const sold = st.status === "sellable";
+        const isEmpty = caravan.rows.length === 0;
         return (
-          <div className={`caravan ${side} ${sold ? "sold" : ""}`} key={ci}>
+          <div className={`caravan ${side} ${sold ? "sold" : ""} ${isEmpty ? "is-empty" : ""}`} key={ci}>
             <header>
               <CaravanScore caravan={caravan} highestSold={pairWinnerPlayer === playerId} playerId={playerId} />
               <span className="title">{caravanName(playerId, ci)}</span>
@@ -48,7 +51,7 @@ function CaravanColumn({
             </header>
             <Caravan
               caravan={caravan}
-              caravanIndex={ci}
+              caravanIndex={ci as 0 | 1 | 2}
               playerId={playerId}
               highestSold={pairWinnerPlayer === playerId}
               selection={selection}
@@ -64,6 +67,7 @@ function CaravanColumn({
     </>
   );
 }
+
 export function Board({ store, confirm = typeof window !== "undefined" ? window.confirm.bind(window) : () => true }: { store: GameStore; confirm?: (msg: string) => boolean }) {
   const { state, legal, act, transition, acknowledge } = store;
   const [sel, setSel] = useState<number | null>(null);
@@ -71,59 +75,66 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
   const [activityOpen, setActivityOpen] = useState(false);
   const [viewDeck, setViewDeck] = useState<PlayerId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const deckPeekEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekDeck");
   const human = isHumanTurn(state);
   const blocked = !!transition?.needsConfirmation && transition.confirmer === Human;
-  const onCopyActivity = useCallback(async () => {
+
+  const onCopyActivity = async () => {
     const lines: string[] = [];
     lines.push(`# Caravan Activity — ${new Date().toISOString()}`);
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("seed") : null;
-    lines.push(`Seed: ${params ?? "(random)"} | Phase: ${state.phase} | Current: ${state.current === Human ? "Human" : "AI"} | Winner: ${state.winner ?? "none"}`);
+    lines.push(`Seed: ${params ?? "(random)"} | Phase: ${state.phase} | Current: ${state.current === Human ? "Human" : "AI"} | Winner: ${String(state.winner ?? "none")}`);
     for (const pid of [Human, Ai] as const) {
       const p = state.players[pid];
       const label = pid === Human ? "Human" : "AI";
-      lines.push(`${label} — hand:${p.hand.length} deck:${p.deck.length} | hand: ${p.hand.map(cardLabel).join(", ")}`);
+      lines.push(`${label} — hand:${String(p.hand.length)} deck:${String(p.deck.length)} | hand: ${p.hand.map(cardLabel).join(", ")}`);
       p.caravans.forEach((c, idx) => {
         const st = calculateCaravanState(c);
-        const total = st.status === "empty" ? 0 : st.total;
-        lines.push(`  ${caravanName(pid, idx)}: ${total} (${st.status}) — rows:${c.rows.length} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`);
+        const total = st.total;
+        lines.push(`  ${caravanName(pid, idx)}: ${String(total)} (${st.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`);
       });
     }
+
     lines.push("");
     lines.push("Activity Log:");
     if (state.log.length === 0) lines.push("(empty)");
+
     else state.log.forEach((e) => {
       lines.push(`- ${e.text}`);
       if (e.detail) e.detail.forEach((d) => lines.push(`  - ${d}`));
     });
+
     const text = lines.join("\n");
+    
     try {
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
-      else {
-        const ta = document.createElement("textarea");
-        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-      }
+      await navigator.clipboard.writeText(text);
       setToast("Copied activity + debug to clipboard");
     } catch {
       setToast("Copy failed");
     }
-  }, [state]);
+  };
   // auto-clear toast after 3s
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => { setToast(null); }, 3000);
+    return () => { clearTimeout(t); };
   }, [toast]);
+
   // Reset all UI state on new game (state with empty log + empty caravans)
   useEffect(() => {
     const isNewGame = state.log.length === 0 && state.players.every((p) => p.caravans.every((c) => c.rows.length === 0));
     if (isNewGame) {
-      setSel(null);
-      setPendingRemove(new Set());
-      setToast(null);
-      setViewDeck(null);
-      setActivityOpen(false);
+      const id = setTimeout(() => {
+        setSel(null);
+        setPendingRemove(new Set());
+        setToast(null);
+        setViewDeck(null);
+        setActivityOpen(false);
+      }, 0);
+      return () => { clearTimeout(id); };
     }
   }, [state]);
+
   // Displayed state is previous + addedTemp when pending AI removal (human must ack)
   const displayedState = useMemo(() => {
     if (!transition?.needsConfirmation || transition.confirmer !== Human) return state;
@@ -172,20 +183,17 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     (target: TargetRef) => {
       if (sel === null || blocked) return;
       const card = humanPlayer.hand[sel];
-      if (!card) return;
       if (target.player === Ai) {
         if (targetSet.has(targetKey(target))) { tryAct({ type: "playFaceCard", player: Human, target, handIndex: sel }); setSel(null); }
         return;
       }
-      if (target.player === Human) {
-        if (isValueCard(card)) {
-          const caravanLen = humanPlayer.caravans[target.caravan].rows.length;
-          const isTop = target.cardIndex === caravanLen - 1;
-          if (legalCaravans.includes(target.caravan) && isTop) { tryAct({ type: "playValueCard", player: Human, caravan: target.caravan, handIndex: sel }); setSel(null); }
-          return;
-        }
-        if (targetSet.has(targetKey(target))) { tryAct({ type: "playFaceCard", player: Human, target, handIndex: sel }); setSel(null); }
+      if (isValueCard(card)) {
+        const caravanLen = humanPlayer.caravans[target.caravan].rows.length;
+        const isTop = target.cardIndex === caravanLen - 1;
+        if (legalCaravans.includes(target.caravan) && isTop) { tryAct({ type: "playValueCard", player: Human, caravan: target.caravan, handIndex: sel }); setSel(null); }
+        return;
       }
+      if (targetSet.has(targetKey(target))) { tryAct({ type: "playFaceCard", player: Human, target, handIndex: sel }); setSel(null); }
     },
     [sel, blocked, humanPlayer, targetSet, legalCaravans, tryAct],
   );
@@ -194,7 +202,6 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     (caravanIndex: number) => {
       if (sel === null) return;
       const card = humanPlayer.hand[sel];
-      if (!card) return;
       const ci = caravanIndex as 0 | 1 | 2;
       if (isValueCard(card) && legalCaravans.includes(ci)) { tryAct({ type: "playValueCard", player: Human, caravan: ci, handIndex: sel }); setSel(null); }
     },
@@ -204,7 +211,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
   const onDiscard = useCallback(() => {
     if (sel === null) return;
     const d = legal.find((a) => a.type === "discardCard" && a.handIndex === sel);
-    if (d) { tryAct(d as Move); setSel(null); }
+    if (d) { tryAct(d); setSel(null); }
   }, [sel, legal, tryAct]);
 
   const onNewGame = useCallback(() => {
@@ -214,12 +221,12 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     setViewDeck(null);
     setActivityOpen(false);
     store.reset({ seed: Math.floor(Math.random() * 1e9) });
-  }, [store.reset]);
+  }, [store]);
 
   const onDeckClick = useCallback(() => {
     if (sel !== null && canDiscard) onDiscard();
-    else setViewDeck(Human);
-  }, [sel, canDiscard, onDiscard]);
+    else if (deckPeekEnabled) setViewDeck(Human);
+  }, [sel, canDiscard, onDiscard, deckPeekEnabled]);
 
   const onDisband = useCallback(
     (ci: number) => {
@@ -269,7 +276,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
           <div className="column caravans">
             <div className="play-row ai">
               <div className="caravans">
-                <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} state={state} onCardClick={onCardClick} onPlaceholderClick={() => {}} onAcknowledge={onAcknowledge} />
+                <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} state={state} onCardClick={onCardClick} onPlaceholderClick={() => undefined} onAcknowledge={onAcknowledge} />
               </div>
             </div>
             <div className="play-row human">
@@ -284,7 +291,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                   onAcknowledge={onAcknowledge}
                   childrenFor={(ci) =>
                     canDisbandAny ? (
-                      <button type="button" className="disband" onClick={() => onDisband(ci)} aria-label={`Disband your ${caravanName(Human, ci)}`}>
+                      <button type="button" className="disband" onClick={() => { onDisband(ci); }} aria-label={`Disband your ${caravanName(Human, ci)}`}>
                         Disband
                       </button>
                     ) : null
@@ -299,8 +306,9 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               <button
                 type="button"
                 className={`deck ai ${aiPlayer.deck.length === 0 ? "empty" : ""}`}
-                onClick={() => setViewDeck(Ai)}
-                aria-label={`AI deck, ${aiPlayer.deck.length} cards remaining. View the deck.`}
+                onClick={deckPeekEnabled ? () => { setViewDeck(Ai); } : undefined}
+                aria-label={deckPeekEnabled ? `AI deck, ${String(aiPlayer.deck.length)} cards remaining. View the deck.` : `AI deck, ${String(aiPlayer.deck.length)} cards remaining.`}
+                aria-disabled={deckPeekEnabled ? undefined : true}
               >
                 {aiPlayer.deck.length === 0 ? <div className="empty" aria-hidden="true" /> : <div className="card back deck2" />}
                 <span className="count">{aiPlayer.deck.length}</span>
@@ -310,7 +318,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 player={aiPlayer}
                 selectedHandIndex={null}
                 selectableIndices={new Set()}
-                onCardClick={() => {}}
+                onCardClick={() => undefined}
               />
             </div>
 
@@ -321,7 +329,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               <button
                 type="button"
                 className="btn"
-                onClick={() => setActivityOpen((v) => !v)}
+                onClick={() => { setActivityOpen((v) => !v); }}
                 aria-expanded={activityOpen}
               >
                 Activity
@@ -340,7 +348,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 type="button"
                 className={`deck ${humanPlayer.deck.length === 0 ? "empty" : ""}`}
                 onClick={onDeckClick}
-                aria-label={`Your deck, ${humanPlayer.deck.length} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`}
+                aria-label={deckPeekEnabled ? `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one, or view the deck.` : `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one.`}
               >
                 {humanPlayer.deck.length === 0 ? <div className="empty" aria-hidden="true" /> : <div className="card back deck1" />}
                 <span className="count">{humanPlayer.deck.length}</span>
@@ -355,13 +363,13 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
           <header>
             <span>Activity</span>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="button" className="copy" onClick={onCopyActivity} aria-label="Copy activity log and debug info">
+              <button type="button" className="copy" onClick={() => { void onCopyActivity(); }} aria-label="Copy activity log and debug info">
                 Copy
               </button>
               <button
                 type="button"
                 className="close"
-                onClick={() => setActivityOpen(false)}
+                onClick={() => { setActivityOpen(false); }}
                 aria-label="Close activity log"
               >
                 ×
@@ -372,16 +380,16 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
         </div>
       )}
 
-      {viewDeck !== null && (
+      {deckPeekEnabled && viewDeck !== null && (
         <div className="overlay" role="dialog" aria-label={`${viewDeck === Human ? "Your" : "AI"} remaining deck`}>
           <header>
             <span>
-              {viewDeck === Human ? "Your" : "AI"} deck — {state.players[viewDeck].deck.length} cards
+              {viewDeck === Human ? "Your" : "AI"} deck — {String(state.players[viewDeck].deck.length)} cards
             </span>
             <button
               type="button"
               className="close"
-              onClick={() => setViewDeck(null)}
+              onClick={() => { setViewDeck(null); }}
               aria-label="Close deck view"
             >
               ×

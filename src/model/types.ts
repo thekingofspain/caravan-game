@@ -12,7 +12,6 @@ export type Nullable<T> = T | null;
 export type Direction = "asc" | "desc";
 export type GamePhase = "play" | "over";
 export type ScoredStatus = "sellable" | "busted" | "unsellable";
-export type EmptyStatus = "empty";
 
 export const SUIT_SYMBOL: Record<Suit, string> = {
   spades: "♠",
@@ -21,8 +20,8 @@ export const SUIT_SYMBOL: Record<Suit, string> = {
   clubs: "♣",
 };
 
-export type StandardCard = { id: string; rank: SuitedRank; suit: Suit; jokerType?: never };
-export type JokerCard = { id: string; rank: "Joker"; suit: null; jokerType: JokerType };
+export interface StandardCard { id: string; rank: SuitedRank; suit: Suit; jokerType?: never }
+export interface JokerCard { id: string; rank: "Joker"; suit: null; jokerType: JokerType }
 export type Card = StandardCard | JokerCard;
 
 export function isJokerCard(card: Card): card is JokerCard {
@@ -38,9 +37,7 @@ export interface Caravan {
   suit: Nullable<Suit>;
 }
 
-type ScoredCaravanState = { status: ScoredStatus; total: number };
-type EmptyCaravanState = { status: EmptyStatus };
-export type CaravanState = ScoredCaravanState | EmptyCaravanState;
+export interface CaravanState { status: ScoredStatus; total: number }
 export interface GameConfig {
   seed?: number;
 }
