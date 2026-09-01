@@ -883,6 +883,19 @@ body {
   border-bottom: 0.0625rem solid var(--c-line);
 }
 
+.activity-flyout__copy {
+  background: transparent;
+  border: 0.0625rem solid var(--c-line);
+  color: var(--c-fg);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+.activity-flyout__copy:hover {
+  background: var(--c-line);
+}
 .activity-flyout__close {
   background: transparent;
   border: none;
@@ -892,7 +905,6 @@ body {
   cursor: pointer;
   padding: 0 var(--sp-1);
 }
-
 .activity-flyout .log {
   margin: var(--sp-2);
   flex: 1;

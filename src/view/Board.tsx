@@ -4,6 +4,7 @@ import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model
 import { pairWinner } from "../model/scoring";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
+import { cardLabel } from "../model/cards";
 import { Caravan, CaravanScore } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
 import { CardView } from "./CardView";
@@ -72,6 +73,40 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
   const [toast, setToast] = useState<string | null>(null);
   const human = isHumanTurn(state);
   const blocked = !!transition?.needsConfirmation && transition.confirmer === Human;
+  const onCopyActivity = useCallback(async () => {
+    const lines: string[] = [];
+    lines.push(`# Caravan Activity — ${new Date().toISOString()}`);
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("seed") : null;
+    lines.push(`Seed: ${params ?? "(random)"} | Phase: ${state.phase} | Current: ${state.current === Human ? "Human" : "AI"} | Winner: ${state.winner ?? "none"}`);
+    for (const pid of [Human, Ai] as const) {
+      const p = state.players[pid];
+      const label = pid === Human ? "Human" : "AI";
+      lines.push(`${label} — hand:${p.hand.length} deck:${p.deck.length} | hand: ${p.hand.map(cardLabel).join(", ")}`);
+      p.caravans.forEach((c, idx) => {
+        const st = calculateCaravanState(c);
+        const total = st.status === "empty" ? 0 : st.total;
+        lines.push(`  ${caravanName(pid, idx)}: ${total} (${st.status}) — rows:${c.rows.length} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`);
+      });
+    }
+    lines.push("");
+    lines.push("Activity Log:");
+    if (state.log.length === 0) lines.push("(empty)");
+    else state.log.forEach((e) => {
+      lines.push(`- ${e.text}`);
+      if (e.detail) e.detail.forEach((d) => lines.push(`  - ${d}`));
+    });
+    const text = lines.join("\n");
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+      }
+      setToast("Copied activity + debug to clipboard");
+    } catch {
+      setToast("Copy failed");
+    }
+  }, [state]);
   // auto-clear toast after 3s
   useEffect(() => {
     if (!toast) return;
@@ -319,14 +354,19 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
         <div className="activity-flyout" role="dialog" aria-label="Activity log">
           <div className="activity-flyout__header">
             <span>Activity</span>
-            <button
-              type="button"
-              className="activity-flyout__close"
-              onClick={() => setActivityOpen(false)}
-              aria-label="Close activity log"
-            >
-              ×
-            </button>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <button type="button" className="activity-flyout__copy" onClick={onCopyActivity} aria-label="Copy activity log and debug info">
+                Copy
+              </button>
+              <button
+                type="button"
+                className="activity-flyout__close"
+                onClick={() => setActivityOpen(false)}
+                aria-label="Close activity log"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <Sidebar log={state.log} />
         </div>
