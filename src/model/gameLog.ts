@@ -1,6 +1,7 @@
-import { calculateCaravanRowValue, hasJackAttached } from "./rules/caravanCardRules";
+import { calculateCaravanState, calculateCaravanRowValue, hasJackAttached } from "./rules/caravanCardRules";
+import { pairWinner } from "./scoring";
 import { caravanName } from "./names";
-import { Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard, isPlaceholderCard } from "./types";
+import { Ai, Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard, isPlaceholderCard } from "./types";
 
 let logId = 0;
 export function resetLogIds(): void {
@@ -23,10 +24,24 @@ export function formatOwnerLabel(p: PlayerId): string {
 }
 
 export function formatFinalScore(state: GameState): string {
-  const scores = state.players.map((pl) =>
-    pl.caravans.reduce((s, c) => s + c.rows.reduce((sum, row) => sum + (hasJackAttached(row) ? 0 : calculateCaravanRowValue(row)), 0), 0),
-  );
-  return `(${scores[0]} vs ${scores[1]})`;
+  const parts: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const h = state.players[Human].caravans[i as 0 | 1 | 2];
+    const a = state.players[Ai].caravans[i as 0 | 1 | 2];
+    const hs = calculateCaravanState(h);
+    const as = calculateCaravanState(a);
+    const winner = pairWinner(state, i as 0 | 1 | 2);
+    const fmt = (st: ReturnType<typeof calculateCaravanState>, isWinner: boolean): string => {
+      if (st.status === "empty") return "0";
+      const t = String(st.total);
+      if (st.status === "sellable") return isWinner ? `**${t}**` : `*${t}*`;
+      return t;
+    };
+    const hStr = fmt(hs, winner === Human);
+    const aStr = fmt(as, winner === Ai);
+    parts.push(`${caravanName(Human, i)} ${hStr} vs ${aStr}`);
+  }
+  return parts.join(" | ");
 }
 
 export function removalDetail(state: GameState, refs: TargetRef[]): string[] {
