@@ -68,7 +68,7 @@ function normalizeCaravan(car: Caravan): void {
   } else if (car.rows.length === 1) {
     car.direction = null;
     car.suit = car.rows[0][0].suit;
-  } else {
+  } else if (car.direction === null) {
     const aRow = car.rows[car.rows.length - 2];
     const bRow = car.rows[car.rows.length - 1];
     const a = baseValue(aRow[0]);
