@@ -419,12 +419,16 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   pointer-events: none;
 }
 
+.caravan .track.ai .card > .card {
+  left: auto;
+  right: calc(var(--c, 0) * var(--card-offset-x));
+}
+
 .caravan .card > .card.confirmation-src, .caravan .card > .card.remove-src { z-index: 7; }
 
 .caravan .card > .card .confirm { pointer-events: auto; }
 
 .caravan .track.ai .confirm { right: auto; left: -0.6875rem; }
-
 /* Empty placeholder */
 .caravan .empty {
   position: absolute;

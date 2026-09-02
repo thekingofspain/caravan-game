@@ -76,7 +76,7 @@ function decorateCardTokens(text: string, keyBase: string | number): ReactNode[]
     );
     last = idx + m[0].length;
   }
-  if (last < text.length) nodes.push(...decorateLog(text.slice(last), `${String(keyBase)}-${String(k++)}`));
+  if (last < text.length) nodes.push(...decorateLog(text.slice(last), `${String(keyBase)}-${String(k)}`));
   return nodes;
 }
 
@@ -172,10 +172,10 @@ function SidebarImpl({ log, state }: SidebarProps) {
 
   return (
     <ol className="log" ref={logRef}>
-        {log.map((entry) => {
+        {log.map((entry, idx) => {
           const isWin = isWinEntry(entry.text) && state?.phase === "over";
           return (
-            <li className={`line ${isWin ? "win" : ""}`} key={entry.id}>
+            <li className={`line ${isWin ? "win" : ""}`} key={`${entry.id}-${idx}`}>
               <span className="text">
                 {isWin ? (
                   <>

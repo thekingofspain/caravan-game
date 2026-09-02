@@ -19,7 +19,7 @@ interface CaravanProps {
 }
 
 interface PortalRemoveProps {
-  anchorRef: React.RefObject<HTMLDivElement>;
+  anchorRef: React.RefObject<HTMLDivElement | null>;
   isHuman: boolean;
   onAcknowledge: () => void;
   label: string;

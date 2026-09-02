@@ -51,8 +51,6 @@ const RANK_CLASS: Record<Rank, string> = {
   Joker: "joker",
 };
 export function cardClassName(base: string, card: Card): string {
-  if (isJokerCard(card)) return [base, RANK_CLASS[card.rank], card.jokerType.toLowerCase()].join(" ");
-
-  const classes = [base, RANK_CLASS[card.rank], card.suit];
-  return classes.join(" ");
+  const suitOrJokerClass = isJokerCard(card) ? card.jokerType.toLowerCase() : card.suit
+  return [base, RANK_CLASS[card.rank], suitOrJokerClass].join(" ");
 }

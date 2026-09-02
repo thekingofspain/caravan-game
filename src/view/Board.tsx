@@ -372,7 +372,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 onClick={() => { setActivityOpen(false); }}
                 aria-label="Close activity log"
               >
-                ×
+                Close
               </button>
             </div>
           </header>
@@ -392,7 +392,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
               onClick={() => { setViewDeck(null); }}
               aria-label="Close deck view"
             >
-              ×
+              Close
             </button>
           </header>
           <div className="cards">
