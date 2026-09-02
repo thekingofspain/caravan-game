@@ -175,7 +175,7 @@ function SidebarImpl({ log, state }: SidebarProps) {
         {log.map((entry, idx) => {
           const isWin = isWinEntry(entry.text) && state?.phase === "over";
           return (
-            <li className={`line ${isWin ? "win" : ""}`} key={`${entry.id}-${idx}`}>
+            <li className={`line ${isWin ? "win" : ""}`} key={`${String(entry.id)}-${String(idx)}`}>
               <span className="text">
                 {isWin ? (
                   <>

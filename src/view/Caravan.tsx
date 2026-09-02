@@ -116,7 +116,7 @@ function CaravanImpl({
     return { zIndex: index + 1 };
   }
   return (
-    <div className={`track ${isHuman ? "human" : "ai"} ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`}>
+    <div className={`track ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`}>
       {children}
       {caravan.rows.map((caravanRow, k) => (
         <CaravanRowButton
@@ -204,7 +204,7 @@ function CaravanRowButton({
     </button>
   );
 }
-export function CaravanScore({ caravan, highestSold }: { caravan: CaravanType; highestSold: boolean; playerId?: PlayerId }) {
+export function CaravanScore({ caravan, isSeller: highestSold }: { caravan: CaravanType; isSeller: boolean; playerId?: PlayerId }) {
   const state = calculateCaravanState(caravan);
   const isSellable = state.status === "sellable";
   const total = state.total;

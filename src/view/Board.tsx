@@ -17,7 +17,7 @@ function CaravanColumn({
   playerId,
   caravans,
   selection,
-  state,
+  gameState,
   onCardClick,
   onPlaceholderClick,
   onAcknowledge,
@@ -26,26 +26,24 @@ function CaravanColumn({
   playerId: PlayerId;
   caravans: CaravanModel[];
   selection: SelectionState;
-  state: GameState;
+  gameState: GameState;
   onCardClick: (t: TargetRef) => void;
   onPlaceholderClick: (ci: number) => void;
   onAcknowledge: () => void;
   childrenFor?: (ci: number) => React.ReactNode;
 }) {
-  const side = playerId === Human ? "human" : "ai";
-
   return (
     <>
       {[0, 1, 2].map((ci) => {
-        const pairWinnerPlayer = caravanSeller(state, ci as 0 | 1 | 2);
+        const seller = caravanSeller(gameState, ci as 0 | 1 | 2);
         const caravan = caravans[ci];
-        const st = calculateCaravanState(caravan);
-        const sold = st.status === "sellable";
+        const state = calculateCaravanState(caravan);
+        const sellable = state.status === "sellable";
         const isEmpty = caravan.rows.length === 0;
         return (
-          <div className={`caravan ${side} ${sold ? "sold" : ""} ${isEmpty ? "is-empty" : ""}`} key={ci}>
+          <div className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""}`} key={ci}>
             <header>
-              <CaravanScore caravan={caravan} highestSold={pairWinnerPlayer === playerId} playerId={playerId} />
+              <CaravanScore caravan={caravan} isSeller={seller === playerId} playerId={playerId} />
               <span className="title">{caravanName(playerId, ci)}</span>
               <span className="direction" data-dir={caravan.direction} aria-hidden="true" />
             </header>
@@ -53,7 +51,7 @@ function CaravanColumn({
               caravan={caravan}
               caravanIndex={ci as 0 | 1 | 2}
               playerId={playerId}
-              highestSold={pairWinnerPlayer === playerId}
+              highestSold={seller === playerId}
               selection={selection}
               onCardClick={onCardClick}
               onPlaceholderClick={onPlaceholderClick}
@@ -274,30 +272,26 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
       <div className="field">
         <div className="columns">
           <div className="column caravans">
-            <div className="play-row ai">
-              <div className="caravans">
-                <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} state={state} onCardClick={onCardClick} onPlaceholderClick={() => undefined} onAcknowledge={onAcknowledge} />
-              </div>
+            <div className="caravans ai">
+              <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} gameState={state} onCardClick={onCardClick} onPlaceholderClick={() => undefined} onAcknowledge={onAcknowledge} />
             </div>
-            <div className="play-row human">
-              <div className="caravans">
-                <CaravanColumn
-                  playerId={Human}
-                  caravans={humanPlayer.caravans}
-                  selection={humanSelection}
-                  state={state}
-                  onCardClick={onCardClick}
-                  onPlaceholderClick={onPlaceholderClick}
-                  onAcknowledge={onAcknowledge}
-                  childrenFor={(ci) =>
-                    canDisbandAny ? (
-                      <button type="button" className="disband" onClick={() => { onDisband(ci); }} aria-label={`Disband your ${caravanName(Human, ci)}`}>
-                        Disband
-                      </button>
-                    ) : null
-                  }
-                />
-              </div>
+            <div className="caravans human">
+              <CaravanColumn
+                playerId={Human}
+                caravans={humanPlayer.caravans}
+                selection={humanSelection}
+                gameState={state}
+                onCardClick={onCardClick}
+                onPlaceholderClick={onPlaceholderClick}
+                onAcknowledge={onAcknowledge}
+                childrenFor={(ci) =>
+                  canDisbandAny ? (
+                    <button type="button" className="disband" onClick={() => { onDisband(ci); }} aria-label={`Disband your ${caravanName(Human, ci)}`}>
+                      Disband
+                    </button>
+                  ) : null
+                }
+              />
             </div>
           </div>
 

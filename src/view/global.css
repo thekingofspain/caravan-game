@@ -1,3 +1,4 @@
+/* ── 01 — Design tokens ── */
 :root {
   --c-felt: #0d5c2e;
   --c-panel: #0e6b34;
@@ -38,6 +39,7 @@
   --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
 }
 
+/* ── 02 — Reset & base ── */
 * {
   box-sizing: border-box;
 }
@@ -57,6 +59,7 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* ── 03 — App shell ── */
 /* App */
 .app {
   height: 100%;
@@ -85,26 +88,7 @@ body {
   color: var(--c-fg);
 }
 
-/* Card — base: .card, modifiers: suit/rank as simple classes */
-.card {
-  width: var(--card-w);
-  height: var(--card-h);
-  background: no-repeat center / contain;
-  flex: none;
-  border-radius: var(--radius);
-  border: none;
-  padding: 0;
-  outline: none;
-}
-
-.card.hidden {
-  visibility: hidden;
-}
-
-.card.selectable {
-  cursor: pointer;
-}
-
+/* ── 04 — Board layout ── */
 /* Board */
 .board {
   position: relative;
@@ -135,14 +119,6 @@ body {
   padding: 0;
   gap: 0;
   flex: 1;
-}
-
-.play-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--sp-4);
-  flex: 1;
-  min-height: 0;
 }
 
 .board .columns {
@@ -179,18 +155,28 @@ body {
   z-index: 20;
 }
 
-.play-row.ai {
-  --player-flex-direction: column;
+/* ── 05 — Card primitive ── */
+/* Card — base: .card, modifiers: suit/rank as simple classes */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  background: no-repeat center / contain;
+  flex: none;
+  border-radius: var(--radius);
+  border: none;
+  padding: 0;
+  outline: none;
 }
 
-.play-row.human {
-  --player-flex-direction: column;
-}
-.play-row {
-  align-items: stretch;
-  
+.card.hidden {
+  visibility: hidden;
 }
 
+.card.selectable {
+  cursor: pointer;
+}
+
+/* ── 06 — Hand ── */
 .hand-half {
   display: flex;
   flex-direction: column;
@@ -266,6 +252,7 @@ body {
   margin-top: auto;
 }
 
+/* ── 07 — Deck ── */
 /* Deck — base: .deck */
 .deck {
   display: flex;
@@ -298,45 +285,7 @@ body {
   color: var(--c-fg);
 }
 
-.overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
-  z-index: 50;
-}
-
-.overlay header {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  color: var(--c-fg);
-  font-weight: 700;
-}
-
-.overlay .close {
-  background: none;
-  border: none;
-  color: var(--c-fg);
-  font-size: 1.375rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.overlay .cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  justify-content: center;
-  max-width: 80%;
-  max-height: 70%;
-  overflow-y: auto;
-}
-
+/* ── 08 — Caravans wrapper (player vars) ── */
 /* Caravans wrapper */
 .caravans {
   flex: 1;
@@ -348,10 +297,41 @@ body {
   padding-right: 0;
 }
 
+.caravans.human {
+  --player-color: var(--c-human);
+  --player-rgb: var(--c-human-rgb);
+  --caravan-direction: column;
+  --track-direction: column;
+  --confirm-left: auto;
+  --confirm-right: -0.6875rem;
+  --stack-margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+  --stack-margin-bottom: 0;
+  --badge-left: auto;
+  --badge-right: -0.5rem;
+  --badge-top: -0.5rem;
+  --badge-bottom: auto;
+}
+
+.caravans.ai {
+  --player-color: var(--c-ai);
+  --player-rgb: var(--c-ai-rgb);
+  --caravan-direction: column-reverse;
+  --track-direction: column-reverse;
+  --confirm-left: -0.6875rem;
+  --confirm-right: auto;
+  --stack-margin-top: 0;
+  --stack-margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+  --badge-left: -0.6875rem;
+  --badge-right: auto;
+  --badge-top: auto;
+  --badge-bottom: -0.5625rem;
+}
+
+/* ── 09 — Caravan ── */
 /* Caravan — base: .caravan (outer column) */
 .caravan {
   display: flex;
-  flex-direction: column;
+  flex-direction: var(--caravan-direction, column);
   flex: 1 1 0;
   min-width: var(--caravan-w);
   min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
@@ -373,30 +353,19 @@ body {
   pointer-events: none;
 }
 
-.play-row.human .caravan::before {
-  border-color: rgba(var(--c-human-rgb), 0.28);
-  background: rgba(var(--c-human-rgb), 0.06);
+.caravans .caravan::before {
+  border-color: rgba(var(--player-rgb), 0.28);
+  background: rgba(var(--player-rgb), 0.06);
 }
 
-.play-row.ai .caravan::before {
-  border-color: rgba(var(--c-ai-rgb), 0.28);
-  background: rgba(var(--c-ai-rgb), 0.06);
-}
-
-.caravan.sold::before {
+.caravan.sellable::before {
   border-width: 0.1875rem;
 }
 
-.play-row.human .caravan.sold::before {
-  border-color: rgba(var(--c-human-rgb), 0.85);
-  background: rgba(var(--c-human-rgb), 0.16);
-  box-shadow: 0 0 0.75rem rgba(var(--c-human-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-human-rgb), 0.14);
-}
-
-.play-row.ai .caravan.sold::before {
-  border-color: rgba(var(--c-ai-rgb), 0.85);
-  background: rgba(var(--c-ai-rgb), 0.16);
-  box-shadow: 0 0 0.75rem rgba(var(--c-ai-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-ai-rgb), 0.14);
+.caravans .caravan.sellable::before {
+  border-color: rgba(var(--player-rgb), 0.85);
+  background: rgba(var(--player-rgb), 0.16);
+  box-shadow: 0 0 0.75rem rgba(var(--player-rgb), 0.35), inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
 }
 
 .caravan header {
@@ -438,12 +407,8 @@ body {
   font-weight: 400;
 }
 
-.caravan.human .score.sellable {
-  color: var(--c-human);
-}
-
-.caravan.ai .score.sellable {
-  color: var(--c-ai);
+.caravan .score.sellable {
+  color: var(--player-color);
 }
 
 .caravan .score.sold,
@@ -478,18 +443,11 @@ body {
   content: "\25BC";
 }
 
-.play-row.ai .caravan {
-  flex-direction: column-reverse;
-}
-
-.play-row.human .caravan {
-  flex-direction: column;
-}
-
+/* ── 10 — Track (stack) ── */
 /* Track — inner caravan stack, base: .caravan .track */
 .caravan .track {
   display: flex;
-  flex-direction: column;
+  flex-direction: var(--track-direction, column);
   flex: 1;
   min-height: calc(var(--card-h) + var(--caravan-pad));
   width: var(--caravan-w);
@@ -498,23 +456,9 @@ body {
   align-items: center;
 }
 
-.caravan .track.human {
-  justify-content: flex-start;
-  /* padding-top: var(--caravan-pad); */
-}
-
-.caravan .track.ai {
-  flex-direction: column-reverse;
-  /* padding-bottom: var(--caravan-pad); */
-}
-
-.caravan .track.human>.card+.card {
-  margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-}
-
-.caravan .track.ai>.card+.card {
-  margin-top: 0;
-  margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+.caravan .track>.card+.card {
+  margin-top: var(--stack-margin-top);
+  margin-bottom: var(--stack-margin-bottom);
 }
 
 /* .caravan .track > .card.pending { z-index: 50 !important; } */
@@ -523,6 +467,7 @@ body {
   z-index: 51 !important;
 }
 
+/* ── 11 — Card states & attachments ── */
 /* Card states */
 
 .caravan button.card {
@@ -537,30 +482,25 @@ body {
 .caravan .card>.card {
   position: absolute;
   top: 0;
-  left: calc(var(--c, 0) * var(--card-offset-x));
   z-index: 5;
   pointer-events: none;
 }
 
-.caravan .track.ai .card>.card {
-  left: auto;
-  right: calc(var(--c, 0) * var(--card-offset-x));
+.caravans.human .card>.card {
+  left: calc(var(--c, 0) * var(--card-offset-x));
+  right: auto;
 }
 
-.caravan .card>.card.confirmation-src,
-.caravan .card>.card.remove-src {
-  z-index: 7;
+.caravans.ai .card>.card {
+  left: auto;
+  right: calc(var(--c, 0) * var(--card-offset-x));
 }
 
 .caravan .card>.card .confirm {
   pointer-events: auto;
 }
 
-.caravan .track.ai .confirm {
-  right: auto;
-  left: -0.6875rem;
-}
-
+/* ── 12 — Empty placeholder & disband ── */
 /* Empty placeholder */
 .caravan .empty {
   position: absolute;
@@ -574,15 +514,6 @@ body {
   background: transparent;
   cursor: pointer;
   padding: 0;
-}
-
-.caravan .track.human .empty {
-  /* top: var(--caravan-pad); */
-}
-
-.caravan .track.ai .empty {
-  top: auto;
-  /* bottom: var(--caravan-pad); */
 }
 
 /* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
@@ -618,11 +549,10 @@ body {
   opacity: 0.9;
 }
 
+/* ── 13 — Badges ── */
 /* Badges */
 .card .badge {
   position: absolute;
-  top: -0.5rem;
-  left: -0.5rem;
   min-width: 1.125rem;
   height: 1.125rem;
   padding: 0 0.25rem;
@@ -635,6 +565,11 @@ body {
   justify-content: center;
   border: 0.0625rem solid #1a160c;
   z-index: 3;
+  left: var(--badge-left, -0.5rem);
+  right: var(--badge-right, auto);
+  top: var(--badge-top, -0.5rem);
+  bottom: var(--badge-bottom, auto);
+  transform: none;
 }
 
 .card .badge.king {
@@ -649,25 +584,14 @@ body {
   border-color: #8f8f8f;
 }
 
-.caravan .track.ai .badge.king {
-  top: auto;
-  bottom: -0.5625rem;
-  left: -0.6875rem;
-  transform: none;
-}
-
-.caravan .track.human .badge.king {
-  left: auto;
-  right: -0.5rem;
-}
-
+/* ── 14 — Confirm & removal animations ── */
 /* Confirm X */
 .confirm {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  right: -0.6875rem;
-  left: auto;
+  right: var(--confirm-right, -0.6875rem);
+  left: var(--confirm-left, auto);
   width: 1.375rem;
   height: 1.375rem;
   border-radius: 50%;
@@ -746,7 +670,7 @@ body {
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   border-radius: inherit;
-  z-index: 6;
+  /* z-index: 6; */
   pointer-events: none;
 }
 
@@ -761,10 +685,11 @@ body {
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   border-radius: inherit;
-  z-index: 6;
+  /* z-index: 6; */
   pointer-events: none;
 }
 
+/* ── 15 — Controls ── */
 /* Controls / buttons */
 .controls {
   display: flex;
@@ -794,6 +719,7 @@ body {
   cursor: not-allowed;
 }
 
+/* ── 16 — Log & activity ── */
 /* Log — base: .log */
 .log {
   flex: 1;
@@ -1051,47 +977,47 @@ body {
   margin: 0;
 }
 
-/* Selection hover outlines */
-.board:has(.slot.selected) .caravan .card:hover {
-  outline: 0.1875rem solid var(--c-bad);
-  outline-offset: 0.125rem;
+/* ── 17 — Overlay ── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  z-index: 50;
 }
 
-.board:has(.slot.selected) .caravan .track.selectable .card:last-child:hover,
-.board:has(.slot.selected) .caravan .card.target:hover {
-  outline-color: var(--c-good);
+.overlay header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  color: var(--c-fg);
+  font-weight: 700;
 }
 
-/* Focus */
-.hand .slot:focus-visible,
-.btn:focus-visible {
-  outline: 0.1875rem solid var(--c-fg);
-  outline-offset: 0.125rem;
+.overlay .close {
+  background: none;
+  border: none;
+  color: var(--c-fg);
+  font-size: 1.375rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.caravan .track:focus-visible {
-  outline: 0.1875rem solid var(--c-accent);
-  outline-offset: 0.125rem;
+.overlay .cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  justify-content: center;
+  max-width: 80%;
+  max-height: 70%;
+  overflow-y: auto;
 }
 
-@media (prefers-reduced-motion: reduce) {
-
-  .hand .slot,
-  .btn {
-    transition: none;
-  }
-}
-
-@media (forced-colors: active) {
-  .card {
-    border: 0.125rem solid ButtonText;
-  }
-
-  .hand .slot.selected {
-    outline: 0.1875rem solid Highlight;
-  }
-}
-
+/* ── 18 — Modal ── */
 /* Modal — base: .modal */
 .modal {
   position: fixed;
@@ -1123,6 +1049,51 @@ body {
 
 .rules {}
 
+/* ── 19 — Selection outlines ── */
+/* Selection hover outlines */
+.board:has(.slot.selected) .caravan .card:hover {
+  outline: 0.1875rem solid var(--c-bad);
+  outline-offset: 0.125rem;
+}
+
+.board:has(.slot.selected) .caravan .track.selectable .card:last-child:hover,
+.board:has(.slot.selected) .caravan .card.target:hover {
+  outline-color: var(--c-good);
+}
+
+/* ── 19b — Focus ── */
+/* Focus */
+.hand .slot:focus-visible,
+.btn:focus-visible {
+  outline: 0.1875rem solid var(--c-fg);
+  outline-offset: 0.125rem;
+}
+
+.caravan .track:focus-visible {
+  outline: 0.1875rem solid var(--c-accent);
+  outline-offset: 0.125rem;
+}
+
+/* ── 20 — Motion & forced-colors ── */
+@media (prefers-reduced-motion: reduce) {
+
+  .hand .slot,
+  .btn {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .card {
+    border: 0.125rem solid ButtonText;
+  }
+
+  .hand .slot.selected {
+    outline: 0.1875rem solid Highlight;
+  }
+}
+
+/* ── 21 — Card assets (suit/rank) ── */
 /* Cards — semantic suit/rank */
 .card.spades.ace {
   background-image: url("/cards/AS.svg")
