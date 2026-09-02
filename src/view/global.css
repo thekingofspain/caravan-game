@@ -38,20 +38,52 @@
   --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body, #root { height: 100%; margin: 0; overflow: hidden; }
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
 
-body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--font-base); letter-spacing: 0.02em; }
+body {
+  background: var(--c-felt);
+  color: var(--c-fg);
+  font: 0.875rem/1.4 var(--font-base);
+  letter-spacing: 0.02em;
+}
 
 /* App */
-.app { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-.start { flex: 1; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); min-height: 0; }
+.start {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  min-height: 0;
+}
 
-.start .intro { margin: 0; color: var(--c-dim); line-height: 1.5; }
+.start .intro {
+  margin: 0;
+  color: var(--c-dim);
+  line-height: 1.5;
+}
 
-.start .intro b, .rules b { color: var(--c-fg); }
+.start .intro b,
+.rules b {
+  color: var(--c-fg);
+}
 
 /* Card — base: .card, modifiers: suit/rank as simple classes */
 .card {
@@ -65,8 +97,13 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   outline: none;
 }
 
-.card.hidden { visibility: hidden; }
-.card.selectable { cursor: pointer; }
+.card.hidden {
+  visibility: hidden;
+}
+
+.card.selectable {
+  cursor: pointer;
+}
 
 /* Board */
 .board {
@@ -116,11 +153,22 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   justify-content: center;
 }
 
-.board .column { display: flex; flex-direction: column; min-height: 0; }
+.board .column {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
-.board .column.caravans { flex: 1 1 auto; min-width: 0; }
+.board .column.caravans {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
-.board .column.hands { flex: 0 0 auto; width: var(--hand-w); align-items: center; }
+.board .column.hands {
+  flex: 0 0 auto;
+  width: var(--hand-w);
+  align-items: center;
+}
 
 .board .controls {
   display: flex;
@@ -131,8 +179,17 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   z-index: 20;
 }
 
-.play-row.ai { align-items: stretch; }
-.play-row.human { align-items: stretch; }
+.play-row.ai {
+  --player-flex-direction: column;
+}
+
+.play-row.human {
+  --player-flex-direction: column;
+}
+.play-row {
+  align-items: stretch;
+  
+}
 
 .hand-half {
   display: flex;
@@ -144,9 +201,16 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   min-height: 0;
 }
 
-.hand-half.human { transform: translateY(var(--hand-lift, 0rem)); transition: transform 120ms ease; }
+.hand-half.human {
+  transform: translateY(var(--hand-lift, 0rem));
+  transition: transform 120ms ease;
+}
 
-.hand-half .hand { flex: 0 0 auto; width: var(--hand-w); overflow: visible; }
+.hand-half .hand {
+  flex: 0 0 auto;
+  width: var(--hand-w);
+  overflow: visible;
+}
 
 /* Hand — base: .hand */
 .hand {
@@ -169,7 +233,9 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   height: calc(var(--card-h) * 1.4);
 }
 
-.hand.ai .cards { --hand-rot: 3deg; }
+.hand.ai .cards {
+  --hand-rot: 3deg;
+}
 
 .hand .slot {
   border-radius: var(--radius);
@@ -188,13 +254,17 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   transition: transform 0.12s ease;
 }
 
-.hand .slot.ai { cursor: default; }
+.hand .slot.ai {
+  cursor: default;
+}
 
 .hand .slot.selected {
   transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step))) translateY(-25%);
 }
 
-.hand.human { margin-top: auto; }
+.hand.human {
+  margin-top: auto;
+}
 
 /* Deck — base: .deck */
 .deck {
@@ -208,7 +278,10 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   cursor: pointer;
 }
 
-.deck .card { width: var(--card-w); height: var(--card-h); }
+.deck .card {
+  width: var(--card-w);
+  height: var(--card-h);
+}
 
 .deck .empty {
   width: var(--card-w);
@@ -219,7 +292,11 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   opacity: 0.5;
 }
 
-.deck .count { font-size: 0.75rem; font-weight: 700; color: var(--c-fg); }
+.deck .count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-fg);
+}
 
 .overlay {
   position: absolute;
@@ -275,7 +352,6 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
 .caravan {
   display: flex;
   flex-direction: column;
-  gap: var(--relief);
   flex: 1 1 0;
   min-width: var(--caravan-w);
   min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
@@ -297,15 +373,31 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   pointer-events: none;
 }
 
-.play-row.human .caravan::before { border-color: rgba(var(--c-human-rgb), 0.28); background: rgba(var(--c-human-rgb), 0.06); }
+.play-row.human .caravan::before {
+  border-color: rgba(var(--c-human-rgb), 0.28);
+  background: rgba(var(--c-human-rgb), 0.06);
+}
 
-.play-row.ai .caravan::before { border-color: rgba(var(--c-ai-rgb), 0.28); background: rgba(var(--c-ai-rgb), 0.06); }
+.play-row.ai .caravan::before {
+  border-color: rgba(var(--c-ai-rgb), 0.28);
+  background: rgba(var(--c-ai-rgb), 0.06);
+}
 
-.caravan.sold::before { border-width: 0.1875rem; }
+.caravan.sold::before {
+  border-width: 0.1875rem;
+}
 
-.play-row.human .caravan.sold::before { border-color: rgba(var(--c-human-rgb), 0.85); background: rgba(var(--c-human-rgb), 0.16); box-shadow: 0 0 0.75rem rgba(var(--c-human-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-human-rgb), 0.14); }
+.play-row.human .caravan.sold::before {
+  border-color: rgba(var(--c-human-rgb), 0.85);
+  background: rgba(var(--c-human-rgb), 0.16);
+  box-shadow: 0 0 0.75rem rgba(var(--c-human-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-human-rgb), 0.14);
+}
 
-.play-row.ai .caravan.sold::before { border-color: rgba(var(--c-ai-rgb), 0.85); background: rgba(var(--c-ai-rgb), 0.16); box-shadow: 0 0 0.75rem rgba(var(--c-ai-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-ai-rgb), 0.14); }
+.play-row.ai .caravan.sold::before {
+  border-color: rgba(var(--c-ai-rgb), 0.85);
+  background: rgba(var(--c-ai-rgb), 0.16);
+  box-shadow: 0 0 0.75rem rgba(var(--c-ai-rgb), 0.35), inset 0 0 0.5rem rgba(var(--c-ai-rgb), 0.14);
+}
 
 .caravan header {
   width: 100%;
@@ -341,15 +433,31 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   text-align: right;
 }
 
-.caravan .score.unsellable { color: #1a1a1a; font-weight: 400; }
+.caravan .score.unsellable {
+  color: #1a1a1a;
+  font-weight: 400;
+}
 
-.caravan.human .score.sellable { color: var(--c-human); }
+.caravan.human .score.sellable {
+  color: var(--c-human);
+}
 
-.caravan.ai .score.sellable { color: var(--c-ai); }
+.caravan.ai .score.sellable {
+  color: var(--c-ai);
+}
 
-.caravan .score.sold, .caravan .score.bold { font-weight: 700; }
+.caravan .score.sold,
+.caravan .score.bold {
+  font-weight: 700;
+}
 
-.caravan .total { min-width: 2.5ch; text-align: right; display: inline-block; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.caravan .total {
+  min-width: 2.5ch;
+  text-align: right;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .caravan .direction {
   flex: 1;
@@ -362,13 +470,21 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   font-weight: 700;
 }
 
-.caravan .direction[data-dir="asc"]::before { content: "\25B2"; }
+.caravan .direction[data-dir="asc"]::before {
+  content: "\25B2";
+}
 
-.caravan .direction[data-dir="desc"]::before { content: "\25BC"; }
+.caravan .direction[data-dir="desc"]::before {
+  content: "\25BC";
+}
 
-.play-row.ai .caravan { flex-direction: column-reverse; }
+.play-row.ai .caravan {
+  flex-direction: column-reverse;
+}
 
-.play-row.human .caravan { flex-direction: column; }
+.play-row.human .caravan {
+  flex-direction: column;
+}
 
 /* Track — inner caravan stack, base: .caravan .track */
 .caravan .track {
@@ -382,25 +498,43 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   align-items: center;
 }
 
-.caravan .track.human { justify-content: flex-start; padding-top: var(--caravan-pad); }
+.caravan .track.human {
+  justify-content: flex-start;
+  /* padding-top: var(--caravan-pad); */
+}
 
-.caravan .track.ai { flex-direction: column-reverse; padding-bottom: var(--caravan-pad); }
+.caravan .track.ai {
+  flex-direction: column-reverse;
+  /* padding-bottom: var(--caravan-pad); */
+}
 
-.caravan .track.human > .card + .card { margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y))); }
+.caravan .track.human>.card+.card {
+  margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+}
 
-.caravan .track.ai > .card + .card { margin-top: 0; margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y))); }
+.caravan .track.ai>.card+.card {
+  margin-top: 0;
+  margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+}
 
-.caravan .track > .card.pending { z-index: 50 !important; }
+/* .caravan .track > .card.pending { z-index: 50 !important; } */
 
-.caravan .track > .card.pending-remove { z-index: 51 !important; }
+.caravan .track>.card.pending-remove {
+  z-index: 51 !important;
+}
 
 /* Card states */
 
-.caravan button.card { cursor: default; background-color: transparent; }
+.caravan button.card {
+  cursor: default;
+  background-color: transparent;
+}
 
-.caravan .track > .card { position: relative; }
+.caravan .track>.card {
+  position: relative;
+}
 
-.caravan .card > .card {
+.caravan .card>.card {
   position: absolute;
   top: 0;
   left: calc(var(--c, 0) * var(--card-offset-x));
@@ -408,16 +542,25 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   pointer-events: none;
 }
 
-.caravan .track.ai .card > .card {
+.caravan .track.ai .card>.card {
   left: auto;
   right: calc(var(--c, 0) * var(--card-offset-x));
 }
 
-.caravan .card > .card.confirmation-src, .caravan .card > .card.remove-src { z-index: 7; }
+.caravan .card>.card.confirmation-src,
+.caravan .card>.card.remove-src {
+  z-index: 7;
+}
 
-.caravan .card > .card .confirm { pointer-events: auto; }
+.caravan .card>.card .confirm {
+  pointer-events: auto;
+}
 
-.caravan .track.ai .confirm { right: auto; left: -0.6875rem; }
+.caravan .track.ai .confirm {
+  right: auto;
+  left: -0.6875rem;
+}
+
 /* Empty placeholder */
 .caravan .empty {
   position: absolute;
@@ -433,12 +576,18 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   padding: 0;
 }
 
-.caravan .track.human .empty { top: var(--caravan-pad); }
+.caravan .track.human .empty {
+  /* top: var(--caravan-pad); */
+}
 
-.caravan .track.ai .empty { top: auto; bottom: var(--caravan-pad); }
+.caravan .track.ai .empty {
+  top: auto;
+  /* bottom: var(--caravan-pad); */
+}
 
 /* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
-.caravan.is-empty { }
+.caravan.is-empty {}
+
 .caravan .disband {
   order: 1;
   margin-top: auto;
@@ -455,11 +604,19 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   cursor: pointer;
 }
 
-.caravan .disband:hover { background: #a93226; }
+.caravan .disband:hover {
+  background: #a93226;
+}
 
-.caravan .disband:focus-visible { outline: 0.125rem solid #fff; outline-offset: 0.0625rem; }
+.caravan .disband:focus-visible {
+  outline: 0.125rem solid #fff;
+  outline-offset: 0.0625rem;
+}
 
-.board:has(.slot.selected) .caravan .empty.selectable:hover { border-color: var(--c-good); opacity: 0.9; }
+.board:has(.slot.selected) .caravan .empty.selectable:hover {
+  border-color: var(--c-good);
+  opacity: 0.9;
+}
 
 /* Badges */
 .card .badge {
@@ -480,11 +637,29 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   z-index: 3;
 }
 
-.card .badge.king { background: #ffd60a; color: #1a160c; border-color: #b38f00; }
+.card .badge.king {
+  background: #ffd60a;
+  color: #1a160c;
+  border-color: #b38f00;
+}
 
-.caravan .card.pending .badge.king { background: #c8c8c8; color: #1a160c; border-color: #8f8f8f; }
+.caravan .card.pending .badge.king {
+  background: #c8c8c8;
+  color: #1a160c;
+  border-color: #8f8f8f;
+}
 
-.caravan .track.ai .badge.king { top: auto; bottom: -0.5625rem; left: -0.6875rem; transform: none; }
+.caravan .track.ai .badge.king {
+  top: auto;
+  bottom: -0.5625rem;
+  left: -0.6875rem;
+  transform: none;
+}
+
+.caravan .track.human .badge.king {
+  left: auto;
+  right: -0.5rem;
+}
 
 /* Confirm X */
 .confirm {
@@ -504,11 +679,26 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   padding: 0;
 }
 
-.confirm.row { top: 0.5rem; right: 0.5rem; left: auto; transform: none; z-index: 20; }
+.confirm.row {
+  top: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+  transform: none;
+  z-index: 20;
+}
 
-.confirm.portal { position: fixed; right: auto; left: auto; top: auto; transform: none; z-index: 9999; margin: 0; }
+.confirm.portal {
+  position: fixed;
+  right: auto;
+  left: auto;
+  top: auto;
+  transform: none;
+  z-index: 9999;
+  margin: 0;
+}
 
-.confirm::before, .confirm::after {
+.confirm::before,
+.confirm::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -520,11 +710,18 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
-.confirm::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.confirm::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
 
-.confirm:hover { background: #a93226; }
+.confirm:hover {
+  background: #a93226;
+}
 
-.caravan .card.removing { animation: cardRemove 0.28s ease forwards; pointer-events: none; }
+.caravan .card.removing {
+  animation: cardRemove 0.28s ease forwards;
+  pointer-events: none;
+}
 
 .caravan .track.removing .card::after {
   content: "";
@@ -536,7 +733,12 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   pointer-events: none;
 }
 
-@keyframes cardRemove { to { opacity: 0; transform: scale(0.85); } }
+@keyframes cardRemove {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
 
 .caravan .card.pending::after {
   content: "";
@@ -548,7 +750,10 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   pointer-events: none;
 }
 
-.caravan .card.pending-remove { animation: cardRemove 0.32s ease forwards; pointer-events: none; }
+.caravan .card.pending-remove {
+  animation: cardRemove 0.32s ease forwards;
+  pointer-events: none;
+}
 
 .caravan .card.pending-remove::after {
   content: "";
@@ -561,7 +766,11 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
 }
 
 /* Controls / buttons */
-.controls { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.controls {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
 
 .btn {
   font: 700 0.75rem var(--font-base);
@@ -575,9 +784,15 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   cursor: pointer;
 }
 
-.btn:hover { background: #e6c34d; border-color: #e6c34d; }
+.btn:hover {
+  background: #e6c34d;
+  border-color: #e6c34d;
+}
 
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* Log — base: .log */
 .log {
@@ -595,37 +810,104 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   counter-reset: log-line;
 }
 
-.log .gameover { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+.log .gameover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
 
-.log .scores { display: flex; flex-direction: column; gap: 0.125rem; }
+.log .scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
 
-.log .row { display: flex; align-items: baseline; gap: 0.5rem; font-variant-numeric: tabular-nums; }
+.log .row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
 
-.log .player { flex: 0 0 2.5rem; font-weight: 700; font-size: 0.75rem; }
+.log .player {
+  flex: 0 0 2.5rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
 
-.log .row.human .player { color: var(--c-human); filter: brightness(0.7); }
+.log .row.human .player {
+  color: var(--c-human);
+  filter: brightness(0.7);
+}
 
-.log .row.ai .player { color: var(--c-ai); filter: brightness(0.7); }
+.log .row.ai .player {
+  color: var(--c-ai);
+  filter: brightness(0.7);
+}
 
-.log .caravans { flex: 1; display: flex; align-items: baseline; justify-content: flex-end; gap: 0.375rem; font-size: 0.75rem; }
+.log .caravans {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+}
 
-.log .score { min-width: 2.75ch; text-align: right; display: inline-block; font-variant-numeric: tabular-nums; font-weight: 400; }
+.log .score {
+  min-width: 2.75ch;
+  text-align: right;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
 
-.log .score.unsellable { color: #1a1a1a; }
+.log .score.unsellable {
+  color: #1a1a1a;
+}
 
-.log .row.human .score.sellable { color: var(--c-human); filter: brightness(0.85); }
+.log .row.human .score.sellable {
+  color: var(--c-human);
+  filter: brightness(0.85);
+}
 
-.log .row.ai .score.sellable { color: var(--c-ai); filter: brightness(0.85); }
+.log .row.ai .score.sellable {
+  color: var(--c-ai);
+  filter: brightness(0.85);
+}
 
-.log .score.sold, .log .score.bold { font-weight: 700; }
+.log .score.sold,
+.log .score.bold {
+  font-weight: 700;
+}
 
-.log .sep { color: #8f8f8f; font-weight: 400; }
+.log .sep {
+  color: #8f8f8f;
+  font-weight: 400;
+}
 
-.log .wins { flex: 0 0 2ch; text-align: right; font-weight: 700; font-size: 0.75rem; color: #1a160c; }
+.log .wins {
+  flex: 0 0 2ch;
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #1a160c;
+}
 
-.log .win-title { display: block; font-weight: 700; margin-bottom: 0.125rem; color: #1a160c; }
+.log .win-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.125rem;
+  color: #1a160c;
+}
 
-.log .line.win { background: rgba(212, 175, 55, 0.12); border-radius: 0.25rem; padding: 0.375rem 0.5rem; margin: 0.25rem 0; }
+.log .line.win {
+  background: rgba(212, 175, 55, 0.12);
+  border-radius: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  margin: 0.25rem 0;
+}
 
 .activity {
   position: absolute;
@@ -664,7 +946,9 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   border-radius: 0.25rem;
 }
 
-.activity .copy:hover { background: var(--c-line); }
+.activity .copy:hover {
+  background: var(--c-line);
+}
 
 .activity .close {
   background: transparent;
@@ -676,7 +960,11 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   padding: 0 var(--sp-1);
 }
 
-.activity .log { margin: var(--sp-2); flex: 1; min-height: 0; }
+.activity .log {
+  margin: var(--sp-2);
+  flex: 1;
+  min-height: 0;
+}
 
 .log .line {
   counter-increment: log-line;
@@ -694,48 +982,115 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   margin-right: var(--sp-1);
 }
 
-.log .text { min-width: 0; white-space: pre-wrap; }
+.log .text {
+  min-width: 0;
+  white-space: pre-wrap;
+}
 
-.log .line.key { color: var(--c-fg); }
+.log .line.key {
+  color: var(--c-fg);
+}
 
-.log .sellable, .log .sold { color: var(--c-accent); }
+.log .sellable,
+.log .sold {
+  color: var(--c-accent);
+}
 
-.log .sold { font-weight: 700; }
+.log .sold {
+  font-weight: 700;
+}
 
-.log .who { white-space: nowrap; font-size: 1rem; line-height: 1; }
+.log .who {
+  white-space: nowrap;
+  font-size: 1rem;
+  line-height: 1;
+}
 
-.log .caravan-ref { margin-left: -0.25em; }
+.log .caravan-ref {
+  margin-left: -0.25em;
+}
 
-.log .who-ref { font-size: 0.6875rem; font-weight: 700; color: var(--c-brown); margin-left: -0.25em; }
+.log .who-ref {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-brown);
+  margin-left: -0.25em;
+}
 
-.log .card-name.red, .log .card-name.black, .log .card-name.diamonds, .log .card-name.clubs { font-weight: 700; font-size: 0.875rem; }
+.log .card-name.red,
+.log .card-name.black,
+.log .card-name.diamonds,
+.log .card-name.clubs {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
 
-.log .card-name.red { color: #b3261e; }
+.log .card-name.red {
+  color: #b3261e;
+}
 
-.log .card-name.black { color: #1a1a1a; }
+.log .card-name.black {
+  color: #1a1a1a;
+}
 
-.log .card-name.diamonds { color: blue; }
+.log .card-name.diamonds {
+  color: blue;
+}
 
-.log .card-name.clubs { color: green; }
+.log .card-name.clubs {
+  color: green;
+}
 
-.log .bullets { margin: 0.125rem 0 0.25rem; padding-left: 1.4em; list-style: disc; }
+.log .bullets {
+  margin: 0.125rem 0 0.25rem;
+  padding-left: 1.4em;
+  list-style: disc;
+}
 
-.log .bullets li { margin: 0; }
+.log .bullets li {
+  margin: 0;
+}
 
 /* Selection hover outlines */
-.board:has(.slot.selected) .caravan .card:hover { outline: 0.1875rem solid var(--c-bad); outline-offset: 0.125rem; }
+.board:has(.slot.selected) .caravan .card:hover {
+  outline: 0.1875rem solid var(--c-bad);
+  outline-offset: 0.125rem;
+}
 
 .board:has(.slot.selected) .caravan .track.selectable .card:last-child:hover,
-.board:has(.slot.selected) .caravan .card.target:hover { outline-color: var(--c-good); }
+.board:has(.slot.selected) .caravan .card.target:hover {
+  outline-color: var(--c-good);
+}
 
 /* Focus */
-.hand .slot:focus-visible, .btn:focus-visible { outline: 0.1875rem solid var(--c-fg); outline-offset: 0.125rem; }
+.hand .slot:focus-visible,
+.btn:focus-visible {
+  outline: 0.1875rem solid var(--c-fg);
+  outline-offset: 0.125rem;
+}
 
-.caravan .track:focus-visible { outline: 0.1875rem solid var(--c-accent); outline-offset: 0.125rem; }
+.caravan .track:focus-visible {
+  outline: 0.1875rem solid var(--c-accent);
+  outline-offset: 0.125rem;
+}
 
-@media (prefers-reduced-motion: reduce) { .hand .slot, .btn { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
 
-@media (forced-colors: active) { .card { border: 0.125rem solid ButtonText; } .hand .slot.selected { outline: 0.1875rem solid Highlight; } }
+  .hand .slot,
+  .btn {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .card {
+    border: 0.125rem solid ButtonText;
+  }
+
+  .hand .slot.selected {
+    outline: 0.1875rem solid Highlight;
+  }
+}
 
 /* Modal — base: .modal */
 .modal {
@@ -759,65 +1114,240 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
   box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
 }
 
-.modal .title { color: var(--c-accent); text-transform: uppercase; letter-spacing: 0.15em; margin-top: 0; }
+.modal .title {
+  color: var(--c-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-top: 0;
+}
 
-.rules { }
+.rules {}
 
 /* Cards — semantic suit/rank */
-.card.spades.ace{background-image:url("/cards/AS.svg")}
-.card.spades.two{background-image:url("/cards/2S.svg")}
-.card.spades.three{background-image:url("/cards/3S.svg")}
-.card.spades.four{background-image:url("/cards/4S.svg")}
-.card.spades.five{background-image:url("/cards/5S.svg")}
-.card.spades.six{background-image:url("/cards/6S.svg")}
-.card.spades.seven{background-image:url("/cards/7S.svg")}
-.card.spades.eight{background-image:url("/cards/8S.svg")}
-.card.spades.nine{background-image:url("/cards/9S.svg")}
-.card.spades.ten{background-image:url("/cards/TS.svg")}
-.card.spades.jack{background-image:url("/cards/JS.svg")}
-.card.spades.queen{background-image:url("/cards/QS.svg")}
-.card.spades.king{background-image:url("/cards/KS.svg")}
-.card.hearts.ace{background-image:url("/cards/AH.svg")}
-.card.hearts.two{background-image:url("/cards/2H.svg")}
-.card.hearts.three{background-image:url("/cards/3H.svg")}
-.card.hearts.four{background-image:url("/cards/4H.svg")}
-.card.hearts.five{background-image:url("/cards/5H.svg")}
-.card.hearts.six{background-image:url("/cards/6H.svg")}
-.card.hearts.seven{background-image:url("/cards/7H.svg")}
-.card.hearts.eight{background-image:url("/cards/8H.svg")}
-.card.hearts.nine{background-image:url("/cards/9H.svg")}
-.card.hearts.ten{background-image:url("/cards/TH.svg")}
-.card.hearts.jack{background-image:url("/cards/JH.svg")}
-.card.hearts.queen{background-image:url("/cards/QH.svg")}
-.card.hearts.king{background-image:url("/cards/KH.svg")}
-.card.diamonds.ace{background-image:url("/cards/AD.svg")}
-.card.diamonds.two{background-image:url("/cards/2D.svg")}
-.card.diamonds.three{background-image:url("/cards/3D.svg")}
-.card.diamonds.four{background-image:url("/cards/4D.svg")}
-.card.diamonds.five{background-image:url("/cards/5D.svg")}
-.card.diamonds.six{background-image:url("/cards/6D.svg")}
-.card.diamonds.seven{background-image:url("/cards/7D.svg")}
-.card.diamonds.eight{background-image:url("/cards/8D.svg")}
-.card.diamonds.nine{background-image:url("/cards/9D.svg")}
-.card.diamonds.ten{background-image:url("/cards/TD.svg")}
-.card.diamonds.jack{background-image:url("/cards/JD.svg")}
-.card.diamonds.queen{background-image:url("/cards/QD.svg")}
-.card.diamonds.king{background-image:url("/cards/KD.svg")}
-.card.clubs.ace{background-image:url("/cards/AC.svg")}
-.card.clubs.two{background-image:url("/cards/2C.svg")}
-.card.clubs.three{background-image:url("/cards/3C.svg")}
-.card.clubs.four{background-image:url("/cards/4C.svg")}
-.card.clubs.five{background-image:url("/cards/5C.svg")}
-.card.clubs.six{background-image:url("/cards/6C.svg")}
-.card.clubs.seven{background-image:url("/cards/7C.svg")}
-.card.clubs.eight{background-image:url("/cards/8C.svg")}
-.card.clubs.nine{background-image:url("/cards/9C.svg")}
-.card.clubs.ten{background-image:url("/cards/TC.svg")}
-.card.clubs.jack{background-image:url("/cards/JC.svg")}
-.card.clubs.queen{background-image:url("/cards/QC.svg")}
-.card.clubs.king{background-image:url("/cards/KC.svg")}
-.card.joker.black{background-image:url('/cards/2J.svg')}
-.card.joker.red{background-image:url('/cards/1J.svg')}
-.card.back.deck1{background-image:url('/cards/1B.svg')}
-.card.back.deck2{background-image:url('/cards/2B.svg')}
-.card.back{background-image:url('/cards/1B.svg')}
+.card.spades.ace {
+  background-image: url("/cards/AS.svg")
+}
+
+.card.spades.two {
+  background-image: url("/cards/2S.svg")
+}
+
+.card.spades.three {
+  background-image: url("/cards/3S.svg")
+}
+
+.card.spades.four {
+  background-image: url("/cards/4S.svg")
+}
+
+.card.spades.five {
+  background-image: url("/cards/5S.svg")
+}
+
+.card.spades.six {
+  background-image: url("/cards/6S.svg")
+}
+
+.card.spades.seven {
+  background-image: url("/cards/7S.svg")
+}
+
+.card.spades.eight {
+  background-image: url("/cards/8S.svg")
+}
+
+.card.spades.nine {
+  background-image: url("/cards/9S.svg")
+}
+
+.card.spades.ten {
+  background-image: url("/cards/TS.svg")
+}
+
+.card.spades.jack {
+  background-image: url("/cards/JS.svg")
+}
+
+.card.spades.queen {
+  background-image: url("/cards/QS.svg")
+}
+
+.card.spades.king {
+  background-image: url("/cards/KS.svg")
+}
+
+.card.hearts.ace {
+  background-image: url("/cards/AH.svg")
+}
+
+.card.hearts.two {
+  background-image: url("/cards/2H.svg")
+}
+
+.card.hearts.three {
+  background-image: url("/cards/3H.svg")
+}
+
+.card.hearts.four {
+  background-image: url("/cards/4H.svg")
+}
+
+.card.hearts.five {
+  background-image: url("/cards/5H.svg")
+}
+
+.card.hearts.six {
+  background-image: url("/cards/6H.svg")
+}
+
+.card.hearts.seven {
+  background-image: url("/cards/7H.svg")
+}
+
+.card.hearts.eight {
+  background-image: url("/cards/8H.svg")
+}
+
+.card.hearts.nine {
+  background-image: url("/cards/9H.svg")
+}
+
+.card.hearts.ten {
+  background-image: url("/cards/TH.svg")
+}
+
+.card.hearts.jack {
+  background-image: url("/cards/JH.svg")
+}
+
+.card.hearts.queen {
+  background-image: url("/cards/QH.svg")
+}
+
+.card.hearts.king {
+  background-image: url("/cards/KH.svg")
+}
+
+.card.diamonds.ace {
+  background-image: url("/cards/AD.svg")
+}
+
+.card.diamonds.two {
+  background-image: url("/cards/2D.svg")
+}
+
+.card.diamonds.three {
+  background-image: url("/cards/3D.svg")
+}
+
+.card.diamonds.four {
+  background-image: url("/cards/4D.svg")
+}
+
+.card.diamonds.five {
+  background-image: url("/cards/5D.svg")
+}
+
+.card.diamonds.six {
+  background-image: url("/cards/6D.svg")
+}
+
+.card.diamonds.seven {
+  background-image: url("/cards/7D.svg")
+}
+
+.card.diamonds.eight {
+  background-image: url("/cards/8D.svg")
+}
+
+.card.diamonds.nine {
+  background-image: url("/cards/9D.svg")
+}
+
+.card.diamonds.ten {
+  background-image: url("/cards/TD.svg")
+}
+
+.card.diamonds.jack {
+  background-image: url("/cards/JD.svg")
+}
+
+.card.diamonds.queen {
+  background-image: url("/cards/QD.svg")
+}
+
+.card.diamonds.king {
+  background-image: url("/cards/KD.svg")
+}
+
+.card.clubs.ace {
+  background-image: url("/cards/AC.svg")
+}
+
+.card.clubs.two {
+  background-image: url("/cards/2C.svg")
+}
+
+.card.clubs.three {
+  background-image: url("/cards/3C.svg")
+}
+
+.card.clubs.four {
+  background-image: url("/cards/4C.svg")
+}
+
+.card.clubs.five {
+  background-image: url("/cards/5C.svg")
+}
+
+.card.clubs.six {
+  background-image: url("/cards/6C.svg")
+}
+
+.card.clubs.seven {
+  background-image: url("/cards/7C.svg")
+}
+
+.card.clubs.eight {
+  background-image: url("/cards/8C.svg")
+}
+
+.card.clubs.nine {
+  background-image: url("/cards/9C.svg")
+}
+
+.card.clubs.ten {
+  background-image: url("/cards/TC.svg")
+}
+
+.card.clubs.jack {
+  background-image: url("/cards/JC.svg")
+}
+
+.card.clubs.queen {
+  background-image: url("/cards/QC.svg")
+}
+
+.card.clubs.king {
+  background-image: url("/cards/KC.svg")
+}
+
+.card.joker.black {
+  background-image: url('/cards/2J.svg')
+}
+
+.card.joker.red {
+  background-image: url('/cards/1J.svg')
+}
+
+.card.back.deck1 {
+  background-image: url('/cards/1B.svg')
+}
+
+.card.back.deck2 {
+  background-image: url('/cards/2B.svg')
+}
+
+.card.back {
+  background-image: url('/cards/1B.svg')
+}
