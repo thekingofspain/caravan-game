@@ -395,17 +395,6 @@ body { background: var(--c-felt); color: var(--c-fg); font: 0.875rem/1.4 var(--f
 .caravan .track > .card.pending-remove { z-index: 51 !important; }
 
 /* Card states */
-.caravan .card.jacked { filter: grayscale(0.3); }
-
-.caravan .card.jacked::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: inherit;
-  z-index: 4;
-  pointer-events: none;
-}
 
 .caravan button.card { cursor: default; background-color: transparent; }
 

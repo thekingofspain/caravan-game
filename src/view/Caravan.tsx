@@ -110,7 +110,6 @@ function CaravanImpl({
     if (isTarget) classes.push("target");
     if (selection.pendingRemovalSet.has(key)) classes.push("pending");
     if (selection.removingSet.has(key)) classes.push("pending-remove");
-    if (caravanRow.slice(1).some((c) => c.rank === "J")) classes.push("jacked");
     return classes.join(" ");
   }
   function getCardStyle(index: number): CSSProperties {
