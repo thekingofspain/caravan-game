@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition -- low-level string index checks are intentional */
 import { memo } from "react";
 import type { ReactNode } from "react";
 import { ALL_CARAVAN_NAMES } from "../../model/names";
@@ -56,10 +57,7 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
                         if (ofPos !== -1) {
                             const numStr = afterRow.slice(0, ofPos);
 
-                            if (
-                                numStr.length > 0 &&
-                                [...numStr].every((c) => c >= "0" && c <= "9")
-                            ) {
+                            if (numStr.length > 0 && /^\d+$/.test(numStr)) {
                                 const candidate = probe.slice(rowPos);
 
                                 if (candidate.endsWith(" of ")) {

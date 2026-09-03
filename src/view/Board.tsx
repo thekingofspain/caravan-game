@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
 import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model/types";
-import type { Caravan as CaravanModel, GameState, SelectionState } from "../model/types";
+import type { Caravan as CaravanModel, SelectionState } from "../model/types";
 import { getCaravanScores, type GameScores } from "../model/scoring";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
@@ -17,7 +17,6 @@ function CaravanColumn({
     playerId,
     caravans,
     selection,
-    gameState,
     scores,
     onCardClick,
     onPlaceholderClick,
@@ -27,7 +26,6 @@ function CaravanColumn({
     playerId: PlayerId;
     caravans: CaravanModel[];
     selection: SelectionState;
-    gameState: GameState;
     scores: GameScores;
     onCardClick: (t: TargetRef) => void;
     onPlaceholderClick: (ci: number) => void;
@@ -396,7 +394,6 @@ export function Board({
                                 playerId={Ai}
                                 caravans={aiPlayer.caravans}
                                 selection={aiSelection}
-                                gameState={state}
                                 scores={scores}
                                 onCardClick={onCardClick}
                                 onPlaceholderClick={() => undefined}
@@ -408,7 +405,6 @@ export function Board({
                                 playerId={Human}
                                 caravans={humanPlayer.caravans}
                                 selection={humanSelection}
-                                gameState={state}
                                 scores={scores}
                                 onCardClick={onCardClick}
                                 onPlaceholderClick={onPlaceholderClick}
