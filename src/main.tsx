@@ -4,9 +4,11 @@ import App from "./app/App.tsx";
 import "./view/global.css";
 
 const rootElement = document.getElementById("root");
+
 if (rootElement === null) throw new Error("Root element not found");
+
 createRoot(rootElement).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+    <StrictMode>
+        <App />
+    </StrictMode>
 );

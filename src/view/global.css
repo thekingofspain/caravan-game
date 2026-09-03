@@ -1,1304 +1,1317 @@
 /* ── 01 — Design tokens ── */
 :root {
-  --c-felt: #0d5c2e;
-  --c-panel: #0e6b34;
-  --c-fg: #f5f5dc;
-  --c-accent: #d4af37;
-  --c-dim: #c8d8c0;
-  --c-line: #1a4a2a;
-  --c-bad: #c0392b;
-  --c-good: #2ecc71;
-  --c-suit-diamonds: #ffd166;
-  --c-human: #8ab4f8;
-  --c-ai: #ff8a8a;
-  --c-human-rgb: 138, 180, 248;
-  --c-ai-rgb: 255, 138, 138;
-  --c-brown: #8b4513;
-  --sp-1: 0.25rem;
-  --sp-2: 0.5rem;
-  --sp-3: 0.75rem;
-  --sp-4: 1rem;
-  --sp-5: 1.5rem;
-  --radius: 0.375rem;
-  --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-  --card-h: min(100vh / 7, 100vw / 9);
-  --card-w: calc(var(--card-h) * 212 / 329);
-  --card-offset-x: calc(var(--card-w) * 0.275);
-  --card-offset-y: calc(var(--card-h) * 0.28);
-  --caravan-w: calc(var(--card-w) + 2 * var(--card-offset-x));
-  --confirm-x-w: 5rem;
-  --fan-count: 8;
-  --fan-step: 5.5deg;
-  --fan-pivot: 1.67;
-  --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
-  --hand-skew: 3deg;
-  --hand-w: calc((var(--card-w) * cos(var(--fan-outer-angle)) + 2 * var(--fan-pivot) * var(--card-h) * sin(var(--fan-outer-angle))) * cos(var(--hand-skew)));
-  --caravan-pad: calc(var(--card-h) / 8);
-  --card-border: 0.1875rem dashed var(--c-dim);
-  --transition-fast: 0.15s ease;
-  --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
+    --c-felt: #0d5c2e;
+    --c-panel: #0e6b34;
+    --c-fg: #f5f5dc;
+    --c-accent: #d4af37;
+    --c-dim: #c8d8c0;
+    --c-line: #1a4a2a;
+    --c-bad: #c0392b;
+    --c-good: #2ecc71;
+    --c-suit-diamonds: #ffd166;
+    --c-human: #8ab4f8;
+    --c-ai: #ff8a8a;
+    --c-human-rgb: 138, 180, 248;
+    --c-ai-rgb: 255, 138, 138;
+    --c-brown: #8b4513;
+    --sp-1: 0.25rem;
+    --sp-2: 0.5rem;
+    --sp-3: 0.75rem;
+    --sp-4: 1rem;
+    --sp-5: 1.5rem;
+    --radius: 0.375rem;
+    --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    --card-h: min(100vh / 7, 100vw / 9);
+    --card-w: calc(var(--card-h) * 212 / 329);
+    --card-offset-x: calc(var(--card-w) * 0.275);
+    --card-offset-y: calc(var(--card-h) * 0.28);
+    --caravan-w: calc(var(--card-w) + 2 * var(--card-offset-x));
+    --confirm-x-w: 5rem;
+    --fan-count: 8;
+    --fan-step: 5.5deg;
+    --fan-pivot: 1.67;
+    --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
+    --hand-skew: 3deg;
+    --hand-w: calc(
+        (
+                var(--card-w) * cos(var(--fan-outer-angle)) + 2 * var(--fan-pivot) * var(--card-h) *
+                    sin(var(--fan-outer-angle))
+            ) *
+            cos(var(--hand-skew))
+    );
+    --caravan-pad: calc(var(--card-h) / 8);
+    --card-border: 0.1875rem dashed var(--c-dim);
+    --transition-fast: 0.15s ease;
+    --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
 }
 
 /* ── 02 — Reset & base ── */
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
 }
 
 body {
-  background: var(--c-felt);
-  color: var(--c-fg);
-  font: 0.875rem/1.4 var(--font-base);
-  letter-spacing: 0.02em;
+    background: var(--c-felt);
+    color: var(--c-fg);
+    font: 0.875rem/1.4 var(--font-base);
+    letter-spacing: 0.02em;
 }
 
 /* ── 03 — App shell ── */
 /* App */
 .app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .start {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    min-height: 0;
 }
 
 .start .intro {
-  margin: 0;
-  color: var(--c-dim);
-  line-height: 1.5;
+    margin: 0;
+    color: var(--c-dim);
+    line-height: 1.5;
 }
 
 .start .intro b,
 .rules b {
-  color: var(--c-fg);
+    color: var(--c-fg);
 }
 
 /* ── 04 — Board layout ── */
 /* Board */
 .board {
-  position: relative;
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  padding: var(--relief);
-  overflow-x: hidden;
-  overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    padding: var(--relief);
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .sidebar {
-  overflow: visible;
-  padding: var(--sp-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  width: 22.5rem;
-  flex-shrink: 0;
+    overflow: visible;
+    padding: var(--sp-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: 22.5rem;
+    flex-shrink: 0;
 }
 
 .board .field {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: visible;
-  padding: 0;
-  gap: 0;
-  flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+    padding: 0;
+    gap: 0;
+    flex: 1;
 }
 
 .board .columns {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  gap: var(--relief);
-  justify-content: center;
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: var(--relief);
+    justify-content: center;
 }
 
 .board .column {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .board .column.caravans {
-  flex: 1 1 auto;
-  min-width: 0;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .board .column.hands {
-  flex: 0 0 auto;
-  width: var(--hand-w);
-  align-items: center;
+    flex: 0 0 auto;
+    width: var(--hand-w);
+    align-items: center;
 }
 
 .board .controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--sp-2);
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 20;
 }
 
 /* ── 05 — Card primitive ── */
 /* Card — base: .card, modifiers: suit/rank as simple classes */
 .card {
-  width: var(--card-w);
-  height: var(--card-h);
-  background: no-repeat center / contain;
-  flex: none;
-  border-radius: var(--radius);
-  border: none;
-  padding: 0;
-  outline: none;
+    width: var(--card-w);
+    height: var(--card-h);
+    background: no-repeat center / contain;
+    flex: none;
+    border-radius: var(--radius);
+    border: none;
+    padding: 0;
+    outline: none;
 }
 
 .card.hidden {
-  visibility: hidden;
+    visibility: hidden;
 }
 
 .card.selectable {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 /* ── 06 — Hand ── */
 .hand-half {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
-  flex: 1 1 0;
-  min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    flex: 1 1 0;
+    min-height: 0;
 }
 
 .hand-half.human {
-  transform: translateY(var(--hand-lift, 0rem));
-  transition: transform 120ms ease;
+    transform: translateY(var(--hand-lift, 0rem));
+    transition: transform 120ms ease;
 }
 
 .hand-half .hand {
-  flex: 0 0 auto;
-  width: var(--hand-w);
-  overflow: visible;
+    flex: 0 0 auto;
+    width: var(--hand-w);
+    overflow: visible;
 }
 
 /* Hand — base: .hand */
 .hand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: 1.5rem 0;
-  overflow-x: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 1.5rem 0;
+    overflow-x: auto;
 }
 
 .hand .cards {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-  position: relative;
-  --fan-center: calc((var(--fan-count) - 1) / 2);
-  --hand-rot: 3deg;
-  transform: rotate(var(--hand-rot));
-  transform-origin: center bottom;
-  height: calc(var(--card-h) * 1.4);
+    display: flex;
+    justify-content: center;
+    flex: 1;
+    position: relative;
+    --fan-center: calc((var(--fan-count) - 1) / 2);
+    --hand-rot: 3deg;
+    transform: rotate(var(--hand-rot));
+    transform-origin: center bottom;
+    height: calc(var(--card-h) * 1.4);
 }
 
 .hand.ai .cards {
-  --hand-rot: 3deg;
+    --hand-rot: 3deg;
 }
 
 .hand .slot {
-  border-radius: var(--radius);
-  cursor: pointer;
-  appearance: none;
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: var(--card-w);
-  z-index: var(--i);
-  transform-origin: 50% 167%;
-  transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)));
-  background: none;
-  border: 0;
-  padding: 0;
-  transition: transform 0.12s ease;
+    border-radius: var(--radius);
+    cursor: pointer;
+    appearance: none;
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: var(--card-w);
+    z-index: var(--i);
+    transform-origin: 50% 167%;
+    transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)));
+    background: none;
+    border: 0;
+    padding: 0;
+    transition: transform 0.12s ease;
 }
 
 .hand .slot.ai {
-  cursor: default;
+    cursor: default;
 }
 
 .hand .slot.selected {
-  transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step))) translateY(-25%);
+    transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)))
+        translateY(-25%);
 }
 
 .hand.human {
-  margin-top: auto;
+    margin-top: auto;
 }
 
 /* ── 07 — Deck ── */
 /* Deck — base: .deck */
 .deck {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-1);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-1);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
 }
 
 .deck .card {
-  width: var(--card-w);
-  height: var(--card-h);
+    width: var(--card-w);
+    height: var(--card-h);
 }
 
 .deck .empty {
-  width: var(--card-w);
-  height: var(--card-h);
-  border: var(--card-border);
-  border-radius: var(--radius);
-  background: transparent;
-  opacity: 0.5;
+    width: var(--card-w);
+    height: var(--card-h);
+    border: var(--card-border);
+    border-radius: var(--radius);
+    background: transparent;
+    opacity: 0.5;
 }
 
 .deck .count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--c-fg);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--c-fg);
 }
 
 /* ── 08 — Caravans wrapper (player vars) ── */
 /* Caravans wrapper */
 .caravans {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  gap: var(--relief);
-  min-height: 0;
-  padding-left: 0;
-  padding-right: 0;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    gap: var(--relief);
+    min-height: 0;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .caravans.human {
-  --player-color: var(--c-human);
-  --player-rgb: var(--c-human-rgb);
-  --caravan-direction: column;
-  --track-direction: column;
-  --confirm-left: auto;
-  --confirm-right: -0.6875rem;
-  --stack-margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-  --stack-margin-bottom: 0;
-  --badge-left: auto;
-  --badge-right: -0.5rem;
-  --badge-top: -0.5rem;
-  --badge-bottom: auto;
+    --player-color: var(--c-human);
+    --player-rgb: var(--c-human-rgb);
+    --caravan-direction: column;
+    --track-direction: column;
+    --confirm-left: auto;
+    --confirm-right: -0.6875rem;
+    --stack-margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+    --stack-margin-bottom: 0;
+    --badge-left: auto;
+    --badge-right: -0.5rem;
+    --badge-top: -0.5rem;
+    --badge-bottom: auto;
 }
 
 .caravans.ai {
-  --player-color: var(--c-ai);
-  --player-rgb: var(--c-ai-rgb);
-  --caravan-direction: column-reverse;
-  --track-direction: column-reverse;
-  --confirm-left: -0.6875rem;
-  --confirm-right: auto;
-  --stack-margin-top: 0;
-  --stack-margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-  --badge-left: -0.6875rem;
-  --badge-right: auto;
-  --badge-top: auto;
-  --badge-bottom: -0.5625rem;
+    --player-color: var(--c-ai);
+    --player-rgb: var(--c-ai-rgb);
+    --caravan-direction: column-reverse;
+    --track-direction: column-reverse;
+    --confirm-left: -0.6875rem;
+    --confirm-right: auto;
+    --stack-margin-top: 0;
+    --stack-margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
+    --badge-left: -0.6875rem;
+    --badge-right: auto;
+    --badge-top: auto;
+    --badge-bottom: -0.5625rem;
 }
 
 /* ── 09 — Caravan ── */
 /* Caravan — base: .caravan (outer column) */
 .caravan {
-  display: flex;
-  flex-direction: var(--caravan-direction, column);
-  flex: 1 1 0;
-  min-width: var(--caravan-w);
-  min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
-  position: relative;
-  align-items: center;
+    display: flex;
+    flex-direction: var(--caravan-direction, column);
+    flex: 1 1 0;
+    min-width: var(--caravan-w);
+    min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
+    position: relative;
+    align-items: center;
 }
 
 .caravan::before {
-  content: "";
-  position: absolute;
-  top: 0.125rem;
-  bottom: 0.125rem;
-  left: 0;
-  right: 0;
-  z-index: 0;
-  border-radius: 1.75rem;
-  border: 0.0625rem solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  pointer-events: none;
+    content: "";
+    position: absolute;
+    top: 0.125rem;
+    bottom: 0.125rem;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    border-radius: 1.75rem;
+    border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    pointer-events: none;
 }
 
 .caravans .caravan::before {
-  border-color: rgba(var(--player-rgb), 0.28);
-  background: rgba(var(--player-rgb), 0.06);
+    border-color: rgba(var(--player-rgb), 0.28);
+    background: rgba(var(--player-rgb), 0.06);
 }
 
 .caravan.sellable::before {
-  border-width: 0.1875rem;
+    border-width: 0.1875rem;
 }
 
 .caravans .caravan.sellable::before {
-  border-color: rgba(var(--player-rgb), 0.85);
-  background: rgba(var(--player-rgb), 0.16);
-  box-shadow: 0 0 0.75rem rgba(var(--player-rgb), 0.35), inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
+    border-color: rgba(var(--player-rgb), 0.85);
+    background: rgba(var(--player-rgb), 0.16);
+    box-shadow:
+        0 0 0.75rem rgba(var(--player-rgb), 0.35),
+        inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
 }
 
 .caravan header {
-  width: 100%;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  justify-content: space-between;
+    width: 100%;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    justify-content: space-between;
 }
 
 .caravan .title {
-  flex: 0 0 auto;
-  width: calc(var(--card-w) * 1.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--c-dim);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
+    flex: 0 0 auto;
+    width: calc(var(--card-w) * 1.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--c-dim);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
 }
 
 .caravan .score {
-  flex: 1;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  min-width: 2.5ch;
-  text-align: right;
+    flex: 1;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    min-width: 2.5ch;
+    text-align: right;
 }
 
 .caravan .score.unsellable {
-  color: rgb(255, 240, 240);
-  font-weight: 400;
+    color: rgb(255, 240, 240);
+    font-weight: 400;
 }
 
 .caravan .score.sellable {
-  color: var(--player-color);
+    color: var(--player-color);
 }
 
 .caravan .score.sold,
 .caravan .score.bold {
-  font-weight: 700;
+    font-weight: 700;
 }
 
 .caravan .total {
-  min-width: 2.5ch;
-  text-align: right;
-  display: inline-block;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+    min-width: 2.5ch;
+    text-align: right;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .caravan .direction {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: left;
-  font-size: 1.125rem;
-  line-height: 1;
-  font-weight: 700;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 1.125rem;
+    line-height: 1;
+    font-weight: 700;
 }
 
 .caravan .direction[data-dir="asc"]::before {
-  content: "\25B2";
+    content: "\25B2";
 }
 
 .caravan .direction[data-dir="desc"]::before {
-  content: "\25BC";
+    content: "\25BC";
 }
 
 /* ── 10 — Track (stack) ── */
 /* Track — inner caravan stack, base: .caravan .track */
 .caravan .track {
-  display: flex;
-  flex-direction: var(--track-direction, column);
-  flex: 1;
-  min-height: calc(var(--card-h) + var(--caravan-pad));
-  width: var(--caravan-w);
-  position: relative;
-  isolation: isolate;
-  align-items: center;
+    display: flex;
+    flex-direction: var(--track-direction, column);
+    flex: 1;
+    min-height: calc(var(--card-h) + var(--caravan-pad));
+    width: var(--caravan-w);
+    position: relative;
+    isolation: isolate;
+    align-items: center;
 }
 
-.caravan .track>.card+.card {
-  margin-top: var(--stack-margin-top);
-  margin-bottom: var(--stack-margin-bottom);
+.caravan .track > .card + .card {
+    margin-top: var(--stack-margin-top);
+    margin-bottom: var(--stack-margin-bottom);
 }
 
 /* .caravan .track > .card.pending { z-index: 50 !important; } */
 
-.caravan .track>.card.pending-remove {
-  z-index: 51 !important;
+.caravan .track > .card.pending-remove {
+    z-index: 51 !important;
 }
 
 /* ── 11 — Card states & attachments ── */
 /* Card states */
 
 .caravan button.card {
-  cursor: default;
-  background-color: transparent;
+    cursor: default;
+    background-color: transparent;
 }
 
-.caravan .track>.card {
-  position: relative;
+.caravan .track > .card {
+    position: relative;
 }
 
-.caravan .card>.card {
-  position: absolute;
-  top: 0;
-  z-index: 5;
-  pointer-events: none;
+.caravan .card > .card {
+    position: absolute;
+    top: 0;
+    z-index: 5;
+    pointer-events: none;
 }
 
-.caravans.human .card>.card {
-  left: calc(var(--c, 0) * var(--card-offset-x));
-  right: auto;
+.caravans.human .card > .card {
+    left: calc(var(--c, 0) * var(--card-offset-x));
+    right: auto;
 }
 
-.caravans.ai .card>.card {
-  left: auto;
-  right: calc(var(--c, 0) * var(--card-offset-x));
+.caravans.ai .card > .card {
+    left: auto;
+    right: calc(var(--c, 0) * var(--card-offset-x));
 }
 
-.caravan .card>.card .confirm {
-  pointer-events: auto;
+.caravan .card > .card .confirm {
+    pointer-events: auto;
 }
 
 /* ── 12 — Empty placeholder & disband ── */
 /* Empty placeholder */
 .caravan .empty {
-  position: absolute;
-  left: 50%;
-  width: var(--card-w);
-  height: var(--card-h);
-  border: var(--card-border);
-  border-radius: var(--radius);
-  transition: border-color var(--transition-fast);
-  transform: translate(-50%, 0);
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
+    position: absolute;
+    left: 50%;
+    width: var(--card-w);
+    height: var(--card-h);
+    border: var(--card-border);
+    border-radius: var(--radius);
+    transition: border-color var(--transition-fast);
+    transform: translate(-50%, 0);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
 }
 
 /* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
-.caravan.is-empty {}
+.caravan.is-empty {
+}
 
 .caravan .disband {
-  order: 1;
-  margin-top: auto;
-  font: inherit;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #fff;
-  background: var(--c-bad);
-  border: 0.0625rem solid #e6b0aa;
-  border-radius: var(--radius);
-  padding: 0.0625rem 0.4375rem;
-  cursor: pointer;
+    order: 1;
+    margin-top: auto;
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fff;
+    background: var(--c-bad);
+    border: 0.0625rem solid #e6b0aa;
+    border-radius: var(--radius);
+    padding: 0.0625rem 0.4375rem;
+    cursor: pointer;
 }
 
 .caravan .disband:hover {
-  background: #a93226;
+    background: #a93226;
 }
 
 .caravan .disband:focus-visible {
-  outline: 0.125rem solid #fff;
-  outline-offset: 0.0625rem;
+    outline: 0.125rem solid #fff;
+    outline-offset: 0.0625rem;
 }
 
 .board:has(.slot.selected) .caravan .empty.selectable:hover {
-  border-color: var(--c-good);
-  opacity: 0.9;
+    border-color: var(--c-good);
+    opacity: 0.9;
 }
 
 /* ── 13 — Badges ── */
 /* Badges */
 .card .badge {
-  position: absolute;
-  min-width: 1.125rem;
-  height: 1.125rem;
-  padding: 0 0.25rem;
-  border-radius: 0.5625rem;
-  background: var(--c-accent);
-  color: #1a160c;
-  font: 700 0.6875rem/1 var(--font-base);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0.0625rem solid #1a160c;
-  z-index: 3;
-  left: var(--badge-left, -0.5rem);
-  right: var(--badge-right, auto);
-  top: var(--badge-top, -0.5rem);
-  bottom: var(--badge-bottom, auto);
-  transform: none;
+    position: absolute;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    padding: 0 0.25rem;
+    border-radius: 0.5625rem;
+    background: var(--c-accent);
+    color: #1a160c;
+    font: 700 0.6875rem/1 var(--font-base);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.0625rem solid #1a160c;
+    z-index: 3;
+    left: var(--badge-left, -0.5rem);
+    right: var(--badge-right, auto);
+    top: var(--badge-top, -0.5rem);
+    bottom: var(--badge-bottom, auto);
+    transform: none;
 }
 
 .card .badge.king {
-  background: #ffd60a;
-  color: #1a160c;
-  border-color: #b38f00;
+    background: #ffd60a;
+    color: #1a160c;
+    border-color: #b38f00;
 }
 
 .caravan .card.pending .badge.king {
-  background: #c8c8c8;
-  color: #1a160c;
-  border-color: #8f8f8f;
+    background: #c8c8c8;
+    color: #1a160c;
+    border-color: #8f8f8f;
 }
 
 /* ── 14 — Confirm & removal animations ── */
 /* Confirm X */
 .confirm {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: var(--confirm-right, -0.6875rem);
-  left: var(--confirm-left, auto);
-  width: 1.375rem;
-  height: 1.375rem;
-  border-radius: 50%;
-  border: 0.0625rem solid #1a160c;
-  background: var(--c-bad);
-  color: transparent;
-  cursor: pointer;
-  z-index: 10;
-  padding: 0;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: var(--confirm-right, -0.6875rem);
+    left: var(--confirm-left, auto);
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    border: 0.0625rem solid #1a160c;
+    background: var(--c-bad);
+    color: transparent;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
 }
 
 .confirm.row {
-  top: 0.5rem;
-  right: 0.5rem;
-  left: auto;
-  transform: none;
-  z-index: 20;
+    top: 0.5rem;
+    right: 0.5rem;
+    left: auto;
+    transform: none;
+    z-index: 20;
 }
 
 .confirm.portal {
-  position: fixed;
-  right: auto;
-  left: auto;
-  top: auto;
-  transform: none;
-  z-index: 9999;
-  margin: 0;
+    position: fixed;
+    right: auto;
+    left: auto;
+    top: auto;
+    transform: none;
+    z-index: 9999;
+    margin: 0;
 }
 
 .confirm::before,
 .confirm::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0.6875rem;
-  height: 0.125rem;
-  background: #fff;
-  border-radius: 0.0625rem;
-  transform: translate(-50%, -50%) rotate(45deg);
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.6875rem;
+    height: 0.125rem;
+    background: #fff;
+    border-radius: 0.0625rem;
+    transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .confirm::after {
-  transform: translate(-50%, -50%) rotate(-45deg);
+    transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .confirm:hover {
-  background: #a93226;
+    background: #a93226;
 }
 
 .caravan .card.removing {
-  animation: cardRemove 0.28s ease forwards;
-  pointer-events: none;
+    animation: cardRemove 0.28s ease forwards;
+    pointer-events: none;
 }
 
 .caravan .track.removing .card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: inherit;
-  z-index: 4;
-  pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: inherit;
+    z-index: 4;
+    pointer-events: none;
 }
 
 @keyframes cardRemove {
-  to {
-    opacity: 0;
-    transform: scale(0.85);
-  }
+    to {
+        opacity: 0;
+        transform: scale(0.85);
+    }
 }
 
 .caravan .card.pending::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: inherit;
-  /* z-index: 6; */
-  pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: inherit;
+    /* z-index: 6; */
+    pointer-events: none;
 }
 
 .caravan .card.pending-remove {
-  animation: cardRemove 0.32s ease forwards;
-  pointer-events: none;
+    animation: cardRemove 0.32s ease forwards;
+    pointer-events: none;
 }
 
 .caravan .card.pending-remove::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: inherit;
-  /* z-index: 6; */
-  pointer-events: none;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: inherit;
+    /* z-index: 6; */
+    pointer-events: none;
 }
 
 /* ── 15 — Controls ── */
 /* Controls / buttons */
 .controls {
-  display: flex;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
+    display: flex;
+    gap: var(--sp-2);
+    flex-wrap: wrap;
 }
 
 .btn {
-  font: 700 0.75rem var(--font-base);
-  background: var(--c-accent);
-  color: #1a160c;
-  border: 0.0625rem solid var(--c-accent);
-  border-radius: var(--radius);
-  padding: var(--sp-2) var(--sp-4);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  cursor: pointer;
+    font: 700 0.75rem var(--font-base);
+    background: var(--c-accent);
+    color: #1a160c;
+    border: 0.0625rem solid var(--c-accent);
+    border-radius: var(--radius);
+    padding: var(--sp-2) var(--sp-4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
 }
 
 .btn:hover {
-  background: #e6c34d;
-  border-color: #e6c34d;
+    background: #e6c34d;
+    border-color: #e6c34d;
 }
 
 .btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* ── 16 — Log & activity ── */
 /* Log — base: .log */
 .log {
-  flex: 1;
-  min-height: 0;
-  border: 0.0625rem solid var(--c-line);
-  border-radius: var(--radius);
-  background: #fff;
-  padding: var(--sp-2) var(--sp-3);
-  overflow-y: auto;
-  color: #000;
-  font-size: 0.6875rem;
-  margin: 0;
-  list-style: none;
-  counter-reset: log-line;
+    flex: 1;
+    min-height: 0;
+    border: 0.0625rem solid var(--c-line);
+    border-radius: var(--radius);
+    background: #fff;
+    padding: var(--sp-2) var(--sp-3);
+    overflow-y: auto;
+    color: #000;
+    font-size: 0.6875rem;
+    margin: 0;
+    list-style: none;
+    counter-reset: log-line;
 }
 
 .log .scores {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
 }
 
 .log .row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-variant-numeric: tabular-nums;
 }
 
 .log .player {
-  flex: 0 0 2.5rem;
-  font-weight: 700;
-  font-size: 1rem;
-  margin-left: var(--sp-4);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+    flex: 0 0 2.5rem;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-left: var(--sp-4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .log .row.human .player {
-  color: var(--c-human);
-  filter: brightness(0.7);
+    color: var(--c-human);
+    filter: brightness(0.7);
 }
 
 .log .row.ai .player {
-  color: var(--c-ai);
-  filter: brightness(0.7);
+    color: var(--c-ai);
+    filter: brightness(0.7);
 }
 
 .log .caravans {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--sp-1);
-  font-size: 0.75rem;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-1);
+    font-size: 0.75rem;
 }
 
 .log .score {
-  width: 32px;
-  text-align: right;
-  display: inline-block;
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  margin-right: var(--sp-1);
+    width: 32px;
+    text-align: right;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    margin-right: var(--sp-1);
 }
 
 .log .score:last-child {
-  margin-right: 0;
+    margin-right: 0;
 }
 
 .log .score.unsellable {
-  color: #1a1a1a;
+    color: #1a1a1a;
 }
 
 .log .row.human .score.sellable {
-  color: var(--c-human);
-  filter: brightness(0.85);
+    color: var(--c-human);
+    filter: brightness(0.85);
 }
 
 .log .row.ai .score.sellable {
-  color: var(--c-ai);
-  filter: brightness(0.85);
+    color: var(--c-ai);
+    filter: brightness(0.85);
 }
 
 .log .score.sold,
 .log .score.bold {
-  font-weight: 700;
+    font-weight: 700;
 }
 
 .log .sep {
-  color: #8f8f8f;
-  font-weight: 400;
-  min-width: 1ch;
-  text-align: center;
+    color: #8f8f8f;
+    font-weight: 400;
+    min-width: 1ch;
+    text-align: center;
 }
 
 .log .score + .score::before {
-  content: "|";
-  color: #8f8f8f;
-  font-weight: 400;
-  margin-right: var(--sp-1);
-  padding-right: var(--sp-1);
+    content: "|";
+    color: #8f8f8f;
+    font-weight: 400;
+    margin-right: var(--sp-1);
+    padding-right: var(--sp-1);
 }
 
 .log .wins {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  font-weight: 700;
-  font-size: 0.75rem;
-  color: #1a160c;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1a160c;
 }
 
 .activity {
-  position: absolute;
-  right: var(--sp-3);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 21.25rem;
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--c-panel);
-  border: 0.0625rem solid var(--c-line);
-  border-radius: var(--radius);
-  box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.45);
-  z-index: 50;
+    position: absolute;
+    right: var(--sp-3);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 21.25rem;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--c-panel);
+    border: 0.0625rem solid var(--c-line);
+    border-radius: var(--radius);
+    box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.45);
+    z-index: 50;
 }
 
 .activity header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--sp-2) var(--sp-3);
-  padding-right: 2.5rem;
-  color: var(--c-fg);
-  font-weight: 700;
-  border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--sp-2) var(--sp-3);
+    padding-right: 2.5rem;
+    color: var(--c-fg);
+    font-weight: 700;
+    border-bottom: none;
 }
 
 /* copy now uses .btn — same as New game / Activity */
 
 .activity .close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  background: transparent;
-  border: none;
-  color: var(--c-fg);
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--c-fg);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .activity .log {
-  margin: var(--sp-2);
-  flex: 1;
-  min-height: 0;
+    margin: var(--sp-2);
+    flex: 1;
+    min-height: 0;
 }
 
 .log .line {
-  counter-increment: log-line;
-  display: flex;
-  align-items: baseline;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 1.6em;
+    counter-increment: log-line;
+    display: flex;
+    align-items: baseline;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1.6em;
 }
 
 .log .line::before {
-  content: counter(log-line) ".";
-  flex: none;
-  min-width: 2ch;
-  text-align: right;
-  margin-right: var(--sp-1);
+    content: counter(log-line) ".";
+    flex: none;
+    min-width: 2ch;
+    text-align: right;
+    margin-right: var(--sp-1);
 }
 
 .log .text {
-  min-width: 0;
-  white-space: pre-wrap;
+    min-width: 0;
+    white-space: pre-wrap;
 }
 
 .log .line.key {
-  color: var(--c-fg);
+    color: var(--c-fg);
 }
 
 .log .sellable,
 .log .sold {
-  color: var(--c-accent);
+    color: var(--c-accent);
 }
 
 .log .sold {
-  font-weight: 700;
+    font-weight: 700;
 }
 
 .log .who {
 }
 
 .log .caravan-ref {
-  margin-left: -0.25em;
+    margin-left: -0.25em;
 }
 
 .log .who-ref {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--c-brown);
-  margin-left: -0.25em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--c-brown);
+    margin-left: -0.25em;
 }
 
 .log .card-name.red,
 .log .card-name.black,
+.log .card-name.hearts,
+.log .card-name.spades,
 .log .card-name.diamonds,
 .log .card-name.clubs {
-  font-weight: 700;
-  font-size: 0.875rem;
+    font-weight: 700;
+    font-size: 0.875rem;
 }
 
-.log .card-name.red {
-  color: #b3261e;
+.log .card-name.red,
+.log .card-name.hearts {
+    color: #b3261e;
 }
 
-.log .card-name.black {
-  color: #1a1a1a;
+.log .card-name.black,
+.log .card-name.spades {
+    color: #1a1a1a;
 }
 
 .log .card-name.diamonds {
-  color: blue;
+    color: blue;
 }
 
 .log .card-name.clubs {
-  color: green;
+    color: green;
 }
 
-
 .log .details {
-  margin: 0.125rem 0 0.25rem;
-  padding-left: 1.4em;
+    margin: 0.125rem 0 0.25rem;
+    padding-left: 1.4em;
 }
 
 .log .details .detail {
-  margin: 0;
+    margin: 0;
 }
 
 .overlay header {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  color: var(--c-fg);
-  font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    color: var(--c-fg);
+    font-weight: 700;
 }
 
 .overlay .close {
-  background: none;
-  border: none;
-  color: var(--c-fg);
-  font-size: 1.375rem;
-  line-height: 1;
-  cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--c-fg);
+    font-size: 1.375rem;
+    line-height: 1;
+    cursor: pointer;
 }
 
 .overlay .cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  justify-content: center;
-  max-width: 80%;
-  max-height: 70%;
-  overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    justify-content: center;
+    max-width: 80%;
+    max-height: 70%;
+    overflow-y: auto;
 }
 
 /* ── 18 — Modal ── */
 /* Modal — base: .modal */
 .modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--sp-4);
-  z-index: 10;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-4);
+    z-index: 10;
 }
 
 .modal .panel {
-  max-width: 35rem;
-  width: 100%;
-  border: 0.0625rem solid var(--c-accent);
-  border-radius: var(--radius);
-  background: var(--c-panel);
-  padding: var(--sp-5);
-  box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
+    max-width: 35rem;
+    width: 100%;
+    border: 0.0625rem solid var(--c-accent);
+    border-radius: var(--radius);
+    background: var(--c-panel);
+    padding: var(--sp-5);
+    box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
 }
 
 .modal .title {
-  color: var(--c-accent);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-top: 0;
+    color: var(--c-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0;
 }
 
-.rules {}
+.rules {
+}
 
 /* ── 19 — Selection outlines ── */
 /* Selection hover outlines */
 .board:has(.slot.selected) .caravan .card:hover {
-  outline: 0.1875rem solid var(--c-bad);
-  outline-offset: 0.125rem;
+    outline: 0.1875rem solid var(--c-bad);
+    outline-offset: 0.125rem;
 }
 
 .board:has(.slot.selected) .caravan .track.selectable .card:last-child:hover,
 .board:has(.slot.selected) .caravan .card.target:hover {
-  outline-color: var(--c-good);
+    outline-color: var(--c-good);
 }
 
 /* ── 19b — Focus ── */
 /* Focus */
 .hand .slot:focus-visible,
 .btn:focus-visible {
-  outline: 0.1875rem solid var(--c-fg);
-  outline-offset: 0.125rem;
+    outline: 0.1875rem solid var(--c-fg);
+    outline-offset: 0.125rem;
 }
 
 .caravan .track:focus-visible {
-  outline: 0.1875rem solid var(--c-accent);
-  outline-offset: 0.125rem;
+    outline: 0.1875rem solid var(--c-accent);
+    outline-offset: 0.125rem;
 }
 
 /* ── 20 — Motion & forced-colors ── */
 @media (prefers-reduced-motion: reduce) {
-
-  .hand .slot,
-  .btn {
-    transition: none;
-  }
+    .hand .slot,
+    .btn {
+        transition: none;
+    }
 }
 
 @media (forced-colors: active) {
-  .card {
-    border: 0.125rem solid ButtonText;
-  }
+    .card {
+        border: 0.125rem solid ButtonText;
+    }
 
-  .hand .slot.selected {
-    outline: 0.1875rem solid Highlight;
-  }
+    .hand .slot.selected {
+        outline: 0.1875rem solid Highlight;
+    }
 }
 
 /* ── 21 — Card assets (suit/rank) ── */
 /* Cards — semantic suit/rank */
 .card.spades.ace {
-  background-image: url("/cards/AS.svg")
+    background-image: url("/cards/AS.svg");
 }
 
 .card.spades.two {
-  background-image: url("/cards/2S.svg")
+    background-image: url("/cards/2S.svg");
 }
 
 .card.spades.three {
-  background-image: url("/cards/3S.svg")
+    background-image: url("/cards/3S.svg");
 }
 
 .card.spades.four {
-  background-image: url("/cards/4S.svg")
+    background-image: url("/cards/4S.svg");
 }
 
 .card.spades.five {
-  background-image: url("/cards/5S.svg")
+    background-image: url("/cards/5S.svg");
 }
 
 .card.spades.six {
-  background-image: url("/cards/6S.svg")
+    background-image: url("/cards/6S.svg");
 }
 
 .card.spades.seven {
-  background-image: url("/cards/7S.svg")
+    background-image: url("/cards/7S.svg");
 }
 
 .card.spades.eight {
-  background-image: url("/cards/8S.svg")
+    background-image: url("/cards/8S.svg");
 }
 
 .card.spades.nine {
-  background-image: url("/cards/9S.svg")
+    background-image: url("/cards/9S.svg");
 }
 
 .card.spades.ten {
-  background-image: url("/cards/TS.svg")
+    background-image: url("/cards/TS.svg");
 }
 
 .card.spades.jack {
-  background-image: url("/cards/JS.svg")
+    background-image: url("/cards/JS.svg");
 }
 
 .card.spades.queen {
-  background-image: url("/cards/QS.svg")
+    background-image: url("/cards/QS.svg");
 }
 
 .card.spades.king {
-  background-image: url("/cards/KS.svg")
+    background-image: url("/cards/KS.svg");
 }
 
 .card.hearts.ace {
-  background-image: url("/cards/AH.svg")
+    background-image: url("/cards/AH.svg");
 }
 
 .card.hearts.two {
-  background-image: url("/cards/2H.svg")
+    background-image: url("/cards/2H.svg");
 }
 
 .card.hearts.three {
-  background-image: url("/cards/3H.svg")
+    background-image: url("/cards/3H.svg");
 }
 
 .card.hearts.four {
-  background-image: url("/cards/4H.svg")
+    background-image: url("/cards/4H.svg");
 }
 
 .card.hearts.five {
-  background-image: url("/cards/5H.svg")
+    background-image: url("/cards/5H.svg");
 }
 
 .card.hearts.six {
-  background-image: url("/cards/6H.svg")
+    background-image: url("/cards/6H.svg");
 }
 
 .card.hearts.seven {
-  background-image: url("/cards/7H.svg")
+    background-image: url("/cards/7H.svg");
 }
 
 .card.hearts.eight {
-  background-image: url("/cards/8H.svg")
+    background-image: url("/cards/8H.svg");
 }
 
 .card.hearts.nine {
-  background-image: url("/cards/9H.svg")
+    background-image: url("/cards/9H.svg");
 }
 
 .card.hearts.ten {
-  background-image: url("/cards/TH.svg")
+    background-image: url("/cards/TH.svg");
 }
 
 .card.hearts.jack {
-  background-image: url("/cards/JH.svg")
+    background-image: url("/cards/JH.svg");
 }
 
 .card.hearts.queen {
-  background-image: url("/cards/QH.svg")
+    background-image: url("/cards/QH.svg");
 }
 
 .card.hearts.king {
-  background-image: url("/cards/KH.svg")
+    background-image: url("/cards/KH.svg");
 }
 
 .card.diamonds.ace {
-  background-image: url("/cards/AD.svg")
+    background-image: url("/cards/AD.svg");
 }
 
 .card.diamonds.two {
-  background-image: url("/cards/2D.svg")
+    background-image: url("/cards/2D.svg");
 }
 
 .card.diamonds.three {
-  background-image: url("/cards/3D.svg")
+    background-image: url("/cards/3D.svg");
 }
 
 .card.diamonds.four {
-  background-image: url("/cards/4D.svg")
+    background-image: url("/cards/4D.svg");
 }
 
 .card.diamonds.five {
-  background-image: url("/cards/5D.svg")
+    background-image: url("/cards/5D.svg");
 }
 
 .card.diamonds.six {
-  background-image: url("/cards/6D.svg")
+    background-image: url("/cards/6D.svg");
 }
 
 .card.diamonds.seven {
-  background-image: url("/cards/7D.svg")
+    background-image: url("/cards/7D.svg");
 }
 
 .card.diamonds.eight {
-  background-image: url("/cards/8D.svg")
+    background-image: url("/cards/8D.svg");
 }
 
 .card.diamonds.nine {
-  background-image: url("/cards/9D.svg")
+    background-image: url("/cards/9D.svg");
 }
 
 .card.diamonds.ten {
-  background-image: url("/cards/TD.svg")
+    background-image: url("/cards/TD.svg");
 }
 
 .card.diamonds.jack {
-  background-image: url("/cards/JD.svg")
+    background-image: url("/cards/JD.svg");
 }
 
 .card.diamonds.queen {
-  background-image: url("/cards/QD.svg")
+    background-image: url("/cards/QD.svg");
 }
 
 .card.diamonds.king {
-  background-image: url("/cards/KD.svg")
+    background-image: url("/cards/KD.svg");
 }
 
 .card.clubs.ace {
-  background-image: url("/cards/AC.svg")
+    background-image: url("/cards/AC.svg");
 }
 
 .card.clubs.two {
-  background-image: url("/cards/2C.svg")
+    background-image: url("/cards/2C.svg");
 }
 
 .card.clubs.three {
-  background-image: url("/cards/3C.svg")
+    background-image: url("/cards/3C.svg");
 }
 
 .card.clubs.four {
-  background-image: url("/cards/4C.svg")
+    background-image: url("/cards/4C.svg");
 }
 
 .card.clubs.five {
-  background-image: url("/cards/5C.svg")
+    background-image: url("/cards/5C.svg");
 }
 
 .card.clubs.six {
-  background-image: url("/cards/6C.svg")
+    background-image: url("/cards/6C.svg");
 }
 
 .card.clubs.seven {
-  background-image: url("/cards/7C.svg")
+    background-image: url("/cards/7C.svg");
 }
 
 .card.clubs.eight {
-  background-image: url("/cards/8C.svg")
+    background-image: url("/cards/8C.svg");
 }
 
 .card.clubs.nine {
-  background-image: url("/cards/9C.svg")
+    background-image: url("/cards/9C.svg");
 }
 
 .card.clubs.ten {
-  background-image: url("/cards/TC.svg")
+    background-image: url("/cards/TC.svg");
 }
 
 .card.clubs.jack {
-  background-image: url("/cards/JC.svg")
+    background-image: url("/cards/JC.svg");
 }
 
 .card.clubs.queen {
-  background-image: url("/cards/QC.svg")
+    background-image: url("/cards/QC.svg");
 }
 
 .card.clubs.king {
-  background-image: url("/cards/KC.svg")
+    background-image: url("/cards/KC.svg");
 }
 
 .card.joker.black {
-  background-image: url('/cards/2J.svg')
+    background-image: url("/cards/2J.svg");
 }
 
 .card.joker.red {
-  background-image: url('/cards/1J.svg')
+    background-image: url("/cards/1J.svg");
 }
 
 .card.back.deck1 {
-  background-image: url('/cards/1B.svg')
+    background-image: url("/cards/1B.svg");
 }
 
 .card.back.deck2 {
-  background-image: url('/cards/2B.svg')
+    background-image: url("/cards/2B.svg");
 }
 
 .card.back {
-  background-image: url('/cards/1B.svg')
+    background-image: url("/cards/1B.svg");
 }
