@@ -274,7 +274,9 @@ export function legalMoves(state: GameState): Move[] {
   const player = state.players[pid];
   const hasEmpty = player.caravans.some((c) => c.rows.length === 0);
   if (hasEmpty) {
-    return [...valueCardMoves(player, pid, true), ...player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi))];
+    const valueMoves = valueCardMoves(player, pid, true);
+    if (valueMoves.length > 0) return valueMoves;
+    return player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi));
   }
   return [
     ...valueCardMoves(player, pid, false),

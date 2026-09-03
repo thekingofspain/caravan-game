@@ -1,5 +1,4 @@
 import { calculateCaravanState } from "./rules/caravanCardRules";
-import { caravanSeller } from "./scoring";
 import { caravanName } from "./names";
 import { Ai, Card, GameState, Human, LogEntry, Move, Nullable, PlayerId, SUIT_SYMBOL, TargetRef, isJokerCard } from "./types";
 
@@ -29,14 +28,11 @@ export function formatFinalScore(state: GameState): string {
     const a = state.players[Ai].caravans[i as 0 | 1 | 2];
     const hs = calculateCaravanState(h);
     const as = calculateCaravanState(a);
-    const winner = caravanSeller(state, i as 0 | 1 | 2);
-    const fmt = (st: ReturnType<typeof calculateCaravanState>, isWinner: boolean): string => {
-      const t = String(st.total);
-      if (st.status === "sellable") return isWinner ? `**${t}**` : `*${t}*`;
-      return t;
+    const fmt = (st: ReturnType<typeof calculateCaravanState>): string => {
+      return String(st.total);
     };
-    const hStr = fmt(hs, winner === Human);
-    const aStr = fmt(as, winner === Ai);
+    const hStr = fmt(hs);
+    const aStr = fmt(as);
     parts.push(`${caravanName(Human, i)} ${hStr} vs ${aStr}`);
   }
   return parts.join(" | ");
@@ -58,8 +54,18 @@ export function removalDetail(state: GameState, refs: TargetRef[]): string[] {
       existing.push(...cardsToPush);
     }
   }
+  const sortedEntries = [...byCar.entries()].sort(([aKey], [bKey]) => {
+    const [aPStr, aCiStr] = aKey.split("-");
+    const [bPStr, bCiStr] = bKey.split("-");
+    const aP = Number(aPStr);
+    const bP = Number(bPStr);
+    const aCi = Number(aCiStr);
+    const bCi = Number(bCiStr);
+    if (aP !== bP) return bP - aP;
+    return aCi - bCi;
+  });
   const detail: string[] = [];
-  for (const [key, cards] of byCar) {
+  for (const [key, cards] of sortedEntries) {
     const [pStr, ciStr] = key.split("-");
     const p = Number(pStr) as PlayerId;
     const ci = Number(ciStr);

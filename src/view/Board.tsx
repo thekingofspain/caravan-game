@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
 import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model/types";
 import type { Caravan as CaravanModel, GameState, SelectionState } from "../model/types";
-import { caravanSeller } from "../model/scoring";
+import { getCaravanScores, type GameScores } from "../model/scoring";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
 import { cardLabel } from "../model/cards";
@@ -18,6 +18,7 @@ function CaravanColumn({
   caravans,
   selection,
   gameState,
+  scores,
   onCardClick,
   onPlaceholderClick,
   onAcknowledge,
@@ -27,6 +28,7 @@ function CaravanColumn({
   caravans: CaravanModel[];
   selection: SelectionState;
   gameState: GameState;
+  scores: GameScores;
   onCardClick: (t: TargetRef) => void;
   onPlaceholderClick: (ci: number) => void;
   onAcknowledge: () => void;
@@ -35,10 +37,9 @@ function CaravanColumn({
   return (
     <>
       {[0, 1, 2].map((ci) => {
-        const seller = caravanSeller(gameState, ci as 0 | 1 | 2);
+        const seller = scores.sellers[ci as 0 | 1 | 2];
         const caravan = caravans[ci];
-        const state = calculateCaravanState(caravan);
-        const sellable = state.status === "sellable";
+        const sellable = (playerId === Human ? scores.humanScores[ci] : scores.aiScores[ci]).isSellable;
         const isEmpty = caravan.rows.length === 0;
         return (
           <div className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""}`} key={ci}>
@@ -74,12 +75,12 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
   const [viewDeck, setViewDeck] = useState<PlayerId | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const deckPeekEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekDeck");
+  const scores = useMemo(() => getCaravanScores(state), [state]);
   const human = isHumanTurn(state);
   const blocked = !!transition?.needsConfirmation && transition.confirmer === Human;
 
   const onCopyActivity = async () => {
     const lines: string[] = [];
-    lines.push(`# Caravan Activity — ${new Date().toISOString()}`);
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("seed") : null;
     lines.push(`Seed: ${params ?? "(random)"} | Phase: ${state.phase} | Current: ${state.current === Human ? "Human" : "AI"} | Winner: ${String(state.winner ?? "none")}`);
     for (const pid of [Human, Ai] as const) {
@@ -98,8 +99,8 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
     if (state.log.length === 0) lines.push("(empty)");
 
     else state.log.forEach((e) => {
-      lines.push(`- ${e.text}`);
-      if (e.detail) e.detail.forEach((d) => lines.push(`  - ${d}`));
+      lines.push(`- ${e.text.replace(/\{([^{}]+)\}/g, "$1")}`);
+      if (e.detail) e.detail.forEach((d) => lines.push(`  - ${d.replace(/\{([^{}]+)\}/g, "$1")}`));
     });
 
     const text = lines.join("\n");
@@ -273,7 +274,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
         <div className="columns">
           <div className="column caravans">
             <div className="caravans ai">
-              <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} gameState={state} onCardClick={onCardClick} onPlaceholderClick={() => undefined} onAcknowledge={onAcknowledge} />
+              <CaravanColumn playerId={Ai} caravans={aiPlayer.caravans} selection={aiSelection} gameState={state} scores={scores} onCardClick={onCardClick} onPlaceholderClick={() => undefined} onAcknowledge={onAcknowledge} />
             </div>
             <div className="caravans human">
               <CaravanColumn
@@ -281,6 +282,7 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
                 caravans={humanPlayer.caravans}
                 selection={humanSelection}
                 gameState={state}
+                scores={scores}
                 onCardClick={onCardClick}
                 onPlaceholderClick={onPlaceholderClick}
                 onAcknowledge={onAcknowledge}
@@ -357,20 +359,20 @@ export function Board({ store, confirm = typeof window !== "undefined" ? window.
           <header>
             <span>Activity</span>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <button type="button" className="copy" onClick={() => { void onCopyActivity(); }} aria-label="Copy activity log and debug info">
+              <button type="button" className="btn copy" onClick={() => { void onCopyActivity(); }} aria-label="Copy activity log and debug info">
                 Copy
-              </button>
-              <button
-                type="button"
-                className="close"
-                onClick={() => { setActivityOpen(false); }}
-                aria-label="Close activity log"
-              >
-                Close
               </button>
             </div>
           </header>
-          <Sidebar log={state.log} state={state} />
+          <button
+            type="button"
+            className="close"
+            onClick={() => { setActivityOpen(false); }}
+            aria-label="Close activity log"
+          >
+            ×
+          </button>
+          <Sidebar log={state.log} state={state} scores={scores} />
         </div>
       )}
 

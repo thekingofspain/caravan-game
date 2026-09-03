@@ -373,6 +373,7 @@ body {
   height: 1.5rem;
   display: flex;
   align-items: center;
+  gap: var(--sp-2);
   justify-content: space-between;
 }
 
@@ -403,7 +404,7 @@ body {
 }
 
 .caravan .score.unsellable {
-  color: #1a1a1a;
+  color: rgb(255, 240, 240);
   font-weight: 400;
 }
 
@@ -736,13 +737,6 @@ body {
   counter-reset: log-line;
 }
 
-.log .gameover {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.25rem;
-}
-
 .log .scores {
   display: flex;
   flex-direction: column;
@@ -751,15 +745,19 @@ body {
 
 .log .row {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: center;
+  gap: var(--sp-2);
   font-variant-numeric: tabular-nums;
 }
 
 .log .player {
   flex: 0 0 2.5rem;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 1rem;
+  margin-left: var(--sp-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .log .row.human .player {
@@ -775,18 +773,23 @@ body {
 .log .caravans {
   flex: 1;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-end;
-  gap: 0.375rem;
+  gap: var(--sp-1);
   font-size: 0.75rem;
 }
 
 .log .score {
-  min-width: 2.75ch;
+  width: 32px;
   text-align: right;
   display: inline-block;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
+  margin-right: var(--sp-1);
+}
+
+.log .score:last-child {
+  margin-right: 0;
 }
 
 .log .score.unsellable {
@@ -811,28 +814,25 @@ body {
 .log .sep {
   color: #8f8f8f;
   font-weight: 400;
+  min-width: 1ch;
+  text-align: center;
+}
+
+.log .score + .score::before {
+  content: "|";
+  color: #8f8f8f;
+  font-weight: 400;
+  margin-right: var(--sp-1);
+  padding-right: var(--sp-1);
 }
 
 .log .wins {
-  flex: 0 0 2ch;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-weight: 700;
   font-size: 0.75rem;
   color: #1a160c;
-}
-
-.log .win-title {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 0.125rem;
-  color: #1a160c;
-}
-
-.log .line.win {
-  background: rgba(212, 175, 55, 0.12);
-  border-radius: 0.25rem;
-  padding: 0.375rem 0.5rem;
-  margin: 0.25rem 0;
 }
 
 .activity {
@@ -856,34 +856,30 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: var(--sp-2) var(--sp-3);
+  padding-right: 2.5rem;
   color: var(--c-fg);
   font-weight: 700;
-  border-bottom: 0.0625rem solid var(--c-line);
+  border-bottom: none;
 }
 
-.activity .copy {
-  background: transparent;
-  border: 0.0625rem solid var(--c-line);
-  color: var(--c-fg);
-  font-size: 0.75rem;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-}
-
-.activity .copy:hover {
-  background: var(--c-line);
-}
+/* copy now uses .btn — same as New game / Activity */
 
 .activity .close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
   background: transparent;
   border: none;
   color: var(--c-fg);
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0 var(--sp-1);
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .activity .log {
@@ -927,9 +923,6 @@ body {
 }
 
 .log .who {
-  white-space: nowrap;
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .log .caravan-ref {
@@ -967,27 +960,14 @@ body {
   color: green;
 }
 
-.log .bullets {
+
+.log .details {
   margin: 0.125rem 0 0.25rem;
   padding-left: 1.4em;
-  list-style: disc;
 }
 
-.log .bullets li {
+.log .details .detail {
   margin: 0;
-}
-
-/* ── 17 — Overlay ── */
-.overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
-  z-index: 50;
 }
 
 .overlay header {
