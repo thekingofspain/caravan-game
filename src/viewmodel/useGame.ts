@@ -41,9 +41,7 @@ export function useGame(initial: GameConfig): GameStore {
         previous: GameState | null;
         lastMove: Move | null;
         transition: TransitionInfo | null;
-        stagedNext: GameState | null;
-        pendingMove: Move | null;
-    }>({ previous: null, lastMove: null, transition: null, stagedNext: null, pendingMove: null });
+    }>({ previous: null, lastMove: null, transition: null });
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -62,24 +60,15 @@ export function useGame(initial: GameConfig): GameStore {
     const commitOrStage = useCallback((prev: GameState, move: Move, next: GameState) => {
         const info = getTransitionInfo(prev, move, next);
 
-        if (info.needsConfirmation && info.confirmer === Human) {
-            setUi({
-                previous: prev,
-                lastMove: move,
-                transition: info,
-                stagedNext: next,
-                pendingMove: move
-            });
-        } else {
-            setUi({
-                previous: prev,
-                lastMove: move,
-                transition: null,
-                stagedNext: null,
-                pendingMove: null
-            });
-            dispatch(move);
-        }
+        // Always commit so the move (including its log entry) is visible immediately,
+        // even while a confirmation X is still displayed. The pre-move board stays
+        // available via `previous` for the confirmation visuals until acknowledged.
+        setUi({
+            previous: prev,
+            lastMove: move,
+            transition: info.needsConfirmation ? info : null
+        });
+        dispatch(move);
     }, []);
 
     const { previous, lastMove, transition } = ui;
@@ -117,31 +106,14 @@ export function useGame(initial: GameConfig): GameStore {
     const reset = useCallback((c: GameConfig) => {
         setCfg(c);
         setThinking(false);
-        setUi({
-            previous: null,
-            lastMove: null,
-            transition: null,
-            stagedNext: null,
-            pendingMove: null
-        });
+        setUi({ previous: null, lastMove: null, transition: null });
         dispatch({ type: "reset", config: c });
     }, []);
     const acknowledge = useCallback(() => {
-        if (ui.stagedNext && ui.pendingMove) {
-            dispatch(ui.pendingMove);
-            setUi({
-                previous: null,
-                lastMove: null,
-                transition: null,
-                stagedNext: null,
-                pendingMove: null
-            });
-
-            return;
-        }
-
+        // The move was already committed when played; acknowledging only clears
+        // the confirmation visuals.
         setUi((prev) => ({ ...prev, transition: null, previous: null, lastMove: null }));
-    }, [ui.stagedNext, ui.pendingMove]);
+    }, []);
 
     const legal = useMemo(() => legalMoves(state), [state]);
 

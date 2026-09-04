@@ -78,11 +78,14 @@ assert.equal(afterAI.impactedLen, 5, "Joker should impact 5 rows (4 queens + Ace
 assert.ok(afterAI.hasAck, "should be awaiting human ack via confirm X");
 
 console.log("Log detail:", afterAI.logLast?.detail);
-if (afterAI.logLast?.detail) {
-  const detailStr = afterAI.logLast.detail.join(" | ");
+assert.ok(afterAI.logLast?.detail?.length >= 5, "Joker log entry must list removals before ack X is shown");
+{
+  const detailStr = afterAI.logLast.detail
+    .map((d) => (Array.isArray(d) ? d.map((s) => (typeof s === "string" ? s : s.rank + (s.suit ? s.suit : s.jokerType))).join("") : String(d)))
+    .join(" | ");
   assert.match(detailStr, /Q/, "log detail should mention queens");
-  assert.match(detailStr, /Boneyard.*5/, "Boneyard detail should have 5");
-  assert.match(detailStr, /Redding.*7/, "Redding detail should have 7");
+  assert.match(detailStr, /5.*Boneyard/, "Boneyard detail should have 5");
+  assert.match(detailStr, /7.*Redding/, "Redding detail should have 7");
 }
 
 console.log("Clicking confirm X to acknowledge...");

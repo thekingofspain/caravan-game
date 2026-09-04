@@ -763,7 +763,6 @@ body {
 .log .player {
     flex: 0 0 2.5rem;
     font-weight: 700;
-    font-size: 1rem;
     margin-left: var(--sp-4);
     display: inline-flex;
     align-items: center;
@@ -772,36 +771,26 @@ body {
 
 .log .row.human .player {
     color: var(--c-human);
-    filter: brightness(0.7);
 }
 
 .log .row.ai .player {
     color: var(--c-ai);
-    filter: brightness(0.7);
 }
-
 .log .caravans {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--sp-1);
+    gap: 0.5ch;
     font-size: 0.75rem;
 }
-
 .log .score {
-    width: 32px;
+    width: 2ch;
     text-align: right;
     display: inline-block;
     font-variant-numeric: tabular-nums;
     font-weight: 400;
-    margin-right: var(--sp-1);
 }
-
-.log .score:last-child {
-    margin-right: 0;
-}
-
 .log .score.unsellable {
     color: #1a1a1a;
 }
@@ -820,22 +809,12 @@ body {
 .log .score.bold {
     font-weight: 700;
 }
-
 .log .sep {
     color: #8f8f8f;
     font-weight: 400;
-    min-width: 1ch;
+    min-width: 0;
     text-align: center;
 }
-
-.log .score + .score::before {
-    content: "|";
-    color: #8f8f8f;
-    font-weight: 400;
-    margin-right: var(--sp-1);
-    padding-right: var(--sp-1);
-}
-
 .log .wins {
     display: flex;
     align-items: center;
@@ -975,7 +954,7 @@ body {
 }
 
 .log .details {
-    margin: 0.125rem 0 0.25rem;
+    margin: 0;
     padding-left: 1.4em;
 }
 

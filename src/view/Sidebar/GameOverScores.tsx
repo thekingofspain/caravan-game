@@ -18,21 +18,32 @@ function ScoreRow({ player, scores, wins, icon }: ScoreRowProps) {
             </span>
 
             <span className="caravans">
-                {scores.map((s, idx) => (
-                    <span
-                        key={idx}
-                        className={[
-                            "score",
-                            s.isSellable ? "sellable" : "unsellable",
-                            s.isSold ? "sold" : "",
-                            s.isSold ? "bold" : ""
-                        ]
-                            .filter(Boolean)
-                            .join(" ")}
-                    >
-                        {s.total}
-                    </span>
-                ))}
+                {scores.flatMap((s, idx) => {
+                    const score = (
+                        <span
+                            key={`score-${String(idx)}`}
+                            className={[
+                                "score",
+                                s.isSellable ? "sellable" : "unsellable",
+                                s.isSold ? "sold" : "",
+                                s.isSold ? "bold" : ""
+                            ]
+                                .filter(Boolean)
+                                .join(" ")}
+                        >
+                            {s.total}
+                        </span>
+                    );
+
+                    if (idx === 0) return [score];
+
+                    return [
+                        <span key={`sep-${String(idx)}`} className="sep" aria-hidden="true">
+                            |
+                        </span>,
+                        score
+                    ];
+                })}
             </span>
 
             <span className="wins">

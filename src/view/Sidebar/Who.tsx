@@ -8,9 +8,8 @@ export function Who({ side, caravan }: { side: "ai" | "human"; caravan?: string 
                     <span className="icon" aria-hidden="true">
                         {SIDE_ICON[side]}
                     </span>
-
                     <span className="caravan-ref" aria-hidden="true">
-                        🐎<span className="who-ref">{caravan}</span>
+                        <span className="who-ref">{caravan}</span>
                     </span>
                 </>
             ) : (

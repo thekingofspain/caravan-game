@@ -183,9 +183,9 @@ assert.equal(after.winner, Human, "Human should win 2-1 (21 vs 26 loses, 26 vs 4
 assert.equal(after.pair0, Ai, "Boneyard 21 vs 26 -> Ai");
 assert.equal(after.pair1, Human, "Redding 26 vs 4 -> Human");
 assert.equal(after.pair2, Human, "Shady 26 vs 24 -> Human");
-assert.ok(after.logLast.some((t) => t.includes("You win")), "log should contain win message");
+assert.ok(after.logLast.some((t) => t.includes("You won")), "log should contain win message");
 
-let uiWinner = await page.evaluate(() => document.body.innerText.includes("You win") || document.body.innerText.includes("wins"));
+let uiWinner = await page.evaluate(() => document.body.innerText.includes("You won") || document.body.innerText.includes("won"));
 console.log("UI shows win:", uiWinner);
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

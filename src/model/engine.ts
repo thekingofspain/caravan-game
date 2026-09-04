@@ -14,6 +14,7 @@ import {
     GameState,
     Human,
     IllegalMoveError,
+    LogSegment,
     Nullable,
     PlayerId,
     PlayerState,
@@ -158,14 +159,17 @@ function handlePlayValueCard(
     draw(player);
 }
 
-function attachJack(next: GameState, card: Card, target: TargetRef): void {
+function attachJack(next: GameState, card: Card, target: TargetRef): LogSegment[][] {
+    const detail = removalDetail(next, [target]);
     const car = next.players[target.player].caravans[target.caravan];
     const tgt = car.rows.at(target.cardIndex);
 
-    if (tgt === undefined) return;
+    if (tgt === undefined) return detail;
 
     tgt.push(card);
     removeTargets(next, [target]);
+
+    return detail;
 }
 
 function attachQueen(next: GameState, card: Card, target: TargetRef): void {
@@ -188,14 +192,7 @@ function attachKing(next: GameState, card: Card, target: TargetRef): void {
 
     tgt.push(card);
 }
-
-function attachJoker(next: GameState, card: Card, target: TargetRef): string[] {
-    const car = next.players[target.player].caravans[target.caravan];
-    const tgt = car.rows.at(target.cardIndex);
-
-    if (tgt === undefined) return [];
-
-    tgt.push(card);
+function attachJoker(next: GameState, card: Card, target: TargetRef): LogSegment[][] {
     const refs = jokerRemovals(next, target);
     const detail = removalDetail(next, refs);
 
@@ -207,7 +204,7 @@ function attachJoker(next: GameState, card: Card, target: TargetRef): string[] {
 function handlePlayFaceCard(
     next: GameState,
     action: Extract<Move, { type: "playFaceCard" }>
-): Nullable<string[]> {
+): Nullable<LogSegment[][]> {
     const player = next.players[action.player];
     const card = player.hand.at(action.handIndex);
 
@@ -235,9 +232,9 @@ function handlePlayFaceCard(
         throw new IllegalMoveError("playFaceCard: King on jacked card");
 
     player.hand.splice(action.handIndex, 1);
-    let jokerDetail: Nullable<string[]> = null;
+    let jokerDetail: Nullable<LogSegment[][]> = null;
 
-    if (card.rank === "J") attachJack(next, card, action.target);
+    if (card.rank === "J") jokerDetail = attachJack(next, card, action.target);
     else if (card.rank === "Q") attachQueen(next, card, action.target);
     else if (card.rank === "K") attachKing(next, card, action.target);
     else if (isJokerCard(card)) jokerDetail = attachJoker(next, card, action.target);
@@ -274,13 +271,13 @@ function handleDismissCaravan(
 export function cloneAndApply(
     state: GameState,
     action: Move
-): { next: GameState; jokerDetail: Nullable<string[]> } {
+): { next: GameState; jokerDetail: Nullable<LogSegment[][]> } {
     if (state.phase === "over") throw new IllegalMoveError("game over");
 
     if (action.player !== state.current) throw new IllegalMoveError("not current player");
 
     const next: GameState = structuredClone(state);
-    let jokerDetail: Nullable<string[]> = null;
+    let jokerDetail: Nullable<LogSegment[][]> = null;
 
     if (action.type === "playValueCard") handlePlayValueCard(next, action);
     else if (action.type === "playFaceCard") jokerDetail = handlePlayFaceCard(next, action);
@@ -293,13 +290,13 @@ export function appendActionLog(
     next: GameState,
     action: Move,
     prev: GameState,
-    jokerDetail: Nullable<string[]>
+    jokerDetail: Nullable<LogSegment[][]>
 ): void {
-    const text = describe(action, prev);
+    const entryData = describe(action, prev);
 
-    if (text === null) return;
+    if (entryData === null) return;
 
-    const entry = log(text);
+    const entry = log(entryData);
 
     if (jokerDetail && jokerDetail.length > 0) entry.detail = jokerDetail;
 
@@ -313,7 +310,10 @@ export function resolveTerminal(next: GameState): void {
         next.winner = winner;
         next.log = [
             ...next.log,
-            log(winner === Human ? "You win the caravan!" : "AI wins the caravan.")
+            log({
+                segments: [winner === Human ? "You won the game." : "AI won the game."],
+                player: winner
+            })
         ];
 
         return;
@@ -327,11 +327,13 @@ export function resolveTerminal(next: GameState): void {
         next.winner = loser === Human ? Ai : Human;
         next.log = [
             ...next.log,
-            log(
-                loser === Human
-                    ? "You ran out of moves — AI wins."
-                    : "AI ran out of moves — you win!"
-            )
+            log({
+                segments: [
+                    loser === Human
+                        ? "You ran out of moves — AI wins."
+                        : "AI ran out of moves — You win!"
+                ]
+            })
         ];
     }
 }

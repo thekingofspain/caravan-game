@@ -6,9 +6,9 @@ import {
     GameState,
     Human,
     LogEntry,
+    LogSegment,
     Move,
     Nullable,
-    PlayerId,
     SUIT_SYMBOL,
     TargetRef,
     isJokerCard
@@ -20,10 +20,11 @@ export function resetLogIds(): void {
     logId = 0;
 }
 
-export function log(text: string): LogEntry {
+export function log(entry: Omit<LogEntry, "id" | "text">): LogEntry {
     logId += 1;
+    const text = entry.segments.map((s) => (typeof s === "string" ? s : formatCardLog(s))).join("");
 
-    return { id: logId, text };
+    return { id: logId, text, ...entry };
 }
 
 export function formatCardLog(card: Card): string {
@@ -32,100 +33,120 @@ export function formatCardLog(card: Card): string {
     return `{${card.rank}${SUIT_SYMBOL[card.suit]}}`;
 }
 
-export function formatOwnerLabel(p: PlayerId): string {
-    return p === Human ? "your" : "AI's";
-}
-
 export function formatFinalScore(state: GameState): string {
     const parts: string[] = [];
 
     for (let i = 0; i < 3; i++) {
-        const h = state.players[Human].caravans[i as 0 | 1 | 2];
-        const a = state.players[Ai].caravans[i as 0 | 1 | 2];
-        const hs = calculateCaravanState(h);
-        const as = calculateCaravanState(a);
-        const fmt = (st: ReturnType<typeof calculateCaravanState>): string => {
-            return String(st.total);
-        };
-        const hStr = fmt(hs);
-        const aStr = fmt(as);
+        const hSt = calculateCaravanState(state.players[Human].caravans[i]);
+        const aSt = calculateCaravanState(state.players[Ai].caravans[i]);
 
-        parts.push(`${caravanName(Human, i)} ${hStr} vs ${aStr}`);
+        parts.push(`${String(hSt.total)}-${String(aSt.total)}`);
     }
 
     return parts.join(" | ");
 }
 
-export function removalDetail(state: GameState, refs: TargetRef[]): string[] {
-    const byCar = new Map<string, Card[]>();
+export function removalDetail(state: GameState, refs: TargetRef[]): LogSegment[][] {
+    const byRow = new Map<string, { ref: TargetRef; cards: Card[] }>();
 
     for (const r of refs) {
         const car = state.players[r.player].caravans[r.caravan];
         const row = car.rows[r.cardIndex];
-        const key = `${String(r.player)}-${String(r.caravan)}`;
-
-        // All cards in the row are removed; if last attachment is Joker, its removal is already counted via refs, but detail lists the value card
+        const key = `${String(r.player)}-${String(r.caravan)}-${String(r.cardIndex)}`;
 
         const isLastJoker = row[row.length - 1].rank === "Joker";
-        const cardsToPush: Card[] = isLastJoker ? row.slice(0, -1) : row;
-        const existing = byCar.get(key);
+        const cardsToPush: Card[] = isLastJoker ? row.slice(0, -1) : [...row];
+        const existing = byRow.get(key);
 
         if (existing === undefined) {
-            byCar.set(key, [...cardsToPush]);
+            byRow.set(key, { ref: r, cards: cardsToPush });
         } else {
-            existing.push(...cardsToPush);
+            existing.cards.push(...cardsToPush);
         }
     }
-    const sortedEntries = [...byCar.entries()].sort(([aKey], [bKey]) => {
-        const [aPStr, aCiStr] = aKey.split("-");
-        const [bPStr, bCiStr] = bKey.split("-");
-        const aP = Number(aPStr);
-        const bP = Number(bPStr);
-        const aCi = Number(aCiStr);
-        const bCi = Number(bCiStr);
 
-        if (aP !== bP) return bP - aP;
+    const sorted = [...byRow.values()].sort((a, b) => {
+        if (a.ref.player !== b.ref.player) return b.ref.player - a.ref.player;
 
-        return aCi - bCi;
+        if (a.ref.caravan !== b.ref.caravan) return a.ref.caravan - b.ref.caravan;
+
+        return a.ref.cardIndex - b.ref.cardIndex;
     });
-    const detail: string[] = [];
 
-    for (const [key, cards] of sortedEntries) {
-        const [pStr, ciStr] = key.split("-");
-        const p = Number(pStr) as PlayerId;
-        const ci = Number(ciStr);
+    const detail: LogSegment[][] = [];
 
-        detail.push(
-            `${formatOwnerLabel(p)} caravan ${caravanName(p, ci)}: ${cards.map(formatCardLog).join(", ")}`
-        );
+    for (const { ref, cards } of sorted) {
+        const owner: LogSegment[] = ref.player === Human ? ["You", " "] : ["AI", "'s "];
+
+        for (const card of cards) {
+            detail.push([
+                "removal of ",
+                card,
+                " from ",
+                ...owner,
+                caravanName(ref.player, ref.caravan)
+            ]);
+        }
     }
 
     return detail;
 }
 
-export function describe(action: Move, state: GameState): Nullable<string> {
+export function describe(action: Move, state: GameState): Nullable<Omit<LogEntry, "id" | "text">> {
     const who = action.player === Human ? "You" : "AI";
 
     if (action.type === "playValueCard") {
         const card = state.players[action.player].hand[action.handIndex];
 
-        return `${who} played ${formatCardLog(card)} to ${caravanName(action.player, action.caravan)}`;
+        return {
+            player: action.player,
+            action: action.type,
+            card,
+            caravan: action.caravan,
+            segments: [who, " played ", card, " to ", caravanName(action.player, action.caravan)]
+        };
     }
 
     if (action.type === "playFaceCard") {
         const card = state.players[action.player].hand[action.handIndex];
         const carTgt = state.players[action.target.player].caravans[action.target.caravan];
         const tgt = carTgt.rows[action.target.cardIndex];
-        const tgtLog = formatCardLog(tgt[0]);
+        const tgtCard = tgt[0];
+        const segments: LogSegment[] = [
+            who,
+            " played ",
+            card,
+            " on ",
+            action.target.player === Human ? "You's " : "AI's ",
+            caravanName(action.target.player, action.target.caravan),
+            " ",
+            tgtCard
+        ];
 
-        return `${who} played ${formatCardLog(card)} on ${formatOwnerLabel(action.target.player)} ${caravanName(action.target.player, action.target.caravan)} ${tgtLog}`;
+        return {
+            player: action.player,
+            action: action.type,
+            card,
+            target: action.target,
+            segments
+        };
     }
 
     if (action.type === "discardCard") {
         const card = state.players[action.player].hand[action.handIndex];
 
-        return `${who} discarded ${formatCardLog(card)}`;
+        return {
+            player: action.player,
+            action: action.type,
+            card,
+            segments: [who, " discarded ", card]
+        };
     }
 
-    return `${who} dismissed ${caravanName(action.player, action.caravan)}`;
+    return {
+        player: action.player,
+        action: action.type,
+        caravan: action.caravan,
+        segments: [who, " dismissed ", caravanName(action.player, action.caravan)]
+    };
 }

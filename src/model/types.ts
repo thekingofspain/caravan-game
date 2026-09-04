@@ -82,11 +82,8 @@ export type PlayerId = typeof Human | typeof Ai;
 export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
 export const CARAVAN_COUNT = 3 as const;
 export type CaravanIndex = 0 | 1 | 2;
-export interface LogEntry {
-    id: number;
-    text: string;
-    detail?: string[];
-}
+export type LogSegment = string | Card;
+
 export interface GameState {
     players: [PlayerState, PlayerState];
     current: PlayerId;
@@ -123,6 +120,17 @@ interface DismissCaravanMove {
     caravan: CaravanIndex;
 }
 export type Move = PlayValueCardMove | PlayFaceCardMove | DiscardCardMove | DismissCaravanMove;
+export interface LogEntry {
+    id: number;
+    player?: PlayerId;
+    action?: Move["type"];
+    card?: Card;
+    caravan?: CaravanIndex;
+    target?: TargetRef;
+    text: string;
+    segments: LogSegment[];
+    detail?: LogSegment[][];
+}
 export class IllegalMoveError extends Error {
     constructor(message: string) {
         super(message);

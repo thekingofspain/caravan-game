@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
 import { Ai, Human, PlayerId, TargetRef, isValueCard, type Move } from "../model/types";
-import type { Caravan as CaravanModel, SelectionState } from "../model/types";
+import type { Caravan as CaravanModel, Card, SelectionState } from "../model/types";
+import { SUIT_SYMBOL } from "../model/types";
 import { getCaravanScores, type GameScores } from "../model/scoring";
 import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
@@ -132,7 +133,21 @@ export function Board({
             state.log.forEach((e) => {
                 lines.push(`- ${e.text.replace(/\{([^{}]+)\}/g, "$1")}`);
                 if (e.detail)
-                    e.detail.forEach((d) => lines.push(`  - ${d.replace(/\{([^{}]+)\}/g, "$1")}`));
+                    e.detail.forEach((d) => {
+                        const detailText = Array.isArray(d)
+                            ? (d as (string | Card)[])
+                                  .map((s) =>
+                                      typeof s === "string"
+                                          ? s
+                                          : s.jokerType != null
+                                            ? "Joker"
+                                            : `${s.rank}${SUIT_SYMBOL[s.suit]}`
+                                  )
+                                  .join("")
+                            : (d as string).replace(/\{([^{}]+)\}/g, "$1");
+
+                        lines.push(`  - ${detailText}`);
+                    });
             });
 
         const text = lines.join("\n");

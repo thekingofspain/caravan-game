@@ -71,6 +71,7 @@ function decorateWho(text: string, keyBase: string): ReactNode[] {
                     bestIdx = start;
                     bestLen = prefixLen + needle.length;
                     bestSide = owner.startsWith("AI") ? "ai" : "human";
+                    bestRef = name;
                     isCaravan = true;
                 }
             }
@@ -184,14 +185,44 @@ export function decorateLog(text: string, keyBase: string | number = 0): ReactNo
     return decorateWho(text, String(keyBase));
 }
 
+function renderSegments(segments: (string | Card)[], keyBase: string | number): ReactNode[] {
+    const nodes: ReactNode[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+
+        if (typeof seg === "string") {
+            nodes.push(...decorateLog(seg, `${String(keyBase)}-${String(i)}`));
+        } else {
+            const key = `${String(keyBase)}-card-${String(i)}`;
+
+            // Use a stable key per segment index; CardName will handle display
+
+            nodes.push(<CardName key={key} card={seg} />);
+        }
+    }
+
+    return nodes;
+}
+
 export const DecoratedLog = memo(function DecoratedLog({
     text,
+    segments,
     id
 }: {
-    text: string;
+    text?: string;
+    segments?: (string | Card)[];
     id: string | number;
 }) {
-    return <>{decorateLog(text, id)}</>;
+    if (segments !== undefined) {
+        return <>{renderSegments(segments, id)}</>;
+    }
+
+    if (text !== undefined) {
+        return <>{decorateLog(text, id)}</>;
+    }
+
+    return null;
 });
 
 DecoratedLog.displayName = "DecoratedLog";
