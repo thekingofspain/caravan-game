@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { testHooksEnabled } from "../app/testHooks";
+import { publishTestHooks } from "../app/testHooks";
 import { Move, Ai, GameState, Human } from "../model/types";
 import { applyMove, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
@@ -24,7 +24,7 @@ export interface GameStore {
     acknowledgeRemovals: () => void;
 }
 
-type ReducerMove =
+export type ReducerMove =
     Move | { type: "reset"; config: GameConfig } | { type: "__setState"; state: GameState };
 
 function reducer(state: GameState, action: ReducerMove): GameState {
@@ -44,21 +44,16 @@ export function useGame(initial: GameConfig): GameStore {
         transition: TransitionInfo | null;
     }>({ previous: null, lastMove: null, transition: null });
 
-    useEffect(() => {
-        if (!testHooksEnabled()) return;
-
-        if (typeof window === "undefined") return;
-
-        const w = window as unknown as {
-            __setCaravanState?: (s: GameState) => void;
-            __caravanDispatch?: (a: ReducerMove) => void;
-        };
-
-        w.__setCaravanState = (s: GameState) => {
-            dispatch({ type: "__setState", state: s });
-        };
-        w.__caravanDispatch = dispatch;
-    }, [dispatch]);
+    useEffect(
+        () =>
+            publishTestHooks({
+                __setCaravanState: (s: GameState) => {
+                    dispatch({ type: "__setState", state: s });
+                },
+                __caravanDispatch: dispatch
+            }),
+        [dispatch]
+    );
 
     const commitOrStage = useCallback((prev: GameState, move: Move, next: GameState) => {
         const info = getTransitionInfo(prev, move, next);
@@ -119,7 +114,17 @@ export function useGame(initial: GameConfig): GameStore {
 
     const legal = useMemo(() => legalMoves(state), [state]);
 
-    return { state, legal, act, reset, thinking, transition, previous, lastMove, acknowledgeRemovals };
+    return {
+        state,
+        legal,
+        act,
+        reset,
+        thinking,
+        transition,
+        previous,
+        lastMove,
+        acknowledgeRemovals
+    };
 }
 export function isHumanTurn(state: GameState): boolean {
     return state.phase === "play" && state.current === Human;

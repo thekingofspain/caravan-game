@@ -11,8 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "gen:cards": "node scripts/fetch-cards.mjs",
     "test:e2e": "for f in e2e/*.e2e.mjs; do node \"$f\" || exit 1; done"
   },
@@ -31,6 +31,7 @@
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "playwright": "^1.62.1",
+    "prettier": "^3.9.6",
     "svgo": "^4.1.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.69.0",

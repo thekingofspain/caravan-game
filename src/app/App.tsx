@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { GameConfig, useGame } from "../viewmodel/useGame";
-import { testHooksEnabled } from "./testHooks";
+import { publishTestHooks } from "./testHooks";
 import { Board } from "../view/Board";
 
 export default function App() {
@@ -18,25 +18,19 @@ function Game({ config }: { config: GameConfig }) {
     const store = useGame(config);
     const { reset, act } = store;
 
-    useEffect(() => {
-        if (!testHooksEnabled()) return;
-
-        if (typeof window !== "undefined") {
-            const w = window as unknown as {
-                __caravanStore: typeof store;
-                __resetWithSeed: (s: number) => void;
-                __act: (a: unknown) => void;
-            };
-
-            w.__caravanStore = store;
-            w.__resetWithSeed = (s: number) => {
-                reset({ seed: s });
-            };
-            w.__act = (a: unknown) => {
-                act(a as never);
-            };
-        }
-    }, [reset, act]);
+    useEffect(
+        () =>
+            publishTestHooks({
+                __caravanStore: store,
+                __resetWithSeed: (s: number) => {
+                    reset({ seed: s });
+                },
+                __act: (a) => {
+                    act(a);
+                }
+            }),
+        [reset, act]
+    );
 
     return (
         <div className="app">

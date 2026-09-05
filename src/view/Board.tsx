@@ -17,8 +17,7 @@ import { getDisplayedState, targetKey } from "../viewmodel/transition";
 const EMPTY_SET: ReadonlySet<number> = new Set();
 const NOOP = (): void => undefined;
 const DECK_PEEK_ENABLED =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).has("peekDeck");
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekDeck");
 const BRACE_RE = /\{([^{}]+)\}/g;
 
 function CaravanColumn({
@@ -149,7 +148,7 @@ export function Board({
                                             : `${s.rank}${SUIT_SYMBOL[s.suit]}`
                                   )
                                   .join("")
-                            : (BRACE_RE.lastIndex = 0, (d as string).replace(BRACE_RE, "$1"));
+                            : ((BRACE_RE.lastIndex = 0), (d as string).replace(BRACE_RE, "$1"));
 
                         lines.push(`  - ${detailText}`);
                     });
