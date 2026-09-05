@@ -30,7 +30,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil: "
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
-await page.waitForSelector(".play-row.human .track.human", { timeout: 5000 });
+await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
 await page.waitForTimeout(600);
 
 const hBoneyard = caravanOf([[makeCard(1, "5", "hearts"), makeCard(1, "Q", "clubs")]]);
@@ -61,7 +61,7 @@ await page.waitForTimeout(800);
 let afterAI = await page.evaluate(() => {
   const s = window.__caravanStore.state;
   const t = window.__caravanStore.transition;
-  const ackEl = document.querySelector(".confirm");
+  const ackEl = document.querySelector(".confirm.portal");
   return {
     phase: s.phase,
     current: s.current,
@@ -69,7 +69,7 @@ let afterAI = await page.evaluate(() => {
     transition: t,
     hasAck: !!ackEl,
     impactedLen: t ? t.impacted.length : 0,
-    jackRemoveCount: document.querySelectorAll(".confirm").length,
+    jackRemoveCount: document.querySelectorAll(".confirm.portal").length,
     hBoneyardRows: s.players[0].caravans[0].rows.length,
   };
 });
@@ -89,15 +89,14 @@ assert.ok(afterAI.logLast?.detail?.length >= 5, "Joker log entry must list remov
 }
 
 console.log("Clicking confirm X to acknowledge...");
-const ackEl = page.locator(".confirm").first();
+const ackEl = page.locator(".confirm.portal").first();
 assert.ok((await ackEl.count()) > 0, "ack X should be present");
 await ackEl.click({ force: true });
 await page.waitForTimeout(800);
 
 let afterAck = await page.evaluate(() => {
   const s = window.__caravanStore.state;
-  const t = window.__caravanStore.transition;
-  const ackBtn2 = document.querySelector(".confirm");
+  const ackBtn2 = document.querySelector(".confirm.portal");
   return {
     phase: s.phase,
     current: s.current,
@@ -107,7 +106,7 @@ let afterAck = await page.evaluate(() => {
     aDayglowRows: s.players[1].caravans[0].rows.length,
     aNewRenoRows: s.players[1].caravans[1].rows.length,
     logLen: s.log.length,
-    transition: t,
+    pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
     hasAck: !!ackBtn2,
   };
 });
@@ -118,7 +117,7 @@ assert.equal(afterAck.hShadyRows, 0, "Shady (Ace) should be empty after Joker re
 assert.equal(afterAck.aDayglowRows, 0, "Dayglow should be empty after Joker removal");
 assert.equal(afterAck.aNewRenoRows, 0, "New Reno should be empty after Joker removal");
 assert.equal(afterAck.hasAck, false, "ack should be gone after confirming");
-assert.equal(afterAck.transition, null, "transition should be null after ack");
+assert.equal(afterAck.pending, 0, "confirmation visuals cleared after ack (no pending rows)");
 assert.equal(afterAck.current, Human, "after ack, should be Human turn");
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

@@ -30,7 +30,7 @@ assert.ok(toast && /Copied/.test(toast), `toast should show Copied, got ${toast}
 // Check clipboard
 const clip = await page.evaluate(() => navigator.clipboard.readText());
 console.log("clipboard preview", clip.slice(0,300));
-assert.ok(clip.includes("Caravan Activity"), "clipboard should contain header");
+assert.ok(clip.startsWith("Seed:"), "clipboard should start with Seed header line");
 assert.ok(clip.includes("Seed: 42"), "clipboard should contain seed");
 assert.ok(clip.includes("Activity Log:"), "clipboard should contain log section");
 assert.ok(clip.includes("Human — hand:"), "clipboard should contain debug hand");

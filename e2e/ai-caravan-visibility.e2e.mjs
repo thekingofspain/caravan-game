@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 let id=5000;
 function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
 function caravanOf(ranks, suit="spades"){
-  return { cards: ranks.map(r=> ({card: makeCard(suit, r), kingCount:0, attachments:[]})), direction: ranks.length>=2 ? (ranks[1] > ranks[0] ? "asc" : "desc") : null, suit: ranks.length? suit: null };
+  const rows = ranks.map(r=> [makeCard(suit, r)]);
+  let direction = null;
+  if(rows.length>=2){ const a=rows[0][0].rank==="A"?1:Number(rows[0][0].rank); const b=rows[1][0].rank==="A"?1:Number(rows[1][0].rank); direction = b>a ? "asc" : "desc"; }
+  return { rows, direction, suit: rows.length? suit: null };
 }
-function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans, sales:0 }; }
+function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans }; }
 const Human=0, Ai=1;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport:{width:1280,height:900} });
@@ -16,7 +19,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 // Program deterministic state: AI caravans have cards, placeholder should be gone (user bug was placeholder gone but card not visible)
 const humanCaravans = [caravanOf(["9"],"hearts"), caravanOf(["3"],"clubs"), caravanOf(["7"],"spades")];
@@ -29,7 +32,7 @@ console.log("Programming deterministic AI caravans with cards (placeholder shoul
 await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(500);
 console.log("Checking AI caravans — placeholder should be gone, cards visible (per user report)...");
-const aiCaravansLoc = page.locator(".play-row.ai .track.ai");
+const aiCaravansLoc = page.locator(".caravans.ai .caravan");
 assert.equal(await aiCaravansLoc.count(), 3, "3 AI caravans");
 for(let ci=0; ci<3; ci++){
   const caravan = aiCaravansLoc.nth(ci);
@@ -56,9 +59,9 @@ await page.evaluate(()=>{
   if(idx!==-1) window.__act({ type:"playValueCard", player:0, caravan:0, handIndex: idx });
 });
 await page.waitForTimeout(600);
-let totalAi = await page.locator(".play-row.ai .track.ai .card").count();
-console.log(` total AI cards after human move: ${totalAi} (should still be 3)`);
-assert.equal(totalAi, 3, "AI cards should remain visible after human move");
+let totalAi = await page.locator(".caravans.ai .caravan .card").count();
+console.log(` total AI cards after human move: ${totalAi} (should still be >=3; AI may add one on its turn)`);
+assert.ok(totalAi >= 3, "AI cards should remain visible after human move");
 assert.equal(errors.length, 0, `console errors ${errors.join(" | ")}`);
 console.log("\n=== AI CARAVAN VISIBILITY TEST PASSED ===");
 await browser.close();

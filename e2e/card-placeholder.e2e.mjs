@@ -10,11 +10,11 @@ await page.waitForSelector(".board");
 
 // ── Test 1: Empty placeholder size consistency ─────────────────
 console.log("TEST 1: Empty placeholder size consistency");
-const ph = page.locator(".play-row.human .empty").first();
+const ph = page.locator(".caravans.human .empty").first();
 const phBox = await ph.boundingBox();
 console.log(`  size: ${phBox.width.toFixed(1)} x ${phBox.height.toFixed(1)}`);
 
-const stacks = page.locator(".play-row.human .caravan");
+const stacks = page.locator(".caravans.human .caravan");
 const stackCount = await stacks.count();
 for (let i = 0; i < stackCount; i++) {
   const ph2 = stacks.nth(i).locator(".empty");
@@ -25,41 +25,37 @@ for (let i = 0; i < stackCount; i++) {
 }
 console.log("  PASS");
 
-// ── Test 2: Placed card gap symmetry ───────────────────────────
-console.log("\nTEST 2: Placed card green padding symmetry");
+// ── Test 2: Placed card centering symmetry ─────────────────────
+// The row button IS the card now (no wrapper): it must sit centered in its track.
+console.log("\nTEST 2: Placed card centering symmetry");
 
 const selectableCard = page.locator(".hand.human .slot.selectable").first();
-await selectableCard.click({ force: true, position: { x: 3, y: 3 } });
-const target = page.locator(".play-row.human .empty").first();
+await selectableCard.dispatchEvent("click");
+const target = page.locator(".caravans.human .empty").first();
 await target.waitFor({ state: "attached", timeout: 3000 });
 await target.click({ force: true });
 await page.waitForTimeout(500);
 
-const wrap = page.locator(".play-row.human .caravan .card").first();
+const wrap = page.locator(".caravans.human .caravan button.card[data-index]").first();
 await wrap.waitFor({ state: "visible", timeout: 5000 });
-const card = wrap.locator(".card").first();
-await wrap.waitFor({ state: "visible", timeout: 3000 });
-const wb = await wrap.boundingBox();
-const cb = await card.boundingBox();
+const boxes = await wrap.evaluate((el) => {
+  const r = el.getBoundingClientRect();
+  const t = el.parentElement.getBoundingClientRect();
+  return { wx: r.x, ww: r.width, tx: t.x, tw: t.width, th: t.height };
+});
 
-const gapL = cb.x - wb.x;
-const gapT = cb.y - wb.y;
-const gapR = (wb.x + wb.width) - (cb.x + cb.width);
-const gapB = (wb.y + wb.height) - (cb.y + cb.height);
+const gapL = boxes.wx - boxes.tx;
+const gapR = boxes.tx + boxes.tw - (boxes.wx + boxes.ww);
 
-console.log(`  wrap: ${wb.width.toFixed(1)} x ${wb.height.toFixed(1)}`);
-console.log(`  card: ${cb.width.toFixed(1)} x ${cb.height.toFixed(1)}`);
-console.log(`  gaps: left=${gapL.toFixed(1)}  top=${gapT.toFixed(1)}  right=${gapR.toFixed(1)}  bottom=${gapB.toFixed(1)}`);
+console.log(`  track: ${boxes.tw.toFixed(1)} x ${boxes.th.toFixed(1)}`);
+console.log(`  card: ${boxes.ww.toFixed(1)}`);
+console.log(`  gaps: left=${gapL.toFixed(1)}  right=${gapR.toFixed(1)}`);
 
-const gaps = [gapL, gapT, gapR, gapB];
-const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-assert.ok(avg >= 2 && avg <= 4, `avg gap should be ~3px (border width), got ${avg.toFixed(1)}`);
-for (let i = 0; i < 4; i++) {
-  assert.ok(
-    Math.abs(gaps[i] - avg) < 0.5,
-    `gap[${i}] (${gaps[i].toFixed(1)}) deviates from avg (${avg.toFixed(1)})`
-  );
-}
+assert.ok(gapL >= 0 && gapR >= 0, `card should sit inside its track, got left=${gapL.toFixed(1)} right=${gapR.toFixed(1)}`);
+assert.ok(
+  Math.abs(gapL - gapR) < 1,
+  `card should be horizontally centered in its track (left=${gapL.toFixed(1)}, right=${gapR.toFixed(1)})`
+);
 console.log("  PASS");
 
 // ── Test 3: Corner rounding (image-level) ──────────────────────

@@ -32,7 +32,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil: "
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
-await page.waitForSelector(".play-row.human .track.human", { timeout: 5000 });
+await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
 await page.waitForTimeout(600);
 
 // Pre-final state: Human to play 6♥ on Shady to make 26 and win 2-1
@@ -185,6 +185,8 @@ assert.equal(after.pair1, Human, "Redding 26 vs 4 -> Human");
 assert.equal(after.pair2, Human, "Shady 26 vs 24 -> Human");
 assert.ok(after.logLast.some((t) => t.includes("You won")), "log should contain win message");
 
+await page.getByRole("button", { name: "Activity" }).click();
+await page.waitForSelector(".activity");
 let uiWinner = await page.evaluate(() => document.body.innerText.includes("You won") || document.body.innerText.includes("won"));
 console.log("UI shows win:", uiWinner);
 

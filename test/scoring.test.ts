@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
-import { pairWinner, gameWinner } from "../src/model/scoring";
+import { caravanSeller, gameWinner } from "../src/model/scoring";
 import { Caravan, GameState, PlayerState, Human, Ai } from "../src/model/types";
 import { CaravanRow } from "../src/model/types";
 
@@ -23,22 +23,22 @@ function mkGame(p0: Caravan[], p1: Caravan[]): GameState {
   return { players: [mkPlayer(p0), mkPlayer(p1)], current: Human, phase: "play", winner: null, log: [], started: false };
 }
 
-describe("pairWinner", () => {
+describe("caravanSeller", () => {
   it("no winner when both out of range (under)", () => {
-    expect(pairWinner(mkGame([caravanOf(["10"])], [caravanOf(["9"])]), 0)).toBe(null);
+    expect(caravanSeller(mkGame([caravanOf(["10"])], [caravanOf(["9"])]), 0)).toBe(null);
   });
   it("no winner when both out of range (over)", () => {
-    expect(pairWinner(mkGame([caravanOf(["10", ["10", 1]])], [caravanOf(["10", ["10", 1]])]), 0)).toBe(null);
+    expect(caravanSeller(mkGame([caravanOf(["10", ["10", 1]])], [caravanOf(["10", ["10", 1]])]), 0)).toBe(null);
   });
   it("higher in-range value wins", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(Human);
-    expect(pairWinner(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(Ai);
+    expect(caravanSeller(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "9"])]), 0)).toBe(Human);
+    expect(caravanSeller(mkGame([caravanOf(["10", "9"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(Ai);
   });
   it("tie in range is not resolved", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(null);
+    expect(caravanSeller(mkGame([caravanOf([["10", 1], "4"])], [caravanOf([["10", 1], "4"])]), 0)).toBe(null);
   });
   it("both in range picks the higher", () => {
-    expect(pairWinner(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(Human);
+    expect(caravanSeller(mkGame([caravanOf([["10", 1], "4"])], [caravanOf(["10", "8", "4"])]), 0)).toBe(Human);
   });
 });
 
@@ -48,7 +48,7 @@ describe("allSold / gameWinner", () => {
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9"]), caravanOf(["10"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "8"]), caravanOf(["9"])],
     );
-    expect([0, 1, 2].every((i) => pairWinner(g, i as 0 | 1 | 2) !== null)).toBe(false);
+    expect([0, 1, 2].every((i) => caravanSeller(g, i as 0 | 1 | 2) !== null)).toBe(false);
   });
 
   it("a player with 2+ sold caravans wins", () => {
@@ -56,7 +56,7 @@ describe("allSold / gameWinner", () => {
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "4"]), caravanOf(["10", "9", "7"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "9", "6"]), caravanOf(["10", "9", "2"])],
     );
-    expect([0, 1, 2].every((i) => pairWinner(g, i as 0 | 1 | 2) !== null)).toBe(true);
+    expect([0, 1, 2].every((i) => caravanSeller(g, i as 0 | 1 | 2) !== null)).toBe(true);
     expect(gameWinner(g)).toBe(Human);
   });
 

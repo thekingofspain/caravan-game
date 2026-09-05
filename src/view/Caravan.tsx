@@ -250,7 +250,7 @@ function CaravanRowButton({
                     <div
                         key={a.id}
                         ref={showConfirmation ? anchorRef : undefined}
-                        className={`${cardClassName("card", a)}${showConfirmation ? " confirmation-src remove-src" : ""}`}
+                        className={cardClassName("card", a)}
                         style={{ "--c": j + 1 } as CSSProperties}
                     >
                         {j === lastKingIndex && kingBadge && (
@@ -264,7 +264,7 @@ function CaravanRowButton({
                     anchorRef={anchorRef}
                     isHuman={isHuman}
                     onAcknowledge={onAcknowledge}
-                    label={`Acknowledge and remove card ${head.rank} of ${String(head.suit)}`}
+                    label={`Acknowledge removal of card ${head.rank} of ${String(head.suit)}`}
                     symbol={confirmationSymbol}
                 />
             )}

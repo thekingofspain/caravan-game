@@ -25,7 +25,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if(await btn.count()>0) await btn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 // Human has empty Boneyard, hand only face cards — should still have legal face moves

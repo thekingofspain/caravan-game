@@ -36,7 +36,7 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
@@ -53,11 +53,22 @@ for (let ci = 0; ci < 3; ci++) {
   await waitHumanTurn();
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card to fill a placeholder");
-  await slots[0].click({ force: true, position: { x: 3, y: 3 } });
+  await slots[0].dispatchEvent("click");
   await page.waitForTimeout(120);
   await placeOnCaravan(ci);
 }
 await waitHumanTurn();
+
+// Guarantee a face card to place: the dealt hands may hold none.
+await page.evaluate(() => {
+  const s = window.__caravanStore.state;
+  const hasFace = s.players[0].hand.some((c) => ["J", "Q", "K"].includes(c.rank) || c.rank === "Joker");
+  if (!hasFace) {
+    s.players[0].hand[0] = { id: `e2e-face-K-${Date.now()}`, rank: "K", suit: "hearts" };
+    window.__setCaravanState({ ...s });
+  }
+});
+await page.waitForTimeout(400);
 
 // ── Find a face card with at least one valid target ──
 console.log("TEST: face card placement and rendering");
@@ -69,7 +80,7 @@ for (let i = 0; i < handCount; i++) {
   const cls = await handSlots.nth(i).locator(".card").getAttribute("class");
   const t = faceType(cls);
   if (!t) continue;
-  await handSlots.nth(i).click({ force: true, position: { x: 3, y: 3 } });
+  await handSlots.nth(i).dispatchEvent("click");
   await page.waitForTimeout(100);
   const targets = await page.locator(".card.target").count();
   if (targets > 0) {
@@ -78,35 +89,38 @@ for (let i = 0; i < handCount; i++) {
     break;
   }
   // not this one; deselect
-  await page.locator(".slot.selected").first().click({ force: true, position: { x: 3, y: 3 } });
+  await page.locator(".slot.selected").first().dispatchEvent("click");
   await page.waitForTimeout(60);
 }
 assert.ok(chosen >= 0, "no face card in hand has a valid target to play");
 console.log(`  selected a ${chosenType} with valid targets`);
 
-const wrapsBefore = await page.locator(".card").count();
-const facesBefore = await page.locator(".card").count();
+// Value rows are `button.card[data-index]`; face attachments render as `.card` divs inside them.
+const rowsLoc = page.locator(".caravan button.card[data-index]");
+const attLoc = page.locator(".caravan button.card[data-index] .card");
+const rowsBefore = await rowsLoc.count();
+const attBefore = await attLoc.count();
 
 const target = page.locator(".card.target").first();
 await target.click({ force: true });
 await page.waitForTimeout(250);
 
-const wrapsAfter = await page.locator(".card").count();
-const facesAfter = await page.locator(".card").count();
+const rowsAfter = await rowsLoc.count();
+const attAfter = await attLoc.count();
 
 if (chosenType === "jack") {
-  // Jack jacks the targeted value card -> wraps unchanged, one more attachment, row becomes jacked with removable X
-  assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked, not removed) (${wrapsBefore} -> ${wrapsAfter})`);
-  assert.equal(facesAfter, facesBefore + 1, `Jack should render as 1 attachment (${facesBefore} -> ${facesAfter})`);
-  const jackedRows = await page.locator(".card.jacked").count();
-  assert.ok(jackedRows > 0, "jacked row should have jacked class");
-  const jackedFace = await page.locator(".card.jacked .card .jack").count();
-  assert.ok(jackedFace > 0, "jacked attachment should render as Jack face");
-  console.log("  PASS: Jack jacked the targeted card (removable, dimmed, with X)");
+  // Jack removes the targeted row immediately (state + visuals; own-actor Jack needs no ack).
+  assert.equal(rowsAfter, rowsBefore - 1, `Jack should remove the targeted row (${rowsBefore} -> ${rowsAfter})`);
+  assert.equal(attAfter, attBefore, `Jack attaches nothing (${attBefore} -> ${attAfter})`);
+  console.log("  PASS: Jack removed the targeted row");
+} else if (chosenType === "joker") {
+  // Joker removes every row matching the target (at least the target itself).
+  assert.ok(rowsAfter < rowsBefore, `Joker should remove at least the targeted row (${rowsBefore} -> ${rowsAfter})`);
+  console.log("  PASS: Joker removed the matching rows");
 } else {
-  // Queen / King / Joker attach -> one more rendered face card, card count unchanged
-  assert.equal(wrapsAfter, wrapsBefore, `face card should not change value-card count (${wrapsBefore} -> ${wrapsAfter})`);
-  assert.equal(facesAfter, facesBefore + 1, `face card should render as 1 attachment (${facesBefore} -> ${facesAfter})`);
+  // Queen / King attach -> one more rendered attachment, row count unchanged
+  assert.equal(rowsAfter, rowsBefore, `face card should not change row count (${rowsBefore} -> ${rowsAfter})`);
+  assert.equal(attAfter, attBefore + 1, `face card should render as 1 attachment (${attBefore} -> ${attAfter})`);
   console.log(`  PASS: ${chosenType} rendered as an attachment on the caravan`);
 }
 

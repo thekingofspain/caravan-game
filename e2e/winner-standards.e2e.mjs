@@ -45,7 +45,7 @@ await page.waitForTimeout(500);
 const info = await page.evaluate(() => {
   const gameover = document.querySelector(".gameover");
   const scores = document.querySelector(".scores");
-  const lineWin = document.querySelector(".log .line.win");
+  const lineWin = document.querySelector(".log .line.win") || document.querySelector(".log .win-details")?.closest(".line");
   const winTitle = document.querySelector(".win-title");
   const humanRow = document.querySelector(".log .row.human");
   const aiRow = document.querySelector(".log .row.ai");
@@ -158,10 +158,15 @@ if (info.hasInlineStyles) failures.push(`winner DOM has inline styles (scoreInli
 if (info.hasGameover && info.hasScores) failures.push(`unneeded winner wrappers: both .gameover and .scores exist (one is redundant); remove one to achieve same layout`);
 if (!info.playerIndented) failures.push(`player not indented on left: indent ${info.playerIndentPx}px (expected >2px)`);
 if (info.gaps) {
-  const expected = [8,4,8,4,8,8];
-  for(let i=0;i<expected.length;i++){
-    if(info.gaps[i]!==null && Math.abs(info.gaps[i]-expected[i])>1) failures.push(`gap ${i} expected ${expected[i]}px got ${info.gaps[i]}px (digit->bar 8, bar->digit 4)`);
+  // Current CSS: .log .caravans uses uniform `gap: 0.5ch` between scores/seps,
+  // while .log .row and .log .wins use `gap: var(--sp-2)` (8px). So g1-g4 must
+  // be mutually equal (uniform caravan gap) and g5/g6 must be 8px.
+  const [g1, g2, g3, g4, g5, g6] = info.gaps;
+  for (const [i, g] of [g1, g2, g3, g4].entries()) {
+    if (g !== null && Math.abs(g - g1) > 1) failures.push(`gap ${i} expected uniform caravan gap ~${g1}px, got ${g}px`);
   }
+  if (g5 !== null && Math.abs(g5 - 8) > 1) failures.push(`gap 4 (lastScore->wins) expected 8px, got ${g5}px`);
+  if (g6 !== null && Math.abs(g6 - 8) > 1) failures.push(`gap 5 (x->count) expected 8px, got ${g6}px`);
 }
 if (!info.winsHasSplit) failures.push(`wins not split into x and count (needs same gap as digit-bar); current wins HTML: ${info.winsHTML}`);
 if (!info.isBgRemoved) failures.push(`background not removed: bg ${info.bg}`);

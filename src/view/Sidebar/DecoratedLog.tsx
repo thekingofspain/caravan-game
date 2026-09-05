@@ -159,7 +159,14 @@ function decorateCardTokens(text: string, keyBase: string | number): ReactNode[]
 
         const close = text.indexOf("}", open + 1);
 
-        if (close === -1) break;
+        // Unclosed "{": not a card token. Render the tail literally via
+        // decorateWho (recursion-free) instead of dropping it or recursing forever.
+
+        if (close === -1) {
+            nodes.push(...decorateWho(text.slice(last), String(keyBase)));
+            last = text.length;
+            break;
+        }
 
         if (open > last)
             nodes.push(...decorateLog(text.slice(last, open), `${String(keyBase)}-${String(k++)}`));

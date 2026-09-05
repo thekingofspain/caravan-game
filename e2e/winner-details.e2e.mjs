@@ -30,17 +30,17 @@ const state = {
   players: [mkPlayer([hBoneyard,hRedding,hShady],[],[]), mkPlayer([aDayglow,aNewReno,aHub],[],[])],
   current: 1, phase:"over", winner:1,
   log: [
-    {id:1, text:"You played {9♦} to Boneyard", detail:[]},
-    {id:2, text:"AI played {Red Joker} on your Boneyard {5♣}", detail: ["your caravan Boneyard: {5♣}, {5♦}", "AI's caravan New Reno: {5♠}", "your caravan Shady Sands: {5♥}", "AI's caravan The Hub: {5♣}"]},
-    {id:3, text:"AI wins the caravan.", detail:[]}
+    {id:1, segments:["You played {9♦} to Boneyard"], text:"You played {9♦} to Boneyard", detail:[]},
+    {id:2, segments:["AI played {Red Joker} on your Boneyard {5♣}"], text:"AI played {Red Joker} on your Boneyard {5♣}", detail: [["your caravan Boneyard: {5♣}, {5♦}"], ["AI's caravan New Reno: {5♠}"], ["your caravan Shady Sands: {5♥}"], ["AI's caravan The Hub: {5♣}"]]},
+    {id:3, segments:["AI wins the caravan."], text:"AI wins the caravan.", detail:[]}
   ],
   started:true
 };
 
 await page.evaluate(s=> window.__setCaravanState(s), state);
 await page.waitForTimeout(800);
-await page.locator("button",{hasText:"Activity"}).click();
-await page.waitForSelector(".activity[role='dialog']",{timeout:3000});
+await page.getByRole("button", { name: "Activity" }).click();
+await page.waitForSelector(".activity", {timeout:3000});
 await page.waitForTimeout(500);
 
 const info = await page.evaluate(()=>{
@@ -104,7 +104,7 @@ const info = await page.evaluate(()=>{
   }
 
   // Check removed cards order: detail entries order
-  const detailEntries = [...document.querySelectorAll(".log .bullets li")].map(li=> li.textContent.trim());
+  const detailEntries = [...document.querySelectorAll(".log .detail")].map(li=> li.textContent.trim());
   // Also check the programmed state's detail order is ai l->r then human l->r?
   // For this test, we set detail as mixed order, the UI should display sorted? But we are testing the detail as provided, not sorted logic. Instead we test gameLog removalDetail sorting via direct call if available
   let removalOrder = null;
@@ -157,7 +157,7 @@ if(info.winsMisalignedV!==null && Math.abs(info.winsMisalignedV) > 3) failures.p
 if(info.playerIndent!==null && info.playerIndent < 10) failures.push(`score player not indented enough: indent ${info.playerIndent}px (expected more, e.g., >=10)`);
 if(info.bulletListStyle && info.bulletListStyle!=="none") failures.push(`card removal entry still has bullet: listStyle ${info.bulletListStyle} (expected none)`);
 if(info.bulletVsPlayedDiff!==null && info.bulletVsPlayedDiff > 10) failures.push(`bullet entry start ${info.bulletOffset} not approx where "played" starts ${info.playedOffset} diff ${info.bulletVsPlayedDiff}px (should be ~0)`);
-if(info.sepNextGap!==null && info.digitBarGap!==null && Math.abs(info.sepNextGap - info.digitBarGap/2) > 1) failures.push(`gap sep->nextScore ${info.sepNextGap}px not half of digit->bar ${info.digitBarGap}px (expected ${info.digitBarGap/2})`);
+if(info.sepNextGap!==null && info.digitBarGap!==null && Math.abs(info.sepNextGap - info.digitBarGap) > 1) failures.push(`gap sep->nextScore ${info.sepNextGap}px should equal digit->bar ${info.digitBarGap}px (uniform .caravans 0.5ch gap)`);
 if(info.hasGameover) failures.push(`unneeded .gameover wrapper still exists`);
 if(!isSortedCorrect) failures.push(`removed cards order should be ai l->r then human l->r, got ${JSON.stringify(sortedKeys)} expected ${JSON.stringify(expectedSorted)}`);
 if(info.caravansGap && info.caravansGap!=="8px" && info.caravansGap!=="0.5rem") {} // placeholder

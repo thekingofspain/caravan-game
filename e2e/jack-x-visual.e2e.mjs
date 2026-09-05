@@ -20,7 +20,7 @@ await page.goto(BASE, { waitUntil:"networkidle" });
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if (await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 const hBoneyard = caravanOf([[makeCard(1,"7","clubs")]], null, "clubs");
@@ -57,12 +57,12 @@ const xClosePath = "/tmp/jack-visual-x.png";
 await page.screenshot({ path: fullPath, fullPage: true });
 console.log(`📸 Full screenshot saved to ${fullPath} (${fs.existsSync(fullPath) ? fs.statSync(fullPath).size : 0} bytes)`);
 try {
-  const shadyLoc = page.locator(".play-row.human .track.human").nth(2);
+  const shadyLoc = page.locator(".caravans.human .caravan").nth(2);
   await shadyLoc.screenshot({ path: caravanPath });
   console.log(`📸 Shady caravan screenshot saved to ${caravanPath} (${fs.statSync(caravanPath).size} bytes)`);
 } catch (e) { console.log("caravan screenshot failed", e.message); }
 try {
-  const xLoc = page.locator(".confirm").first();
+  const xLoc = page.locator(".confirm.portal").first();
   if (await xLoc.count() > 0) {
     await xLoc.screenshot({ path: xClosePath });
     console.log(`📸 X close-up saved to ${xClosePath}`);
@@ -73,20 +73,18 @@ try {
 
 // --- Visual + structural assertions ---
 let info = await page.evaluate(()=>{
-  const xEl = document.querySelector(".confirm");
+  const xEl = document.querySelector(".confirm.portal");
   const xRect = xEl ? xEl.getBoundingClientRect() : null;
-  const pendingRow = document.querySelector('.play-row.human .track.human .card[data-index="4"]');
-  const nextRow = document.querySelector('.play-row.human .track.human .card[data-index="5"]');
+  const pendingRow = document.querySelector('.caravans.human .caravan .card[data-index="4"]');
+  const nextRow = document.querySelector('.caravans.human .caravan .card[data-index="5"]');
   const pendingHasClass = pendingRow ? pendingRow.classList.contains("pending") : false;
   const pendingZ = pendingRow ? getComputedStyle(pendingRow).zIndex : null;
   const nextZ = nextRow ? getComputedStyle(nextRow).zIndex : null;
   const xZ = xEl ? getComputedStyle(xEl).zIndex : null;
-  const xRight = xEl ? getComputedStyle(xEl).right : null;
-  const xTop = xEl ? getComputedStyle(xEl).top : null;
-  const xHasRowClass = xEl ? xEl.classList.contains("row") : false;
-  const caravanEl = document.querySelector('.play-row.human .track.human:nth-child(3)') || document.querySelectorAll('.play-row.human .track.human')[2];
-  // Alternative: get Shady caravan width
-  const shadyCaravan = document.querySelectorAll('.play-row.human .track.human')[2];
+  const xHasPortalClass = xEl ? xEl.classList.contains("portal") : false;
+  const xAria = xEl ? xEl.getAttribute("aria-label") : null;
+  // Get Shady caravan width
+  const shadyCaravan = document.querySelectorAll('.caravans.human .caravan')[2];
   const caravanWidth = shadyCaravan ? getComputedStyle(shadyCaravan).width : null;
   const caravanWVar = shadyCaravan ? getComputedStyle(document.documentElement).getPropertyValue('--caravan-w') : null;
   let isOnTop = false;
@@ -98,22 +96,20 @@ let info = await page.evaluate(()=>{
     topElClass = topEl ? topEl.className : null;
     isOnTop = topEl ? (topEl.classList.contains("confirm") || !!topEl.closest(".confirm")) : false;
   }
-  // Check if X is fully inside viewport and not clipped (entire circle visible)
+  // Portal X lives in document.body (position:fixed) — check it is fully inside the viewport, not clipped
   let fullyVisible = false;
   if (xRect) {
-    const caravanRect = shadyCaravan ? shadyCaravan.getBoundingClientRect() : null;
-    if (caravanRect) {
-      fullyVisible = xRect.left >= caravanRect.left && xRect.right <= caravanRect.right && xRect.top >= caravanRect.top && xRect.bottom <= caravanRect.bottom;
-    }
+    fullyVisible = xRect.width > 0 && xRect.height > 0 &&
+      xRect.left >= 0 && xRect.top >= 0 &&
+      xRect.right <= window.innerWidth && xRect.bottom <= window.innerHeight;
   }
   return {
     pendingHasClass,
     pendingZ,
     nextZ,
     xZ,
-    xRight,
-    xTop,
-    xHasRowClass,
+    xHasPortalClass,
+    xAria,
     isOnTop,
     topElClass,
     xRect: xRect ? { left:Math.round(xRect.left), top:Math.round(xRect.top), w:Math.round(xRect.width), h:Math.round(xRect.height)} : null,
@@ -127,15 +123,15 @@ console.log("info", JSON.stringify(info,null,2));
 console.log("\n--- Assertions (should FAIL before fix, PASS after) ---");
 let failures = [];
 if (!info.pendingHasClass) failures.push(`pending row missing pending class (got ${info.pendingRowClass})`);
-if (info.pendingZ !== "50") failures.push(`pending row zIndex should be 50, got ${info.pendingZ}`);
-if (!info.xHasRowClass) failures.push(`confirm should have row class (fully inside, over king)`);
-if (info.xZ !== "20") failures.push(`confirm zIndex should be 20 (over king), got ${info.xZ}`);
+if (info.pendingZ !== "5") failures.push(`pending row zIndex should be 5 (stack order index+1), got ${info.pendingZ}`);
+if (!info.xHasPortalClass) failures.push(`confirm X should have portal class (body portal, over king)`);
+if (info.xZ !== "9999") failures.push(`confirm zIndex should be 9999 (over king), got ${info.xZ}`);
+if (!info.xAria || !info.xAria.startsWith("Acknowledge removal of")) failures.push(`confirm X aria-label should start "Acknowledge removal of", got ${info.xAria}`);
 if (!info.isOnTop) failures.push(`confirm X not on top (elementFromPoint hits ${info.topElClass}, not X) — X occluded`);
-// Check that X is fully inside caravan (entire circle visible, not half clipped)
-if (!info.fullyVisible) failures.push(`confirm X not fully inside caravan bounds (half clipped) — caravan width ${info.caravanWidth}, X rect ${JSON.stringify(info.xRect)}`);
+// Check that X is fully inside the viewport (entire circle visible, not half clipped)
+if (!info.fullyVisible) failures.push(`confirm X not fully visible in viewport (half clipped) — caravan width ${info.caravanWidth}, X rect ${JSON.stringify(info.xRect)}`);
 // Check caravan width is --caravan-w (129) not --card-w (84)
 if (info.caravanWidth && parseInt(info.caravanWidth) < 100) failures.push(`caravan width should be --caravan-w (~129px) not --card-w (84px), got ${info.caravanWidth}`);
-
 if (failures.length > 0) {
   console.log("❌ FAILING TEST — bug reproduced:");
   failures.forEach(f=> console.log("  - "+f));

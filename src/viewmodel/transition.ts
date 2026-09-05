@@ -87,12 +87,12 @@ export function getDisplayedState(
     return cloned;
 }
 
-export function sortAttachments(cards: Card[]): Card[] {
-    const order: Record<string, number> = { K: 0, J: 1, Joker: 2, Q: 3 };
+const ATTACHMENT_ORDER: Record<string, number> = { K: 0, J: 1, Joker: 2, Q: 3 };
 
+export function sortAttachments(cards: Card[]): Card[] {
     return [...cards].sort((a, b) => {
-        const oa = order[a.rank] ?? 99;
-        const ob = order[b.rank] ?? 99;
+        const oa = ATTACHMENT_ORDER[a.rank] ?? 99;
+        const ob = ATTACHMENT_ORDER[b.rank] ?? 99;
 
         return oa - ob;
     });

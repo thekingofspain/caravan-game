@@ -8,7 +8,7 @@ interface PlayerHandProps {
     playerId: PlayerId;
     player: PlayerState;
     selectedHandIndex: number | null;
-    selectableIndices: Set<number>;
+    selectableIndices: ReadonlySet<number>;
     onCardClick: (handIndex: number) => void;
 }
 

@@ -21,7 +21,7 @@ await page.goto(BASE, {waitUntil:"networkidle"});
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 const hBoneyard = caravanOf([[makeCard(1,"2","diamonds")]], null, "diamonds");
@@ -50,7 +50,7 @@ await page.evaluate(()=> window.__act({type:"playValueCard", player:0, caravan:2
 await page.waitForTimeout(600);
 
 const info = await page.evaluate(()=>{
-  const tracks = document.querySelectorAll(".play-row.human .track.human");
+  const tracks = document.querySelectorAll(".caravans.human .caravan .track");
   const shadyTrack = tracks[2];
   const cards = [...shadyTrack.querySelectorAll(":scope > .card")];
   const rects = cards.map(c=>{
@@ -71,7 +71,7 @@ console.log(`nineY=${nineY} twoY=${twoY}`);
 // Human placeholder at top toward title; cards stack from placeholder downward, so 9 at top, 2 below, but 9 still under in z
 if(!(nineY < twoY)) failures.push(`9 should be at placeholder top and above 2 in Y (9 y ${nineY} should be < 2 y ${twoY}) — placement should be where placeholder now is`);
 const hasJack = await page.evaluate(()=>{
-  const card9 = document.querySelectorAll(".play-row.human .track.human")[2].querySelector("[data-index='0']");
+  const card9 = document.querySelectorAll(".caravans.human .caravan .track")[2].querySelector("[data-index='0']");
   return card9 ? card9.innerHTML.includes("jack") : false;
 });
 if(!hasJack) failures.push("9 should have Jack attachment inside");

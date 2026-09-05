@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { testHooksEnabled } from "../app/testHooks";
 import { Move, Ai, GameState, Human } from "../model/types";
 import { applyMove, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
@@ -20,7 +21,7 @@ export interface GameStore {
     transition: TransitionInfo | null;
     previous: GameState | null;
     lastMove: Move | null;
-    acknowledge: () => void;
+    acknowledgeRemovals: () => void;
 }
 
 type ReducerMove =
@@ -44,6 +45,8 @@ export function useGame(initial: GameConfig): GameStore {
     }>({ previous: null, lastMove: null, transition: null });
 
     useEffect(() => {
+        if (!testHooksEnabled()) return;
+
         if (typeof window === "undefined") return;
 
         const w = window as unknown as {
@@ -63,6 +66,7 @@ export function useGame(initial: GameConfig): GameStore {
         // Always commit so the move (including its log entry) is visible immediately,
         // even while a confirmation X is still displayed. The pre-move board stays
         // available via `previous` for the confirmation visuals until acknowledged.
+
         setUi({
             previous: prev,
             lastMove: move,
@@ -78,10 +82,8 @@ export function useGame(initial: GameConfig): GameStore {
 
         if (transition?.needsConfirmation && transition.confirmer === Human) return;
 
-        const thinkingTimer = window.setTimeout(() => {
-            setThinking(true);
-        }, 0);
         const t = window.setTimeout(() => {
+            setThinking(true);
             const a = determineBestMove(state, Ai);
             const next = applyMove(state, a);
 
@@ -90,7 +92,6 @@ export function useGame(initial: GameConfig): GameStore {
         }, 650);
 
         return () => {
-            window.clearTimeout(thinkingTimer);
             window.clearTimeout(t);
         };
     }, [state, transition, commitOrStage]);
@@ -109,15 +110,16 @@ export function useGame(initial: GameConfig): GameStore {
         setUi({ previous: null, lastMove: null, transition: null });
         dispatch({ type: "reset", config: c });
     }, []);
-    const acknowledge = useCallback(() => {
+    const acknowledgeRemovals = useCallback(() => {
         // The move was already committed when played; acknowledging only clears
         // the confirmation visuals.
+
         setUi((prev) => ({ ...prev, transition: null, previous: null, lastMove: null }));
     }, []);
 
     const legal = useMemo(() => legalMoves(state), [state]);
 
-    return { state, legal, act, reset, thinking, transition, previous, lastMove, acknowledge };
+    return { state, legal, act, reset, thinking, transition, previous, lastMove, acknowledgeRemovals };
 }
 export function isHumanTurn(state: GameState): boolean {
     return state.phase === "play" && state.current === Human;

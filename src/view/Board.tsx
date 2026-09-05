@@ -14,6 +14,13 @@ import { Sidebar } from "./Sidebar";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
 
+const EMPTY_SET: ReadonlySet<number> = new Set();
+const NOOP = (): void => undefined;
+const DECK_PEEK_ENABLED =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("peekDeck");
+const BRACE_RE = /\{([^{}]+)\}/g;
+
 function CaravanColumn({
     playerId,
     caravans,
@@ -86,15 +93,12 @@ export function Board({
     store: GameStore;
     confirm?: (msg: string) => boolean;
 }) {
-    const { state, legal, act, transition, acknowledge } = store;
+    const { state, legal, act, transition, acknowledgeRemovals } = store;
     const [sel, setSel] = useState<number | null>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
     const [activityOpen, setActivityOpen] = useState(false);
     const [viewDeck, setViewDeck] = useState<PlayerId | null>(null);
     const [toast, setToast] = useState<string | null>(null);
-    const deckPeekEnabled =
-        typeof window !== "undefined" &&
-        new URLSearchParams(window.location.search).has("peekDeck");
     const scores = useMemo(() => getCaravanScores(state), [state]);
     const human = isHumanTurn(state);
     const blocked = !!transition?.needsConfirmation && transition.confirmer === Human;
@@ -131,7 +135,8 @@ export function Board({
         if (state.log.length === 0) lines.push("(empty)");
         else
             state.log.forEach((e) => {
-                lines.push(`- ${e.text.replace(/\{([^{}]+)\}/g, "$1")}`);
+                BRACE_RE.lastIndex = 0;
+                lines.push(`- ${e.text.replace(BRACE_RE, "$1")}`);
                 if (e.detail)
                     e.detail.forEach((d) => {
                         const detailText = Array.isArray(d)
@@ -144,7 +149,7 @@ export function Board({
                                             : `${s.rank}${SUIT_SYMBOL[s.suit]}`
                                   )
                                   .join("")
-                            : (d as string).replace(/\{([^{}]+)\}/g, "$1");
+                            : (BRACE_RE.lastIndex = 0, (d as string).replace(BRACE_RE, "$1"));
 
                         lines.push(`  - ${detailText}`);
                     });
@@ -211,7 +216,7 @@ export function Board({
 
     const humanPlayer = displayedState.players[Human];
     const aiPlayer = displayedState.players[Ai];
-    const canDisbandAny =
+    const canDismissAny =
         human && !blocked && sel === null && humanPlayer.caravans.every((c) => c.rows.length > 0);
 
     const selectableIndices = useMemo(() => {
@@ -256,10 +261,10 @@ export function Board({
         setPendingRemove(new Set(transition.impacted.map(targetKey)));
         window.setTimeout(() => {
             setPendingRemove(new Set());
-            acknowledge();
+            acknowledgeRemovals();
             setSel(null);
         }, 320);
-    }, [transition, acknowledge]);
+    }, [transition, acknowledgeRemovals]);
 
     const onCardClick = useCallback(
         (target: TargetRef) => {
@@ -338,20 +343,23 @@ export function Board({
 
     const onDeckClick = useCallback(() => {
         if (sel !== null && canDiscard) onDiscard();
-        else if (deckPeekEnabled) setViewDeck(Human);
-    }, [sel, canDiscard, onDiscard, deckPeekEnabled]);
+        else if (DECK_PEEK_ENABLED) setViewDeck(Human);
+    }, [sel, canDiscard, onDiscard]);
+    const onViewAiDeck = useCallback(() => {
+        setViewDeck(Ai);
+    }, []);
 
-    const onDisband = useCallback(
+    const onDismissCaravan = useCallback(
         (ci: number) => {
-            if (!canDisbandAny) return;
+            if (!canDismissAny) return;
 
-            if (!confirm(`Disband ${caravanName(Human, ci)}? All its cards will be discarded.`))
+            if (!confirm(`Dismiss ${caravanName(Human, ci)}? All its cards will be discarded.`))
                 return;
 
             tryAct({ type: "dismissCaravan", player: Human, caravan: ci as 0 | 1 | 2 });
             setSel(null);
         },
-        [canDisbandAny, tryAct, confirm]
+        [canDismissAny, tryAct, confirm]
     );
 
     const aiSelection = useMemo(
@@ -382,25 +390,11 @@ export function Board({
 
     return (
         <div className="board">
-            {toast && (
-                <div
-                    role="alert"
-                    className="toast"
-                    style={{
-                        position: "absolute",
-                        top: "1rem",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        background: "#c0392b",
-                        color: "#fff",
-                        padding: "0.5rem 1rem",
-                        borderRadius: "0.5rem",
-                        zIndex: 100
-                    }}
-                >
+            {toast !== null ? (
+                <div role="alert" className="toast">
                     {toast}
                 </div>
-            )}
+            ) : null}
             <div className="field">
                 <div className="columns">
                     <div className="column caravans">
@@ -411,7 +405,7 @@ export function Board({
                                 selection={aiSelection}
                                 scores={scores}
                                 onCardClick={onCardClick}
-                                onPlaceholderClick={() => undefined}
+                                onPlaceholderClick={NOOP}
                                 onAcknowledge={onAcknowledge}
                             />
                         </div>
@@ -425,16 +419,16 @@ export function Board({
                                 onPlaceholderClick={onPlaceholderClick}
                                 onAcknowledge={onAcknowledge}
                                 childrenFor={(ci) =>
-                                    canDisbandAny ? (
+                                    canDismissAny ? (
                                         <button
                                             type="button"
-                                            className="disband"
+                                            className="dismiss"
                                             onClick={() => {
-                                                onDisband(ci);
+                                                onDismissCaravan(ci);
                                             }}
-                                            aria-label={`Disband your ${caravanName(Human, ci)}`}
+                                            aria-label={`Dismiss your ${caravanName(Human, ci)}`}
                                         >
-                                            Disband
+                                            Dismiss
                                         </button>
                                     ) : null
                                 }
@@ -447,19 +441,13 @@ export function Board({
                             <button
                                 type="button"
                                 className={`deck ai ${aiPlayer.deck.length === 0 ? "empty" : ""}`}
-                                onClick={
-                                    deckPeekEnabled
-                                        ? () => {
-                                              setViewDeck(Ai);
-                                          }
-                                        : undefined
-                                }
+                                onClick={DECK_PEEK_ENABLED ? onViewAiDeck : undefined}
                                 aria-label={
-                                    deckPeekEnabled
+                                    DECK_PEEK_ENABLED
                                         ? `AI deck, ${String(aiPlayer.deck.length)} cards remaining. View the deck.`
                                         : `AI deck, ${String(aiPlayer.deck.length)} cards remaining.`
                                 }
-                                aria-disabled={deckPeekEnabled ? undefined : true}
+                                aria-disabled={DECK_PEEK_ENABLED ? undefined : true}
                             >
                                 {aiPlayer.deck.length === 0 ? (
                                     <div className="empty" aria-hidden="true" />
@@ -472,8 +460,8 @@ export function Board({
                                 playerId={Ai}
                                 player={aiPlayer}
                                 selectedHandIndex={null}
-                                selectableIndices={new Set()}
-                                onCardClick={() => undefined}
+                                selectableIndices={EMPTY_SET}
+                                onCardClick={NOOP}
                             />
                         </div>
 
@@ -506,7 +494,7 @@ export function Board({
                                 className={`deck ${humanPlayer.deck.length === 0 ? "empty" : ""}`}
                                 onClick={onDeckClick}
                                 aria-label={
-                                    deckPeekEnabled
+                                    DECK_PEEK_ENABLED
                                         ? `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`
                                         : `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one.`
                                 }
@@ -523,7 +511,7 @@ export function Board({
                 </div>
             </div>
 
-            {activityOpen && (
+            {activityOpen ? (
                 <div className="activity" role="dialog" aria-label="Activity log">
                     <header>
                         <span>Activity</span>
@@ -552,9 +540,9 @@ export function Board({
                     </button>
                     <Sidebar log={state.log} state={state} scores={scores} />
                 </div>
-            )}
+            ) : null}
 
-            {deckPeekEnabled && viewDeck !== null && (
+            {DECK_PEEK_ENABLED && viewDeck !== null ? (
                 <div
                     className="overlay"
                     role="dialog"
@@ -582,7 +570,7 @@ export function Board({
                         ))}
                     </div>
                 </div>
-            )}
+            ) : null}
         </div>
     );
 }

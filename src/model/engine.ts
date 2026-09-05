@@ -122,22 +122,32 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
     return refs;
 }
 function removeTargets(state: GameState, refs: TargetRef[]): void {
-    const byCar = new Map<string, number[]>();
+    const byCar = new Map<PlayerId, Map<CaravanIndex, number[]>>();
 
     for (const r of refs) {
-        const key = `${String(r.player)}-${String(r.caravan)}`;
+        let byCi = byCar.get(r.player);
 
-        if (!byCar.has(key)) byCar.set(key, []);
+        if (!byCi) {
+            byCi = new Map();
+            byCar.set(r.player, byCi);
+        }
 
-        byCar.get(key)?.push(r.cardIndex);
+        let indices = byCi.get(r.caravan);
+
+        if (!indices) {
+            indices = [];
+            byCi.set(r.caravan, indices);
+        }
+
+        indices.push(r.cardIndex);
     }
-    for (const [key, indices] of byCar) {
-        const [p, ci] = key.split("-").map(Number) as [PlayerId, CaravanIndex];
-        const car = state.players[p].caravans[ci];
+    for (const [p, byCi] of byCar)
+        for (const [ci, indices] of byCi) {
+            const car = state.players[p].caravans[ci];
 
-        for (const idx of indices.sort((a, b) => b - a)) car.rows.splice(idx, 1);
-        normalizeCaravan(car);
-    }
+            for (const idx of indices.sort((a, b) => b - a)) car.rows.splice(idx, 1);
+            normalizeCaravan(car);
+        }
 }
 
 function handlePlayValueCard(
@@ -159,14 +169,9 @@ function handlePlayValueCard(
     draw(player);
 }
 
-function attachJack(next: GameState, card: Card, target: TargetRef): LogSegment[][] {
+function attachJack(next: GameState, target: TargetRef): LogSegment[][] {
     const detail = removalDetail(next, [target]);
-    const car = next.players[target.player].caravans[target.caravan];
-    const tgt = car.rows.at(target.cardIndex);
 
-    if (tgt === undefined) return detail;
-
-    tgt.push(card);
     removeTargets(next, [target]);
 
     return detail;
@@ -234,7 +239,7 @@ function handlePlayFaceCard(
     player.hand.splice(action.handIndex, 1);
     let jokerDetail: Nullable<LogSegment[][]> = null;
 
-    if (card.rank === "J") jokerDetail = attachJack(next, card, action.target);
+    if (card.rank === "J") jokerDetail = attachJack(next, action.target);
     else if (card.rank === "Q") attachQueen(next, card, action.target);
     else if (card.rank === "K") attachKing(next, card, action.target);
     else if (isJokerCard(card)) jokerDetail = attachJoker(next, card, action.target);
@@ -264,7 +269,7 @@ function handleDismissCaravan(
     const player = next.players[action.player];
 
     if (player.caravans.some((c) => c.rows.length === 0))
-        throw new IllegalMoveError("dismissCaravan: cannot disband before all caravans started");
+        throw new IllegalMoveError("dismissCaravan: cannot dismiss before all caravans started");
 
     player.caravans[action.caravan] = emptyCaravan();
 }

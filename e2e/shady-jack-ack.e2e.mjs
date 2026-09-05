@@ -4,6 +4,7 @@ let id=3000;
 function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
 const Human=0, Ai=1;
 function caravanOf(cards){
+  // cards: array of {card, kingCount, attachments} → rows: [value, ...attachments]
   let direction=null, suit=null;
   if(cards.length>=2){
     const a = cards[0].card.rank==="A"?1:Number(cards[0].card.rank);
@@ -11,7 +12,7 @@ function caravanOf(cards){
     direction = b>a ? "asc" : "desc";
   }
   if(cards.length>=1) suit=cards[0].card.suit;
-  return { cards, direction, suit };
+  return { rows: cards.map(c=> [c.card, ...c.attachments]), direction, suit };
 }
 function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans, sales:0 }; }
 
@@ -25,7 +26,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 // Program the exact board before turn 15 (human Jack on 2♥)
@@ -70,9 +71,9 @@ let programmedState = {
 };
 
 console.log("Programming Shady state before Human J♦ on 2♥ (turn 15)...");
-console.log(" Human Shady:", programmedState.players[Human].caravans[2].cards.map(c=> c.card.rank+c.card.suit[0]).join(","));
+console.log(" Human Shady:", programmedState.players[Human].caravans[2].rows.map(r=> r[0].rank+r[0].suit[0]).join(","));
 console.log(" Human hand:", programmedState.players[Human].hand.map(c=> c.rank+c.suit[0]).join(","));
-console.log(" AI Dayglow:", programmedState.players[Ai].caravans[0].cards.map(c=> `${c.card.rank}${c.card.suit[0]}${c.kingCount?`×${Math.pow(2,c.kingCount)}`:""}`).join(","));
+console.log(" AI Dayglow:", programmedState.players[Ai].caravans[0].rows.map(r=> `${r[0].rank}${r[0].suit[0]}${r.slice(1).some(c=>c.rank==="K")?`×${Math.pow(2,r.slice(1).filter(c=>c.rank==="K").length)}`:""}`).join(","));
 
 await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(500);
@@ -81,11 +82,11 @@ let before = await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const shady = s.players[0].caravans[2];
   return {
-    shady: shady.cards.map((c,i)=> ({idx:i, rank:c.card.rank, suit:c.card.suit, kc:c.kingCount})),
-    shadyCount: shady.cards.length,
+    shady: shady.rows.map((r,i)=> ({idx:i, rank:r[0].rank, suit:r[0].suit, kc:r.slice(1).filter(c=>c.rank==="K").length})),
+    shadyCount: shady.rows.length,
     current: s.current,
     pending: document.querySelectorAll(".card.pending").length,
-    html: document.querySelectorAll(".play-row.human .track.human")[2]?.innerHTML.slice(0,600),
+    html: document.querySelectorAll(".caravans.human .caravan")[2]?.innerHTML.slice(0,600),
   };
 });
 console.log(" before:", JSON.stringify(before, null,2));
@@ -106,24 +107,26 @@ let after = await page.evaluate(()=>{
   const t = window.__caravanStore.transition;
   const shady = s.players[0].caravans[2];
   return {
-    shady: shady.cards.map(c=> c.card.rank+c.card.suit[0]),
-    shadyCount: shady.cards.length,
+    shady: shady.rows.map(r=> r[0].rank+r[0].suit[0]),
+    shadyCount: shady.rows.length,
     current: s.current,
     transition: t,
     pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
-    ackBtn: document.querySelectorAll(".ack-btn, .confirm").length,
+    ackX: document.querySelectorAll(".confirm.portal").length,
+    ackBtn: document.querySelectorAll(".ack-btn, .confirm.portal").length,
     selectable: document.querySelectorAll(".slot.selectable").length,
   };
 });
 console.log(" after:", JSON.stringify(after, null,2));
 
-// Validate: since human made the move, there is not acknowledgement, turn should have ended and cards removed
-assert.equal(after.pending, 0, "no grey pending after human Jack — should be immediately removed");
+// Validate: since human made the move, there is no acknowledgement for the human (no X),
+// turn should have ended and cards removed immediately in state
+assert.equal(after.ackX, 0, "no ack X shown for human Jack — human has nothing to acknowledge");
 assert.equal(after.shadyCount, 4, "Shady should have 4 cards after removing 2♥ (was 5, now 4)");
 assert.ok(!after.shady.includes("2h"), "2♥ should be gone");
 assert.equal(after.shady.join(","), "5c,6d,7h,7d", "Shady should be 5♣,6♦,7♥,7♦ after Jack");
 assert.equal(after.current, Ai, "game should jump to AI turn as soon as J is placed by human (current 1)");
-assert.equal(after.transition, null, "no pending transition for human Jack (confirmer is Ai, immediate)");
+assert.equal(after.transition?.confirmer, Ai, "confirmation belongs to AI, not the human");
 assert.equal(after.shady.length, 4);
 
 // Human should not be blocked, but it's AI turn so human selectable is 0, AI will play
@@ -132,9 +135,12 @@ console.log(` human selectable after Jack (now AI turn): ${humanSelAfter} (expec
 assert.equal(after.current, Ai, "still AI turn");
 
 // Let AI play one move to ensure human unblocked after
-await page.waitForTimeout(1000);
-let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length }));
-console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel}`);
+await page.waitForTimeout(1500); // AI auto 650ms + visuals settle
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackX: document.querySelectorAll(".confirm.portal").length }));
+console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel} pending=${afterAI.pending} ackX=${afterAI.ackX}`);
+assert.equal(afterAI.current, Human, "after AI auto move, back to Human turn");
+assert.equal(afterAI.pending, 0, "transient pending grey cleared once AI moved");
+assert.ok(afterAI.humanSel > 0, "human unblocked after AI move");
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);
 console.log("\n=== SHADY JACK TEST PASSED ===");

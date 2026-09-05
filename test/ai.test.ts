@@ -57,8 +57,8 @@ describe("AI", () => {
         s.players.map((p) => [p.hand.map((c) => c.id), p.caravans.map((c) => c.rows.map((x) => x[0].id))]),
       );
       if (seen.has(key)) {
-        const disband = legal.find((l) => l.type === "dismissCaravan");
-        if (disband) s = applyMove(s, disband);
+        const dismiss = legal.find((l) => l.type === "dismissCaravan");
+        if (dismiss) s = applyMove(s, dismiss);
       } else {
         seen.add(key);
       }

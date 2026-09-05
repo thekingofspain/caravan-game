@@ -96,6 +96,18 @@ body {
 
 /* ── 04 — Board layout ── */
 /* Board */
+.board .toast {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #c0392b;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    z-index: 100;
+}
+
 .board {
     position: relative;
     display: flex;
@@ -479,8 +491,6 @@ body {
     margin-bottom: var(--stack-margin-bottom);
 }
 
-/* .caravan .track > .card.pending { z-index: 50 !important; } */
-
 .caravan .track > .card.pending-remove {
     z-index: 51 !important;
 }
@@ -518,7 +528,7 @@ body {
     pointer-events: auto;
 }
 
-/* ── 12 — Empty placeholder & disband ── */
+/* ── 12 — Empty placeholder & dismiss ── */
 /* Empty placeholder */
 .caravan .empty {
     position: absolute;
@@ -538,7 +548,7 @@ body {
 .caravan.is-empty {
 }
 
-.caravan .disband {
+.caravan .dismiss {
     order: 1;
     margin-top: auto;
     font: inherit;
@@ -554,11 +564,11 @@ body {
     cursor: pointer;
 }
 
-.caravan .disband:hover {
+.caravan .dismiss:hover {
     background: #a93226;
 }
 
-.caravan .disband:focus-visible {
+.caravan .dismiss:focus-visible {
     outline: 0.125rem solid #fff;
     outline-offset: 0.0625rem;
 }
@@ -659,21 +669,6 @@ body {
 
 .confirm:hover {
     background: #a93226;
-}
-
-.caravan .card.removing {
-    animation: cardRemove 0.28s ease forwards;
-    pointer-events: none;
-}
-
-.caravan .track.removing .card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    border-radius: inherit;
-    z-index: 4;
-    pointer-events: none;
 }
 
 @keyframes cardRemove {

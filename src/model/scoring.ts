@@ -57,7 +57,6 @@ export function getCaravanScores(state: GameState): GameScores {
     return { humanScores, aiScores, humanWins, aiWins, sellers };
 }
 
-export const pairWinner = caravanSeller;
 export function gameWinner(state: GameState): PlayerId | null {
     const w = [caravanSeller(state, 0), caravanSeller(state, 1), caravanSeller(state, 2)];
 

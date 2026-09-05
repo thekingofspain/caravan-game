@@ -21,7 +21,7 @@ await page.goto(BASE, {waitUntil:"networkidle"});
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 const hBoneyard = caravanOf([[makeCard(1,"2","diamonds")]], null, "diamonds");
@@ -82,10 +82,9 @@ console.log(JSON.stringify(info,null,2));
 
 let failures=[];
 if(info.anyConfirmInLog>0) failures.push(`activity log should not have red x .confirm entry at all (found ${info.anyConfirmInLog} .confirm inside log)`);
-if(info.fullText.includes("×") && !info.fullText.includes("×2") && !info.fullText.includes("×1")){
-  const hasHeaderX = info.fullText.includes("×") && info.lines.every(l=> !l.text.includes("×"));
-  if(hasHeaderX) failures.push(`activity dialog should not have red x entry at all (found × in header, should be Close) fullText: ${info.fullText.slice(0,200)}`);
-}
+// The dialog close button is legitimately "×" (aria-label "Close activity log") — only × inside log lines counts as a red-x entry (covered below).
+const closeBtn = await page.getByRole("button", { name: "Close activity log" }).count();
+if(closeBtn !== 1) failures.push(`expected one Close activity log button, got ${closeBtn}`);
 for(const l of info.lines){
   if(l.hasConfirm) failures.push(`log line should not have confirm X: ${l.text}`);
   if(l.text.includes("×")){

@@ -21,7 +21,8 @@ async function waitHumanTurn() {
 async function clearSelection() {
   const sel = page.locator(".slot.selected");
   if (await sel.count() > 0) {
-    await sel.first().click({ force: true, position: { x: 3, y: 3 } });
+    // dispatchEvent: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
+    await sel.first().dispatchEvent("click");
     await page.waitForTimeout(60);
   }
 }
@@ -43,7 +44,7 @@ async function valueSlots() {
 
 // Place a value card on the human caravan column `ci` (real user click).
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
@@ -60,14 +61,14 @@ for (let ci = 0; ci < 3; ci++) {
   await waitHumanTurn();
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card available to fill a placeholder");
-  await slots[0].click({ force: true, position: { x: 3, y: 3 } });
+  await slots[0].dispatchEvent("click");
   await page.waitForTimeout(120);
   await placeOnCaravan(ci);
 }
 
 // Each caravan should now hold exactly one card.
 for (let ci = 0; ci < 3; ci++) {
-  const n = await page.locator(".play-row.human .caravan").nth(ci).locator(".card").count();
+  const n = await page.locator(".caravans.human .caravan").nth(ci).locator(".card").count();
   assert.equal(n, 1, `caravan ${ci + 1} should have 1 card after filling its placeholder, got ${n}`);
 }
 console.log("  all 3 placeholders filled (1 card each)");
@@ -83,15 +84,15 @@ let placed = false;
 let tried = 0;
 for (const slot of candidates) {
   await clearSelection();
-  await slot.click({ force: true, position: { x: 3, y: 3 } });
+  await slot.dispatchEvent("click");
   await page.waitForTimeout(100);
+  if ((await page.locator(".slot.selected").count()) === 0) continue; // corner of the fanned slot missed; try the next candidate
 
-  const stacks = page.locator(".play-row.human .caravan");
+  const stacks = page.locator(".caravans.human .caravan");
   const stackCount = await stacks.count();
   let targetCi = -1;
   for (let ci = 0; ci < stackCount; ci++) {
-    const c = await stacks.nth(ci).getAttribute("class");
-    if (/is-selectable/.test(c || "")) {
+    if ((await stacks.nth(ci).locator(".track.selectable").count()) > 0) {
       targetCi = ci;
       break;
     }

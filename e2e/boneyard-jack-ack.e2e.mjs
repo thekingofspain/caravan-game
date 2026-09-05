@@ -5,7 +5,7 @@ let id=2000;
 function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
 const Human=0, Ai=1;
 function caravanOf(cards){
-  // cards: array of {card, kingCount, attachments}
+  // cards: array of {card, kingCount, attachments} → rows: [value, ...attachments]
   let direction=null, suit=null;
   if(cards.length>=2){
     const a=cards[0].card.rank==="A"?1:Number(cards[0].card.rank);
@@ -13,7 +13,7 @@ function caravanOf(cards){
     direction = b>a ? "asc" : "desc";
   }
   if(cards.length>=1) suit=cards[0].card.suit;
-  return { cards, direction, suit };
+  return { rows: cards.map(c=> [c.card, ...c.attachments]), direction, suit };
 }
 function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans, sales:0 }; }
 
@@ -27,7 +27,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 // Program the exact board just before the final human Jack:
@@ -74,9 +74,9 @@ let beforeInfo = await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const boneyard = s.players[0].caravans[0];
   return {
-    boneyard: boneyard.cards.map((c,i)=> ({idx:i, rank:c.card.rank, suit:c.card.suit, kc:c.kingCount, att:c.attachments.map(a=>a.rank)})),
-    html: document.querySelector(".play-row.human .track.human")?.innerHTML.slice(0,800),
-    boneyardCards: document.querySelector(".play-row.human .track.human")?.querySelectorAll(".card").length,
+    boneyard: boneyard.rows.map((r,i)=> ({idx:i, rank:r[0].rank, suit:r[0].suit, kc:r.slice(1).filter(c=>c.rank==="K").length, att:r.slice(1).map(a=>a.rank)})),
+    html: document.querySelector(".caravans.human .caravan")?.innerHTML.slice(0,800),
+    boneyardCards: document.querySelector(".caravans.human .caravan")?.querySelectorAll(".card").length,
     badge: document.querySelector(".badge.king")?.textContent,
     pendingBefore: document.querySelectorAll(".card.pending").length,
   };
@@ -100,28 +100,30 @@ let after = await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const t = window.__caravanStore.transition;
   return {
-    boneyard: s.players[0].caravans[0].cards.map(c=> ({rank:c.card.rank, kc:c.kingCount})),
+    boneyard: s.players[0].caravans[0].rows.map(r=> ({rank:r[0].rank, kc:r.slice(1).filter(c=>c.rank==="K").length})),
     current: s.current,
     transition: t,
-    html: document.querySelector(".play-row.human .track.human")?.innerHTML.slice(0,800),
+    html: document.querySelector(".caravans.human .caravan")?.innerHTML.slice(0,800),
     pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
-    badgeAfter: document.querySelector(".play-row.human .track.human .badge.king")?.textContent || null,
-    boneyardCardCount: document.querySelector(".play-row.human .track.human")?.querySelectorAll(".card").length,
-    boneyardEmpty: document.querySelector(".play-row.human .track.human .empty") ? 1 : 0,
+    ackX: document.querySelectorAll(".confirm.portal").length,
+    badgeAfter: document.querySelector(".caravans.human .caravan .badge.king")?.textContent || null,
+    boneyardCardCount: document.querySelector(".caravans.human .caravan")?.querySelectorAll(".card").length,
+    boneyardEmpty: document.querySelector(".caravans.human .caravan .empty") ? 1 : 0,
   };
 });
 console.log(" after:", JSON.stringify(after, null,2));
 
-// Validate: since human made the move, there is not acknowledgement, turn should have ended and cards removed
-assert.equal(after.pending, 0, "no grey pending after human Jack — should be immediately removed");
+// Validate: since human made the move, there is no acknowledgement for the human (no X),
+// turn should have ended and cards removed immediately in state
+assert.equal(after.ackX, 0, "no ack X shown for human Jack — human has nothing to acknowledge");
 assert.equal(after.boneyard.length, 3, "Boneyard should have 3 cards after removing 8♠+K (was 4, now 3: 9♦,6♠,3♠)");
 assert.ok(!after.boneyard.some(c=> c.rank==="8"), "8♠ should be gone");
 assert.equal(after.current, Ai, "turn should have ended — now AI's turn (1)");
-assert.equal(after.transition, null, "no pending transition for human Jack (confirmer is Ai, immediate)");
+assert.equal(after.transition?.confirmer, Ai, "confirmation belongs to AI, not the human");
 assert.equal(after.badgeAfter, null, "2x badge should be gone with the 8♠");
 
 // Verify no half-greyed 2x remains
-let badgeCount = await page.locator(".play-row.human .track.human .badge.king").count();
+let badgeCount = await page.locator(".caravans.human .caravan .badge.king").count();
 console.log(` badge count after: ${badgeCount} (expect 0)`);
 assert.equal(badgeCount, 0, "half greyed 2x should be gone");
 
@@ -131,9 +133,13 @@ console.log(` human selectable after Jack (now AI turn): ${humanSelectable} (exp
 assert.equal(after.current, Ai, "still AI turn");
 
 // Let AI play one move then check human unblocked
-await page.waitForTimeout(1000); // AI auto 650ms
-let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length }));
-console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel}`);
+await page.waitForTimeout(1500); // AI auto 650ms + ack visuals settle
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackX: document.querySelectorAll(".confirm.portal").length }));
+console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel} pending=${afterAI.pending} ackX=${afterAI.ackX}`);
+assert.equal(afterAI.current, Human, "after AI auto move, back to Human turn");
+assert.equal(afterAI.pending, 0, "transient pending grey cleared once AI moved");
+assert.equal(afterAI.ackX, 0, "no ack X remains");
+assert.ok(afterAI.humanSel > 0, "human unblocked after AI move");
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);
 console.log("\n=== BONEYARD JACK TEST PASSED ===");

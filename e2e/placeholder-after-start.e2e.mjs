@@ -35,18 +35,18 @@ async function addValueCardTo(ci) {
   await waitHumanTurn();
   const slots = await valueSlots();
   for (const slot of slots) {
-    await slot.click({ force: true, position: { x: 3, y: 3 } });
+    // dispatchEvent: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
+    await slot.dispatchEvent("click");
     await page.waitForTimeout(100);
-    const stack = page.locator(".play-row.human .caravan").nth(ci);
-    const cls = await stack.getAttribute("class");
-    if (/is-selectable/.test(cls || "")) {
+    const stack = page.locator(".caravans.human .caravan").nth(ci);
+    if ((await stack.locator(".track.selectable").count()) > 0) {
       const ph = stack.locator(".empty");
       if (await ph.count() > 0) await ph.first().click({ force: true });
       else await stack.locator(".card").last().click({ force: true });
       await page.waitForTimeout(200);
       return true;
     }
-    await page.locator(".slot.selected").first().click({ force: true, position: { x: 3, y: 3 } });
+    await page.locator(".slot.selected").first().dispatchEvent("click");
     await page.waitForTimeout(60);
   }
   return false;
@@ -77,41 +77,44 @@ for (let i = 0; i < handCount; i++) {
 }
 
 if (jackIdx < 0) {
-  console.log("  SKIP: no Jack in hand this round (could not empty a caravan deterministically)");
+  console.log("  SKIP: no Jack in hand this round (could not remove a row deterministically)");
 } else {
-  await handSlots.nth(jackIdx).click({ force: true, position: { x: 3, y: 3 } });
-  await page.waitForTimeout(120);
-  const humanTargets = page.locator(".play-row.human .caravan .card.target");
-  assert.ok((await humanTargets.count()) > 0, "expected at least one human caravan card to be a Jack target");
-  // Jack now jacks (attaches, sets value 0, removable) instead of splicing — wraps stay, row becomes jacked with X
-  const wrapsBefore = await page.locator(".play-row.human .caravan .card").count();
-  const facesBefore = await page.locator(".card").count();
-  await humanTargets.first().click({ force: true });
-  await page.waitForTimeout(350);
-
-  const wrapsAfter = await page.locator(".play-row.human .caravan .card").count();
-  assert.equal(wrapsAfter, wrapsBefore, `Jack should keep value-card count (jacked) (${wrapsBefore} -> ${wrapsAfter})`);
-  const facesAfter = await page.locator(".card").count();
-  assert.equal(facesAfter, facesBefore + 1, `Jack should render as attachment (${facesBefore} -> ${facesAfter})`);
-  const isJacked = await page.locator(".card.jacked").count();
-  assert.ok(isJacked > 0, "jacked row should have jacked class");
-
-  const phAfter = await page.locator(".empty").count();
-  assert.equal(phAfter, 0, `a jacked caravan must NOT show a default placeholder, got ${phAfter}`);
-  console.log("  PASS: a caravan jacked mid-game shows no placeholder and renders Jack");
-
-  // Now test actual emptying via the X (removeJacked) — jacked Ace/face can be removed, still no placeholder when game has started
-  const removeBtn = page.locator(".confirm").first();
-  if ((await removeBtn.count()) > 0) {
-    const wrapsBefore2 = await page.locator(".play-row.human .caravan .card").count();
-    await removeBtn.click({ force: true });
-    await page.waitForTimeout(350);
-    const wrapsAfter2 = await page.locator(".play-row.human .caravan .card").count();
-    assert.equal(wrapsAfter2, wrapsBefore2 - 1, `removeJacked should remove exactly one card (${wrapsBefore2} -> ${wrapsAfter2})`);
-    const phAfter2 = await page.locator(".empty").count();
-    assert.equal(phAfter2, 0, `an emptied caravan mid-game must NOT show a default placeholder after removeJacked, got ${phAfter2}`);
-    console.log("  PASS: a caravan emptied via X (removeJacked) shows no placeholder");
+  // Jack removes the targeted row immediately in state. Give one caravan a second
+  // row first so the removal never empties it (an emptied caravan correctly shows `.empty`).
+  let twoRowCi = -1;
+  for (let ci = 0; ci < 3; ci++) {
+    if (await addValueCardTo(ci)) {
+      const n = await page.locator(".caravans.human .caravan").nth(ci).locator("button.card[data-index]").count();
+      if (n >= 2) { twoRowCi = ci; break; }
+    }
   }
+  assert.ok(twoRowCi >= 0, "could not build a 2-row caravan to Jack");
+  await waitHumanTurn();
+  const handSlots2 = page.locator(".hand.human .slot.selectable");
+  const handCount2 = await handSlots2.count();
+  let jackIdx2 = -1;
+  for (let i = 0; i < handCount2; i++) {
+    const cls = await handSlots2.nth(i).locator(".card").getAttribute("class");
+    if (/jack/.test(cls || "")) { jackIdx2 = i; break; }
+  }
+  assert.ok(jackIdx2 >= 0, "Jack left the hand while building the 2-row caravan");
+  await handSlots2.nth(jackIdx2).dispatchEvent("click");
+  await page.waitForTimeout(120);
+  const caravanTargets = page.locator(".caravans.human .caravan").nth(twoRowCi).locator(".card.target");
+  assert.ok((await caravanTargets.count()) > 0, "expected the 2-row caravan's cards to be Jack targets");
+  const rowsLoc = page.locator(".caravans.human .caravan button.card[data-index]");
+  const rowsBefore = await rowsLoc.count();
+  await caravanTargets.first().click({ force: true });
+  await page.waitForTimeout(350);
+  // Removal is immediate in state and (own-actor Jack needs no ack) in visuals too.
+  const stateRows = await page.evaluate(() => window.__caravanStore.state.players[0].caravans.reduce((n, c) => n + c.rows.length, 0));
+  assert.equal(stateRows, rowsBefore - 1, `Jack should remove exactly one row in state (${rowsBefore} -> ${stateRows})`);
+  const rowsAfter = await rowsLoc.count();
+  assert.equal(rowsAfter, rowsBefore - 1, `Jack should remove exactly one rendered row (${rowsBefore} -> ${rowsAfter})`);
+
+  const jackedPh = await page.locator(".caravans.human .caravan").nth(twoRowCi).locator(".empty").count();
+  assert.equal(jackedPh, 0, `the jacked caravan still holds cards so it must NOT show a placeholder, got ${jackedPh}`);
+  console.log("  PASS: a row removed mid-game shows no placeholder while its caravan still holds cards");
 }
 
 assert.equal(consoleErrors.length, 0, `console errors: ${consoleErrors.join(" | ")}`);

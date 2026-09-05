@@ -144,7 +144,7 @@ const staged = await page.evaluate(() => {
   const t = window.__caravanStore.transition;
   return {
     logLast: s.log[s.log.length - 1],
-    hasAck: !!document.querySelector(".confirm"),
+    hasAck: !!document.querySelector(".confirm.portal"),
     needsConfirm: !!t?.needsConfirmation,
   };
 });
@@ -152,13 +152,13 @@ console.log("Staged AI Joker:", JSON.stringify(staged.logLast?.text), "ack:", st
 assert.ok(staged.logLast && /Joker/.test(staged.logLast.text), "AI Joker is logged before ack X is clicked");
 assert.ok(staged.logLast.detail && staged.logLast.detail.length >= 2, "removal detail logged before ack X");
 assert.ok(staged.hasAck && staged.needsConfirm, "red X still shows for confirmation");
-await page.locator(".confirm").first().click({ force: true });
+await page.locator(".confirm.portal").first().click({ force: true });
 await page.waitForTimeout(800);
 const cleared = await page.evaluate(() => {
   const s = window.__caravanStore.state;
-  return { current: s.current, transition: window.__caravanStore.transition, ackLeft: document.querySelectorAll(".confirm").length };
+  return { current: s.current, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackLeft: document.querySelectorAll(".confirm.portal").length };
 });
-assert.equal(cleared.transition, null, "ack clears confirmation visuals");
+assert.equal(cleared.pending, 0, "ack clears confirmation visuals (no pending rows)");
 assert.equal(cleared.ackLeft, 0, "no red X remains");
 assert.equal(cleared.current, 0, "turn passes to Human after ack");
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

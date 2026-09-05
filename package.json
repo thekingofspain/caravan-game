@@ -14,7 +14,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "gen:cards": "node scripts/fetch-cards.mjs",
-    "test:e2e": "node e2e/cards.e2e.mjs && node e2e/hand-cards.e2e.mjs && node e2e/opponent-stacking.e2e.mjs && node e2e/win-game.e2e.mjs && node e2e/place-on-filled-caravan.e2e.mjs && node e2e/placeholder-visibility.e2e.mjs && node e2e/hover-placeholder.e2e.mjs && node e2e/face-card-placement.e2e.mjs && node e2e/card-visibility-after-placement.e2e.mjs && node e2e/placeholder-after-start.e2e.mjs && node e2e/ai-caravan-visibility.e2e.mjs && node e2e/ai-jack-joker-ack.e2e.mjs && node e2e/boneyard-jack-ack.e2e.mjs && node e2e/shady-jack-ack.e2e.mjs && node e2e/human-win-shady-26.e2e.mjs && node e2e/ai-joker-ace-queens-ack.e2e.mjs && node e2e/human-shady-6heart-no-win.e2e.mjs && node e2e/empty-face-legal-moves.e2e.mjs && node e2e/long-game-premature-9clubs.e2e.mjs"
+    "test:e2e": "for f in e2e/*.e2e.mjs; do node \"$f\" || exit 1; done"
   },
   "dependencies": {
     "react": "^19.2.8",

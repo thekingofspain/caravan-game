@@ -12,8 +12,10 @@ await page.goto(BASE, { waitUntil: "networkidle" });
 await page.waitForSelector(".board");
 
 const vh = 900;
-const cardH = await page.locator(".hand.human .card").first().evaluate((el) => el.getBoundingClientRect().height);
-assert.ok(Math.abs(cardH - vh / 8) < vh / 8 * 0.2, `card height ${cardH} not ~vh/8`);
+const vw = 1280;
+const expectedH = Math.max(vh / 7, vw / 9);
+const cardH = await page.locator(".hand.human .card").first().evaluate((el) => parseFloat(getComputedStyle(el).height));
+assert.ok(Math.abs(cardH - expectedH) < expectedH * 0.2, `card height ${cardH} not ~max(vh/7, vw/9)=${expectedH}`);
 console.log("card height OK:", Math.round(cardH));
 
 async function waitHumanTurn() {
@@ -23,26 +25,33 @@ async function waitHumanTurn() {
 async function doHumanAction() {
   const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
-  let picked = 0;
+  // Prefer a value card; fall back to face cards. dispatchEvent: the fanned hand
+  // overlaps, so coordinate clicks can land on a neighbor — try until one selects.
+  const order = [];
   for (let i = 0; i < n; i++) {
     const cls = await slots.nth(i).locator(".card").getAttribute("class");
-    if (!/jack|queen|king|joker/.test(cls)) { picked = i; break; }
+    if (!/jack|queen|king|joker/.test(cls)) order.push(i);
   }
-  await slots.nth(picked).click({ force: true, position: { x: 3, y: 3 } });
-  await page.waitForTimeout(100);
+  for (let i = 0; i < n; i++) if (!order.includes(i)) order.push(i);
+  let selected = false;
+  for (const i of order) {
+    await slots.nth(i).dispatchEvent("click");
+    await page.waitForTimeout(100);
+    if ((await page.locator(".hand.human .slot.selected").count()) > 0) { selected = true; break; }
+  }
+  if (!selected) return;
   const tgt = page.locator(".card.target").first();
   if (await tgt.count() > 0) {
     await tgt.click({ force: true });
   } else {
-    const ownCount = await page.locator(".play-row.human .caravan.selectable").count();
-    if (ownCount > 0) {
-      await page.evaluate(() => {
-        const btn = document.querySelector(".play-row.human .caravan.selectable");
-        if (btn) btn.click();
-      });
+    const track = page.locator(".caravans.human .caravan .track.selectable").first();
+    if (await track.count() > 0) {
+      const ph = track.locator(".empty");
+      if (await ph.count() > 0) await ph.first().click({ force: true });
+      else await track.locator(".card").last().click({ force: true });
     } else {
-      const d = page.locator(".btn", { hasText: "Discard" });
-      if (await d.isEnabled()) await d.click();
+      // Face card with no legal target (or no open caravan): discard the selected card via the deck.
+      await page.locator(".deck:not(.ai)").click({ force: true });
     }
   }
 }
@@ -50,7 +59,8 @@ async function doHumanAction() {
 async function backCards() {
   return await page.evaluate(() => {
     const out = [];
-    for (const el of document.querySelectorAll(".card")) {
+    // Deck backs and the AI's hidden hand are intentional backs — only played and human-hand cards must never be backs/blanks.
+    for (const el of document.querySelectorAll(".caravans .card, .hand.human .card")) {
       const bg = getComputedStyle(el).backgroundImage;
       if (el.className.includes("back") || bg === "none" || bg.includes("back.svg")) {
         out.push({ cls: el.className, bg });
@@ -66,7 +76,7 @@ for (let move = 0; move < 150; move++) {
   try { await waitHumanTurn(); } catch { break; }
   await doHumanAction();
   await page.waitForTimeout(100);
-  const placed = await page.evaluate(() => document.querySelectorAll(".play-row.human .caravan .card").length);
+  const placed = await page.evaluate(() => document.querySelectorAll(".caravans.human .caravan .card").length);
   if (placed > placedMax) placedMax = placed;
   const b = await backCards();
   if (b.length) { backs = b; break; }

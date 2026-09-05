@@ -25,7 +25,7 @@ await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"n
 await page.waitForSelector(".board");
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if(await btn.count()>0) await btn.first().click({force:true});
-await page.waitForSelector(".play-row.human .track.human", {timeout:5000});
+await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
 await page.waitForTimeout(600);
 
 // State BEFORE final 9♣ (after AI A♣ to The Hub, step 32)
@@ -78,8 +78,8 @@ let after = await page.evaluate(()=>{
     hShaLen:s.players[0].caravans[2].rows.length,
     hShaRows:s.players[0].caravans[2].rows.map(r=>r.map(c=>c.rank+c.suit[0]).join("+")),
     logLast:s.log[s.log.length-1]?.text,
-    // check sold styling
-    soldCols: document.querySelectorAll(".caravan.sold").length,
+    // check sold styling (current DOM: sellable caravans get .caravan.sellable border/glow, no SOLD word)
+    soldCols: document.querySelectorAll(".caravan.sellable").length,
     hasSoldText: document.querySelectorAll(".sold-word").length,
   };
 });
@@ -88,7 +88,7 @@ assert.equal(after.phase, "play", "BUG REPRO: game should NOT be over after 9♣
 assert.equal(after.winner, null, "winner should still be null (1-1)");
 assert.equal(after.hShaLen, 4, "Shady should have 4 rows after 9♣");
 assert.equal(after.hasSoldText, 0, "SOLD word should be removed from board");
-assert.ok(after.soldCols >= 3, "sold caravans should have is-sold border (at least 3 sellable: Redding 23, Shady 23, Hub 25)");
+assert.ok(after.soldCols >= 3, "sellable caravans should have sellable border (at least 3 sellable: Redding 23, Shady 23, Hub 25)");
 
 // Let AI play one more move to ensure not stuck
 await page.waitForTimeout(1200); // AI auto

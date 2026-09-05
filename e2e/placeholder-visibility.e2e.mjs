@@ -28,7 +28,7 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
-  const stack = page.locator(".play-row.human .caravan").nth(ci);
+  const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
     await ph.first().click({ force: true });
@@ -41,7 +41,7 @@ async function placeOnCaravan(ci) {
 
 // ── Empty caravans show a placeholder ──
 console.log("TEST: empty caravans show a placeholder");
-const placeholdersAtStart = await page.locator(".play-row.human .empty").count();
+const placeholdersAtStart = await page.locator(".caravans.human .empty").count();
 assert.equal(placeholdersAtStart, 3, `expected 3 human placeholders at start, got ${placeholdersAtStart}`);
 console.log("  PASS: 3 placeholders visible for the 3 empty human caravans");
 
@@ -50,15 +50,15 @@ console.log("TEST: filling a caravan hides its initial placeholder");
 await waitHumanTurn();
 const slots = await valueSlots();
 assert.ok(slots.length > 0, "no value card to fill a placeholder");
-await slots[0].click({ force: true, position: { x: 3, y: 3 } });
+await slots[0].dispatchEvent("click");
 await page.waitForTimeout(120);
 await placeOnCaravan(0);
 
-const afterOne = await page.locator(".play-row.human .empty").count();
+const afterOne = await page.locator(".caravans.human .empty").count();
 assert.equal(afterOne, 2, `after filling 1 caravan, expected 2 placeholders, got ${afterOne}`);
 
-const stack0Ph = await page.locator(".play-row.human .caravan").nth(0).locator(".empty").count();
-const stack0Wraps = await page.locator(".play-row.human .caravan").nth(0).locator(".card").count();
+const stack0Ph = await page.locator(".caravans.human .caravan").nth(0).locator(".empty").count();
+const stack0Wraps = await page.locator(".caravans.human .caravan").nth(0).locator(".card").count();
 assert.equal(stack0Ph, 0, "filled caravan 1 should no longer show a placeholder");
 assert.equal(stack0Wraps, 1, "filled caravan 1 should show 1 placed card");
 console.log("  PASS: caravan 1 hides its placeholder and shows the placed card");
@@ -69,13 +69,13 @@ for (let ci = 1; ci < 3; ci++) {
   await waitHumanTurn();
   const s = await valueSlots();
   assert.ok(s.length > 0, "no value card to fill a placeholder");
-  await s[0].click({ force: true, position: { x: 3, y: 3 } });
+  await s[0].dispatchEvent("click");
   await page.waitForTimeout(120);
   await placeOnCaravan(ci);
 }
 // Wait for the AI to finish placing its starters so the game is fully started.
 await waitHumanTurn();
-const finalPh = await page.locator(".play-row.human .empty").count();
+const finalPh = await page.locator(".caravans.human .empty").count();
 assert.equal(finalPh, 0, `after filling all caravans, expected 0 human placeholders, got ${finalPh}`);
 
 // Once the game has started, no placeholder is shown by default on ANY caravan.
