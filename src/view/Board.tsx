@@ -104,9 +104,9 @@ function CaravanColumn({
                                 data-dir={caravan.direction}
                                 aria-hidden="true"
                             >
-                                {caravan.direction !== null ? <span className="sort-icon" /> : null}
+                                <span className="sort-icon" aria-hidden="true" />
                                 {caravan.suit !== null ? (
-                                    <span className="suit" data-suit={caravan.suit}>
+                                    <span className={`suit card-name ${caravan.suit}`}>
                                         {SUIT_SYMBOL[caravan.suit]}
                                     </span>
                                 ) : null}

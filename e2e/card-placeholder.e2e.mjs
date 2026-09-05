@@ -117,7 +117,8 @@ const cornerCheck = JSON.parse(
 
     const borderRatio = totalPixels > 0 ? borderPixels / totalPixels : 0;
 
-    // Corners should show background (green felt), not card-white
+    // Corners should show background (green felt), not card-white. Headers sit
+    // clear of the cards, so all four corners prove rounding here.
     const corners = [
       { label: "tl", x: 0, y: 0 },
       { label: "tr", x: w - 1, y: 0 },

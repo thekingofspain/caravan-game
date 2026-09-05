@@ -38,12 +38,13 @@
         calc(100dvh / 38),
         calc(var(--card-h) * 0.45)
     );
-    /* Caravan width: min 2 cards, max 2.5 cards, preferred = even share of
-       available row width (cqw resolves against the .caravans container). */
+    /* Caravan width: min 2.25 cards, max 3 cards, preferred = even share of
+       available row width (cqw resolves against the .caravans container).
+       Roomy enough for score + name + sort + suit header content. */
     --caravan-w: clamp(
-        calc(var(--card-w) * 2),
+        calc(var(--card-w) * 2.25),
         calc((100cqw - 2 * var(--relief)) / 3),
-        calc(var(--card-w) * 2.5)
+        calc(var(--card-w) * 3)
     );
     /* Gaps between caravans: horizontal follows vw, vertical follows vh. */
     --caravan-gap-x: clamp(calc(var(--card-w) * 0.25), 2.5vw, calc(var(--card-w) * 0.75));
@@ -51,6 +52,9 @@
     /* Lead-in from the track edge facing board center: empty-slot marker and
        first-card landing spot share it, so the stack keys off the marker. */
     --slot-lead: calc(var(--card-offset-y) / 2);
+    /* Caravan header height (score/title/icon row) and high-contrast sort accent. */
+    --caravan-head-h: 2rem;
+    --c-sort: #e9c46a;
     --fan-step: 5.5deg;
     --fan-pivot: 1.67;
     --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
@@ -438,6 +442,9 @@ body {
     align-items: center;
     gap: var(--sp-2);
 }
+.hand-half.human .deck-pair {
+    align-items: flex-start;
+}
 .discard-slot {
     position: relative;
     width: var(--card-w);
@@ -497,6 +504,7 @@ body {
     --badge-right: -0.5rem;
     --badge-top: -0.5rem;
     --badge-bottom: auto;
+    --head-dir: 1;
 }
 
 .caravans.ai {
@@ -512,6 +520,7 @@ body {
     --badge-right: auto;
     --badge-top: auto;
     --badge-bottom: -0.5625rem;
+    --head-dir: -1;
 }
 
 /* ── 09 — Caravan ── */
@@ -557,75 +566,84 @@ body {
         0 0 0.75rem rgba(var(--player-rgb), 0.35),
         inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
 }
-/* Branding-iron SOLD stamp: no plate — cards show through. Seared edge and
-   ember shadows brand the cards beneath. --sold-top staggers the three
-   across; --sold-rot inverts tilt around -12deg within ±5deg. */
+/* SOLD stamp: one flat red, no burn effects. Chosen by maximin contrast —
+   nothing clears AA on dark felt and white stock at once (opposite
+   backgrounds), so this red maximizes the worse side (~2.8:1 both). */
 .sold-stamp {
     position: absolute;
     top: var(--sold-top, 45%);
     left: 50%;
     transform: translate(-50%, -50%) rotate(var(--sold-rot, -12deg));
     z-index: 30;
-    padding: 0.25rem 1rem;
-    border: 0.25rem double rgba(46, 10, 3, 0.92);
+    padding: 0.375rem 1.25rem;
+    border: 0.25rem solid #fb6f52;
     border-radius: var(--radius);
     background: transparent;
-    color: rgba(26, 6, 2, 0.92);
-    font: 700 var(--fs-xl)/1 var(--font-base);
+    color: #fb6f52;
+    font: 700 calc(var(--fs-xl) * 1.3) / 1 var(--font-base);
     text-transform: uppercase;
-    letter-spacing: 0.22em;
-    text-indent: 0.22em;
+    letter-spacing: 0.1em;
     white-space: nowrap;
-    text-shadow:
-        0 0 0.0625rem rgba(0, 0, 0, 0.95),
-        0 0 0.375rem rgba(255, 92, 26, 0.95),
-        0 0 1rem rgba(255, 60, 20, 0.55),
-        0 0.125rem 0.25rem rgba(0, 0, 0, 0.7);
-    box-shadow:
-        0 0.25rem 0.75rem rgba(0, 0, 0, 0.65),
-        0 0 1.5rem rgba(255, 70, 25, 0.45),
-        inset 0 0 1rem rgba(30, 6, 1, 0.35);
     pointer-events: none;
 }
-
 .caravan header {
     width: 100%;
-    height: 1.5rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    height: var(--caravan-head-h);
+    display: flex;
     align-items: center;
-    gap: var(--sp-2);
-    transform: translateY(calc(-1 * var(--sp-2)));
+    justify-content: center;
+    /* Human and AI share this rule: --head-dir (±1) times 1.5 heights pushes
+       each header away from the board center — AI stays above the 50vh line,
+       human stays below it. Click-through so rows stay playable. */
+    transform: translateY(calc(var(--head-dir, 0) * var(--caravan-head-h) * 1.5));
+    position: relative;
+    z-index: 60;
+    pointer-events: none;
 }
-
+/* Score and direction pin at one card width off the caravan center line, so
+   every caravan shows them in the same spot regardless of title width. */
+.caravan .score,
+.caravan .direction {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.caravan .score {
+    right: calc(50% + var(--card-w));
+}
+.caravan .direction {
+    left: calc(50% + var(--card-w));
+}
+.caravan .direction:not([data-dir]) .sort-icon {
+    visibility: hidden;
+}
 .caravan .title {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--c-dim);
-    font-size: var(--fs-xs);
+    font-size: var(--fs-md);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     white-space: nowrap;
+    /* Trailing tracking offsets ink left; shift back half of it so the name
+       itself — not just its box — centers on the placeholder. */
+    transform: translateX(0.05em);
 }
 /* Score (left) and direction (right) pin to the outer edges so the title
    stays dead-center over the caravan track and its placeholder. */
 .caravan .score {
-    justify-self: end;
     height: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    font-size: var(--fs-md);
     font-weight: 400;
     font-variant-numeric: tabular-nums;
     min-width: 2.5ch;
     text-align: right;
-}
-
-.caravan .score.unsellable {
-    color: rgb(255, 240, 240);
-    font-weight: 400;
+    color: #fff;
 }
 
 .caravan .score.sellable {
@@ -645,36 +663,32 @@ body {
     white-space: nowrap;
 }
 .caravan .direction {
-    justify-self: start;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-1);
-    line-height: 1;
-    min-width: var(--fs-xl);
+    width: calc(var(--fs-xl) * 2 + var(--sp-1));
+    height: var(--fs-xl);
 }
 
 .caravan .direction .suit {
-    font-size: var(--fs-md);
+    position: absolute;
+    left: calc(var(--fs-xl) + var(--sp-1));
+    top: 0;
+    display: inline-flex;
+    align-items: center;
+    height: var(--fs-xl);
+    font-size: var(--fs-xl);
     font-weight: 700;
     line-height: 1;
 }
-.caravan .direction .suit[data-suit="hearts"],
-.caravan .direction .suit[data-suit="diamonds"] {
-    color: #ff7b72;
-}
-.caravan .direction .suit[data-suit="spades"],
-.caravan .direction .suit[data-suit="clubs"] {
-    color: var(--c-fg);
-}
-
 /* Direction sort icons (Bootstrap Icons, MIT, public/icons): the class picks
-   the file per data-dir; the mask tints it with the player color. 16-grid
-   glyphs stay crisp at header size where the old 576-grid paths blurred. */
+   the file per data-dir; the mask tints it gold. 16-grid glyphs stay crisp
+   at header size where the old 576-grid paths blurred. */
 .caravan .direction .sort-icon {
+    position: absolute;
+    left: 0;
+    top: 0;
     display: block;
-    width: var(--fs-lg);
-    height: var(--fs-lg);
-    background-color: var(--player-color, var(--c-dim));
+    width: var(--fs-xl);
+    height: var(--fs-xl);
+    background-color: var(--c-sort);
     -webkit-mask-position: center;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: contain;
@@ -780,6 +794,7 @@ body {
 .caravan .disband {
     order: 1;
     margin-top: auto;
+    transform: translateY(-25%);
     font: inherit;
     font-size: var(--fs-xs);
     font-weight: 700;
@@ -1203,21 +1218,22 @@ body {
     font-size: var(--fs-sm);
 }
 
-.log .card-name.red,
-.log .card-name.hearts {
+/* Four-suit palette, shared by the log and the caravan header readout. */
+.card-name.red,
+.card-name.hearts {
     color: #b3261e;
 }
 
-.log .card-name.black,
-.log .card-name.spades {
+.card-name.black,
+.card-name.spades {
     color: #1a1a1a;
 }
 
-.log .card-name.diamonds {
+.card-name.diamonds {
     color: blue;
 }
 
-.log .card-name.clubs {
+.card-name.clubs {
     color: green;
 }
 
