@@ -21,7 +21,7 @@ export function useBoardSelection(
         let discard = false;
 
         for (const a of legal) {
-            if (a.type === "dismissCaravan") continue;
+            if (a.type === "disbandCaravan") continue;
 
             if (a.handIndex !== sel) continue;
 

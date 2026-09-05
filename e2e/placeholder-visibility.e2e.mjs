@@ -79,7 +79,7 @@ const finalPh = await page.locator(".caravans.human .empty").count();
 assert.equal(finalPh, 0, `after filling all caravans, expected 0 human placeholders, got ${finalPh}`);
 
 // Once the game has started, no placeholder is shown by default on ANY caravan.
-const totalPh = await page.locator(".empty").count();
+const totalPh = await page.locator(".caravan .empty").count();
 assert.equal(totalPh, 0, `after the game starts, no placeholders should be shown anywhere, got ${totalPh}`);
 console.log("  PASS: all placeholders hidden once every caravan has a card (no default placeholder in played games)");
 

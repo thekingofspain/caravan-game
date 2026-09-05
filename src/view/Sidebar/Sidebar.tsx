@@ -36,23 +36,38 @@ function SidebarImpl({ log, state, scores }: SidebarProps) {
               })()
             : [];
 
+    // Pin to the newest entry when the panel opens; afterwards only follow
+    // new entries while the user is already near the bottom, so manual
+    // scroll-up stays put. The rAF second pass defeats content-visibility
+    // height estimates that settle after first paint.
+
+    const firstRun = useRef(true);
+
     useLayoutEffect(() => {
         const el = logRef.current;
 
         if (!el) return;
 
-        const threshold = 32;
-        const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+        const pin = () => {
+            const node = logRef.current;
 
-        if (!isAtBottom) return;
+            if (node) node.scrollTop = node.scrollHeight;
+        };
 
-        const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (firstRun.current) {
+            firstRun.current = false;
+            pin();
+            const raf = requestAnimationFrame(pin);
 
-        if (prefersReduced) {
-            el.scrollTop = el.scrollHeight;
-        } else {
-            el.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "end" });
+            return () => {
+                cancelAnimationFrame(raf);
+            };
         }
+
+        const threshold = 48;
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+
+        if (nearBottom) pin();
     }, [log.length]);
 
     return (

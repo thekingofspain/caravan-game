@@ -12,7 +12,7 @@ await page.waitForSelector(".board");
 await page.waitForTimeout(300);
 
 // Open activity
-await page.locator(".btn", { hasText: "Activity" }).click();
+if ((await page.locator(".activity").count()) === 0) await page.locator(".btn", { hasText: "Activity" }).click();
 await page.waitForSelector(".activity");
 await page.waitForTimeout(200);
 

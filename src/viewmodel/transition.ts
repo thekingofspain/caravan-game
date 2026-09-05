@@ -1,4 +1,4 @@
-import { CARAVAN_COUNT, CaravanRow } from "../model/types";
+import { CARAVAN_INDICES, CaravanRow, PLAYERS } from "../model/types";
 import type { Move, Card, GameState, PlayerId, TargetRef } from "../model/types";
 
 export interface TransitionInfo {
@@ -13,16 +13,14 @@ export function targetKey(t: TargetRef): string {
 }
 
 function forEachCaravanRow(state: GameState, fn: (row: CaravanRow, ref: TargetRef) => void): void {
-    for (let p = 0; p < 2; p++) {
-        const player = p as PlayerId;
-
-        for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-            const car = state.players[player].caravans[ci as 0 | 1 | 2];
+    for (const player of PLAYERS) {
+        for (const ci of CARAVAN_INDICES) {
+            const car = state.players[player].caravans[ci];
 
             for (let idx = 0; idx < car.rows.length; idx++) {
                 const row = car.rows[idx];
 
-                fn(row, { player, caravan: ci as 0 | 1 | 2, cardIndex: idx });
+                fn(row, { player, caravan: ci, cardIndex: idx });
             }
         }
     }

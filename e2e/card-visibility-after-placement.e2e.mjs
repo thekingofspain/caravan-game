@@ -67,7 +67,7 @@ for (let ci = 0; ci < 3; ci++) {
 await waitHumanTurn();
 
 // ── Caravans holding a card must never show the default placeholder ──
-const phWithCards = await page.locator(".empty").count();
+const phWithCards = await page.locator(".caravan .empty").count();
 assert.equal(phWithCards, 0, `caravans holding 1 card must show no placeholder, got ${phWithCards}`);
 console.log("  PASS: no default placeholder on caravans holding 1 card");
 

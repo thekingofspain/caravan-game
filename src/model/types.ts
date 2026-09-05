@@ -1,8 +1,7 @@
 export const SUITS = ["spades", "hearts", "diamonds", "clubs"] as const;
 export type Suit = (typeof SUITS)[number];
 
-export const JOKER_TYPES = ["Red", "Black"] as const;
-export type JokerType = (typeof JOKER_TYPES)[number];
+export type JokerType = "Red" | "Black";
 
 export const STANDARD_RANKS = [
     "A",
@@ -61,6 +60,11 @@ export interface Caravan {
     rows: CaravanRow[];
     direction: Nullable<Direction>;
     suit: Nullable<Suit>;
+
+    // Set on the first value row and never cleared. States programmed without
+    // it (tests) read as started when they hold rows.
+
+    started?: boolean;
 }
 
 export interface CaravanState {
@@ -75,6 +79,10 @@ export interface PlayerState {
     deck: Card[];
     hand: Card[];
     caravans: Caravan[];
+
+    // Last player-initiated discard (face-up pile shows this one card only).
+
+    discard: Nullable<Card>;
 }
 export const Human = 0 as const;
 export const Ai = 1 as const;
@@ -82,6 +90,7 @@ export type PlayerId = typeof Human | typeof Ai;
 export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
 export const CARAVAN_COUNT = 3 as const;
 export type CaravanIndex = 0 | 1 | 2;
+export const CARAVAN_INDICES = [0, 1, 2] as const satisfies readonly CaravanIndex[];
 export type LogSegment = string | Card;
 
 export interface GameState {
@@ -114,12 +123,12 @@ interface DiscardCardMove {
     player: PlayerId;
     handIndex: number;
 }
-interface DismissCaravanMove {
-    type: "dismissCaravan";
+interface DisbandCaravanMove {
+    type: "disbandCaravan";
     player: PlayerId;
     caravan: CaravanIndex;
 }
-export type Move = PlayValueCardMove | PlayFaceCardMove | DiscardCardMove | DismissCaravanMove;
+export type Move = PlayValueCardMove | PlayFaceCardMove | DiscardCardMove | DisbandCaravanMove;
 export interface LogEntry {
     id: number;
     player?: PlayerId;
@@ -163,4 +172,8 @@ export interface SelectionState {
     pendingRemovalSet: Set<string>;
     removingSet: Set<string>;
     canDiscard: boolean;
+
+    // AI-last-move highlight (same blink as confirmation, separate class).
+
+    flashKeys?: ReadonlySet<string>;
 }

@@ -59,7 +59,7 @@ await waitHumanTurn();
 
 // ── No placeholder by default once the game is played ──
 console.log("TEST: no placeholder shown by default once the game has started");
-const totalPh = await page.locator(".empty").count();
+const totalPh = await page.locator(".caravan .empty").count();
 assert.equal(totalPh, 0, `played game should show no placeholders, got ${totalPh}`);
 console.log("  PASS: 0 placeholders on the board after the game starts");
 

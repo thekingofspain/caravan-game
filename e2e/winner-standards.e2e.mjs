@@ -38,7 +38,7 @@ const programmedState = {
 
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(800);
-await page.locator("button", { hasText: "Activity" }).click();
+if ((await page.locator(".activity").count()) === 0) await page.locator("button", { hasText: "Activity" }).click();
 await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
 await page.waitForTimeout(500);
 

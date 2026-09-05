@@ -10,6 +10,7 @@ interface PlayerHandProps {
     selectedHandIndex: number | null;
     selectableIndices: ReadonlySet<number>;
     onCardClick: (handIndex: number) => void;
+    onCardDoubleClick: (handIndex: number) => void;
 }
 
 function PlayerHandImpl({
@@ -17,7 +18,8 @@ function PlayerHandImpl({
     player,
     selectedHandIndex,
     selectableIndices,
-    onCardClick
+    onCardClick,
+    onCardDoubleClick
 }: PlayerHandProps) {
     const isHuman = playerId === Human;
     const label = isHuman ? "You" : "AI";
@@ -56,6 +58,9 @@ function PlayerHandImpl({
                                 style={slotStyle}
                                 onClick={() => {
                                     onCardClick(i);
+                                }}
+                                onDoubleClick={() => {
+                                    onCardDoubleClick(i);
                                 }}
                                 aria-label={`${cardLabel(card)}${selectedHandIndex === i ? ", selected" : ""}${selectableIndices.has(i) ? ", playable" : ""}`}
                                 aria-pressed={selectedHandIndex === i}

@@ -46,15 +46,14 @@ export function canPlaceCard(card: Card, caravan: Caravan): boolean {
     const cv = baseValue(card);
     const pv = baseValue(prev);
     const continues = caravan.direction === "asc" ? cv > pv : cv < pv;
-    const matchesSuit = card.suit === prev.suit;
+
+    // Either the previous head's suit or a queen-imposed caravan suit counts.
+
+    const matchesSuit = card.suit === prev.suit || card.suit === caravan.suit;
 
     return continues || matchesSuit;
 }
 
 export function isValidCardIndex(caravan: Caravan, cardIndex: number): boolean {
     return cardIndex >= 0 && cardIndex < caravan.rows.length;
-}
-
-export function hasJackAttached(row: CaravanRow): boolean {
-    return row.slice(1).some((c) => c.rank === "J");
 }

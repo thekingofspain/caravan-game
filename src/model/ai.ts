@@ -1,4 +1,4 @@
-import { CARAVAN_COUNT, GameState, Human, Ai, PlayerId, Move, CaravanState } from "./types";
+import { CARAVAN_INDICES, GameState, Human, Ai, PlayerId, Move, CaravanState } from "./types";
 import { applyMove, legalMoves } from "./engine";
 import { calculateCaravanState } from "./rules/caravanCardRules";
 
@@ -35,13 +35,9 @@ function calculateCaravanAdvantage(current: CaravanState, opposing: CaravanState
 export function evaluateBoard(state: GameState, actingPlayerId: PlayerId): number {
     let score = 0;
 
-    for (let i = 0; i < CARAVAN_COUNT; i++) {
-        const current = calculateCaravanState(
-            state.players[actingPlayerId].caravans[i as 0 | 1 | 2]
-        );
-        const opposing = calculateCaravanState(
-            state.players[OTHER[actingPlayerId]].caravans[i as 0 | 1 | 2]
-        );
+    for (const i of CARAVAN_INDICES) {
+        const current = calculateCaravanState(state.players[actingPlayerId].caravans[i]);
+        const opposing = calculateCaravanState(state.players[OTHER[actingPlayerId]].caravans[i]);
 
         score += calculateCaravanAdvantage(current, opposing);
     }

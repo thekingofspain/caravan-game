@@ -3,7 +3,7 @@ export const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 export function Who({ side, caravan }: { side: "ai" | "human"; caravan?: string | null }) {
     return (
         <span className={`who ${side}`} aria-label={side === "ai" ? "AI" : "You"}>
-            {caravan !== null && caravan !== undefined ? (
+            {caravan != null ? (
                 <>
                     <span className="icon" aria-hidden="true">
                         {SIDE_ICON[side]}

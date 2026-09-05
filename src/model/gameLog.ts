@@ -1,7 +1,5 @@
-import { calculateCaravanState } from "./rules/caravanCardRules";
 import { caravanName } from "./names";
 import {
-    Ai,
     Card,
     GameState,
     Human,
@@ -31,19 +29,6 @@ export function formatCardLog(card: Card): string {
     if (isJokerCard(card)) return `{${card.jokerType} Joker}`;
 
     return `{${card.rank}${SUIT_SYMBOL[card.suit]}}`;
-}
-
-export function formatFinalScore(state: GameState): string {
-    const parts: string[] = [];
-
-    for (let i = 0; i < 3; i++) {
-        const hSt = calculateCaravanState(state.players[Human].caravans[i]);
-        const aSt = calculateCaravanState(state.players[Ai].caravans[i]);
-
-        parts.push(`${String(hSt.total)}-${String(aSt.total)}`);
-    }
-
-    return parts.join(" | ");
 }
 
 export function removalDetail(state: GameState, refs: TargetRef[]): LogSegment[][] {
@@ -147,6 +132,6 @@ export function describe(action: Move, state: GameState): Nullable<Omit<LogEntry
         player: action.player,
         action: action.type,
         caravan: action.caravan,
-        segments: [who, " dismissed ", caravanName(action.player, action.caravan)]
+        segments: [who, " disbanded ", caravanName(action.player, action.caravan)]
     };
 }

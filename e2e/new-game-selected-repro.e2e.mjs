@@ -12,7 +12,8 @@ await page.waitForSelector(".hand.human .slot.selectable", {timeout: 5000});
 const beforeSel = await page.evaluate(() => window.__caravanStore?.state.players[0].hand.map(c=>c.id));
 console.log("before hand ids", beforeSel.slice(0,3));
 const selectable = page.locator(".hand.human .slot.selectable").first();
-await selectable.click({ force: true });
+// dispatchEvent: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
+await selectable.dispatchEvent("click");
 await page.waitForTimeout(200);
 let selCount = await page.locator(".hand.human .slot.selected").count();
 console.log("selected count after click", selCount);
@@ -25,8 +26,10 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(300);
 await page.evaluate(() => {
-  const actBtn = Array.from(document.querySelectorAll(".btn")).find(b=>b.textContent.includes("Activity"));
-  if (actBtn) actBtn.click();
+  if (!document.querySelector(".activity")) {
+    const actBtn = Array.from(document.querySelectorAll(".btn")).find(b=>b.textContent.includes("Activity"));
+    if (actBtn) actBtn.click();
+  }
 });
 await page.waitForTimeout(300);
 
@@ -60,13 +63,14 @@ const after = await page.evaluate(() => {
   };
 });
 console.log("after reset", after);
-
 let failures = [];
+// Persistent panel: stays open across resets on viewports wide enough to dock it.
+const wideActivityExpected = await page.evaluate(() => window.matchMedia("(min-width: 70rem)").matches ? 1 : 0);
 if (after.selDom !== 0) failures.push(`DOM still has ${after.selDom} is-selected after reset`);
 if (after.selAria !== 0) failures.push(`DOM still has ${after.selAria} aria-pressed after reset`);
 if (after.hand.join(",") === beforeSel.join(",")) failures.push("hand ids unchanged after reset");
 if (after.viewDeckOpen !== 0) failures.push("deck overlay still open after reset");
-if (after.activityOpen !== 0) failures.push("activity flyout still open after reset");
+if (after.activityOpen !== wideActivityExpected) failures.push(`activity open=${after.activityOpen}, expected ${wideActivityExpected} (persistent chrome on wide viewports)`);
 if (after.toast !== null) failures.push(`toast not cleared: ${after.toast}`);
 if (after.pendingRemove !== 0) failures.push(`pendingRemove not cleared: ${after.pendingRemove}`);
 if (after.previous !== null) failures.push(`previous not null`);

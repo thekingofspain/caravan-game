@@ -1,5 +1,5 @@
 import { buildDeck } from "./cards";
-import { canPlaceCard, hasJackAttached, isValidCardIndex } from "./rules/caravanCardRules";
+import { canPlaceCard, isValidCardIndex } from "./rules/caravanCardRules";
 import { gameWinner } from "./scoring";
 import { mulberry32, shuffle } from "./rng";
 import { describe, log, removalDetail, resetLogIds } from "./gameLog";
@@ -9,7 +9,7 @@ import {
     Card,
     Caravan,
     CaravanIndex,
-    CARAVAN_COUNT,
+    CARAVAN_INDICES,
     PLAYERS,
     GameState,
     Human,
@@ -19,33 +19,47 @@ import {
     PlayerId,
     PlayerState,
     SetupOptions,
+    StandardCard,
+    Suit,
     TargetRef,
     isFaceCard,
     isJokerCard,
     isValueCard,
     baseValue
 } from "./types";
-import type { CaravanRow } from "./types";
 
 function emptyCaravan(): Caravan {
     return { rows: [], direction: null, suit: null };
 }
 
 function makePlayer(rng: () => number, deckId: number): PlayerState {
-    const deck = shuffle(buildDeck(deckId), rng).slice(0, 30);
+    let deck = shuffle(buildDeck(deckId), rng).slice(0, 30);
+    let hand = deck.slice(0, 8);
+    let rest = deck.slice(8);
+
+    // Opening mulligan (Mifflin): without three number cards the hand goes
+    // back into the shoe (30 total), reshuffles, and redraws — until it hits.
+
+    for (let i = 0; i < 100 && hand.filter((c) => isValueCard(c)).length < 3; i++) {
+        deck = shuffle([...hand, ...rest], rng);
+        hand = deck.slice(0, 8);
+        rest = deck.slice(8);
+    }
 
     if (deck.length !== 30)
         throw new Error(`makePlayer: deck slice expected 30 got ${String(deck.length)}`);
-
-    const hand = deck.slice(0, 8);
-    const rest = deck.slice(8);
 
     if (hand.length !== 8 || rest.length !== 22)
         throw new Error(
             `makePlayer: hand/deck expected 8/22 got ${String(hand.length)}/${String(rest.length)}`
         );
 
-    return { deck: rest, hand, caravans: [emptyCaravan(), emptyCaravan(), emptyCaravan()] };
+    return {
+        deck: rest,
+        hand,
+        discard: null,
+        caravans: [emptyCaravan(), emptyCaravan(), emptyCaravan()]
+    };
 }
 export function setupGame(opts: SetupOptions): GameState {
     resetLogIds();
@@ -67,20 +81,39 @@ function draw(player: PlayerState): void {
         if (c !== undefined) player.hand.push(c);
     }
 }
+function lastRowSuit(car: Caravan): Suit | null {
+    const last = car.rows.at(-1);
+
+    if (last === undefined) return null;
+
+    // Queen ranks only exist on standard cards, whose suits are never null.
+
+    const queens = last.slice(1).filter((c): c is StandardCard => c.rank === "Q");
+
+    if (queens.length === 0) return last[0].suit;
+
+    return queens[queens.length - 1].suit;
+}
 function normalizeCaravan(car: Caravan): void {
     if (car.rows.length === 0) {
         car.direction = null;
         car.suit = null;
     } else if (car.rows.length === 1) {
         car.direction = null;
-        car.suit = car.rows[0][0].suit;
-    } else if (car.direction === null) {
+        car.suit = lastRowSuit(car);
+    } else {
         const aRow = car.rows[car.rows.length - 2];
         const bRow = car.rows[car.rows.length - 1];
         const a = baseValue(aRow[0]);
         const b = baseValue(bRow[0]);
 
-        car.direction = b > a ? "asc" : "desc";
+        // Equal heads keep the existing direction (removal edge case);
+        // otherwise the bottom pair re-establishes it — including after
+        // suit-match plays that break the old run.
+
+        if (a !== b) car.direction = b > a ? "asc" : "desc";
+
+        car.suit = lastRowSuit(car);
     }
 }
 
@@ -97,11 +130,9 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
     const rankVal = baseValue(targetCard);
     const refs: TargetRef[] = [];
 
-    for (let p = 0; p < 2; p++) {
-        const player = p as PlayerId;
-
-        for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-            const car = state.players[player].caravans[ci as 0 | 1 | 2];
+    for (const player of PLAYERS) {
+        for (const ci of CARAVAN_INDICES) {
+            const car = state.players[player].caravans[ci];
 
             for (let cidx = 0; cidx < car.rows.length; cidx++) {
                 const card = car.rows.at(cidx)?.at(0);
@@ -109,11 +140,10 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
                 if (card === undefined) continue;
 
                 if (isAce) {
-                    if (card.suit === suit)
-                        refs.push({ player, caravan: ci as 0 | 1 | 2, cardIndex: cidx });
+                    if (card.suit === suit) refs.push({ player, caravan: ci, cardIndex: cidx });
                 } else {
                     if (baseValue(card) === rankVal)
-                        refs.push({ player, caravan: ci as 0 | 1 | 2, cardIndex: cidx });
+                        refs.push({ player, caravan: ci, cardIndex: cidx });
                 }
             }
         }
@@ -165,6 +195,7 @@ function handlePlayValueCard(
 
     player.hand.splice(action.handIndex, 1);
     car.rows.push([card]);
+    car.started = true;
     normalizeCaravan(car);
     draw(player);
 }
@@ -185,6 +216,8 @@ function attachQueen(next: GameState, card: Card, target: TargetRef): void {
 
     tgt.push(card);
     if (car.direction !== null) car.direction = car.direction === "asc" ? "desc" : "asc";
+
+    // The queen imposes its own suit until rows change again.
 
     car.suit = card.suit;
 }
@@ -230,11 +263,18 @@ function handlePlayFaceCard(
 
     if (tgtPre === undefined) throw new IllegalMoveError("playFaceCard: invalid target");
 
-    if (card.rank === "J" && hasJackAttached(tgtPre))
-        throw new IllegalMoveError("playFaceCard: Jack on jacked card");
+    // At most three pictures ride on one number card; fuller rows only leave
+    // via Joker elsewhere or disbanding.
 
-    if (card.rank === "K" && hasJackAttached(tgtPre))
-        throw new IllegalMoveError("playFaceCard: King on jacked card");
+    if (tgtPre.length - 1 >= 3)
+        throw new IllegalMoveError("playFaceCard: row already has three pictures");
+
+    if (
+        card.rank === "Q" &&
+        action.target.cardIndex !==
+            next.players[action.target.player].caravans[action.target.caravan].rows.length - 1
+    )
+        throw new IllegalMoveError("playFaceCard: Queen must target the last row");
 
     player.hand.splice(action.handIndex, 1);
     let jokerDetail: Nullable<LogSegment[][]> = null;
@@ -251,27 +291,33 @@ function handlePlayFaceCard(
 
 function handleDiscardCard(next: GameState, action: Extract<Move, { type: "discardCard" }>): void {
     const player = next.players[action.player];
+    const mustFillEmpty =
+        player.caravans.some((c) => c.rows.length === 0) && player.hand.some((c) => isValueCard(c));
 
-    if (player.caravans.some((c) => c.rows.length === 0))
-        throw new IllegalMoveError("discardCard: cannot discard before all caravans started");
+    if (mustFillEmpty) throw new IllegalMoveError("discardCard: must fill empty caravans first");
 
-    if (!player.hand[action.handIndex])
+    if (action.handIndex < 0 || action.handIndex >= player.hand.length)
         throw new IllegalMoveError("discardCard: invalid hand index");
 
-    player.hand.splice(action.handIndex, 1);
+    const [card] = player.hand.splice(action.handIndex, 1);
+
+    player.discard = card;
     draw(player);
 }
 
-function handleDismissCaravan(
+function handleDisbandCaravan(
     next: GameState,
-    action: Extract<Move, { type: "dismissCaravan" }>
+    action: Extract<Move, { type: "disbandCaravan" }>
 ): void {
     const player = next.players[action.player];
 
-    if (player.caravans.some((c) => c.rows.length === 0))
-        throw new IllegalMoveError("dismissCaravan: cannot dismiss before all caravans started");
+    if (player.caravans.some((c) => !(c.started ?? c.rows.length > 0)))
+        throw new IllegalMoveError("disbandCaravan: cannot disband before all caravans started");
 
-    player.caravans[action.caravan] = emptyCaravan();
+    if (player.caravans[action.caravan].rows.length === 0)
+        throw new IllegalMoveError("disbandCaravan: caravan already empty");
+
+    player.caravans[action.caravan] = { ...emptyCaravan(), started: true };
 }
 export function cloneAndApply(
     state: GameState,
@@ -287,7 +333,7 @@ export function cloneAndApply(
     if (action.type === "playValueCard") handlePlayValueCard(next, action);
     else if (action.type === "playFaceCard") jokerDetail = handlePlayFaceCard(next, action);
     else if (action.type === "discardCard") handleDiscardCard(next, action);
-    else handleDismissCaravan(next, action);
+    else handleDisbandCaravan(next, action);
 
     return { next, jokerDetail };
 }
@@ -350,9 +396,6 @@ export function applyMove(state: GameState, action: Move): GameState {
 
     return next;
 }
-function isBlockedByJack(row: CaravanRow, rank: string): boolean {
-    return (rank === "J" || rank === "K") && hasJackAttached(row);
-}
 function faceCardTargets(state: GameState, pid: PlayerId, handIndex: number): Move[] {
     const card = state.players[pid].hand.at(handIndex);
 
@@ -361,18 +404,24 @@ function faceCardTargets(state: GameState, pid: PlayerId, handIndex: number): Mo
     const out: Move[] = [];
 
     for (const p of PLAYERS)
-        for (let ci = 0; ci < CARAVAN_COUNT; ci++) {
-            const targetCar = state.players[p].caravans[ci as CaravanIndex];
+        for (const ci of CARAVAN_INDICES) {
+            const targetCar = state.players[p].caravans[ci];
 
             for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
                 const row = targetCar.rows[cidx];
 
-                if (isBlockedByJack(row, card.rank)) continue;
+                // At most three pictures ride on one number card.
+
+                if (row.length - 1 >= 3) continue;
+
+                // Queens ride on the latest (last-row) card only.
+
+                if (card.rank === "Q" && cidx !== targetCar.rows.length - 1) continue;
 
                 out.push({
                     type: "playFaceCard",
                     player: pid,
-                    target: { player: p, caravan: ci as CaravanIndex, cardIndex: cidx },
+                    target: { player: p, caravan: ci, cardIndex: cidx },
                     handIndex
                 });
             }
@@ -418,7 +467,17 @@ export function legalMoves(state: GameState): Move[] {
 
         if (valueMoves.length > 0) return valueMoves;
 
-        return player.hand.flatMap((_, hi) => faceCardTargets(state, pid, hi));
+        // Opening bind: empty slots unfillable (face cards/Jokers only), so the
+        // only move is discard — and only with cards left in the shoe. With an
+        // empty shoe there are no moves and resolveTerminal ends the game.
+
+        if (player.deck.length === 0) return [];
+
+        return player.hand.map((_, hi) => ({
+            type: "discardCard" as const,
+            player: pid,
+            handIndex: hi
+        }));
     }
 
     return [
@@ -429,8 +488,8 @@ export function legalMoves(state: GameState): Move[] {
             player: pid,
             handIndex: hi
         })),
-        ...([0, 1, 2] as CaravanIndex[]).map((ci) => ({
-            type: "dismissCaravan" as const,
+        ...CARAVAN_INDICES.map((ci) => ({
+            type: "disbandCaravan" as const,
             player: pid,
             caravan: ci
         }))

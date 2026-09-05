@@ -60,7 +60,7 @@ await page.waitForTimeout(600);
 await page.evaluate(()=> window.__act({type:"playValueCard", player:0, caravan:2, handIndex:0}));
 await page.waitForTimeout(600);
 
-await page.click("button:has-text('Activity')");
+if ((await page.locator(".activity").count()) === 0) await page.click("button:has-text('Activity')");
 await page.waitForSelector(".activity[role='dialog']", {timeout:3000});
 await page.waitForTimeout(300);
 

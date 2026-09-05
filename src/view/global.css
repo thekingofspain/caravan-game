@@ -21,13 +21,36 @@
     --sp-5: 1.5rem;
     --radius: 0.375rem;
     --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-    --card-h: max(100vh / 7, 100vw / 9);
+    /* Card + type scale react to BOTH vw and vh (dv* preferred, vw/vh fallback). */
+    --card-h: clamp(3.5rem, min(13.5vh, 10.5vw), 12.5rem);
+    --card-h: clamp(3.5rem, min(13.5vh, 13.5dvh, 10.5vw, 10.5dvw), 12.5rem);
     --card-w: calc(var(--card-h) * 212 / 329);
     --card-offset-x: calc(var(--card-w) * 0.275);
-    --card-offset-y: calc(var(--card-h) * 0.28);
-    --caravan-w: calc(var(--card-w) + 2 * var(--card-offset-x));
-    --confirm-x-w: 5rem;
-    --fan-count: 8;
+    /* Stack looseness follows vertical excess: tight (corners only) when short,
+       loose (more corner showing) when tall. Middle term is pure vh. */
+    --card-offset-y: clamp(
+        calc(var(--card-h) * 0.16),
+        calc(100vh / 38),
+        calc(var(--card-h) * 0.45)
+    );
+    --card-offset-y: clamp(
+        calc(var(--card-h) * 0.16),
+        calc(100dvh / 38),
+        calc(var(--card-h) * 0.45)
+    );
+    /* Caravan width: min 2 cards, max 2.5 cards, preferred = even share of
+       available row width (cqw resolves against the .caravans container). */
+    --caravan-w: clamp(
+        calc(var(--card-w) * 2),
+        calc((100cqw - 2 * var(--relief)) / 3),
+        calc(var(--card-w) * 2.5)
+    );
+    /* Gaps between caravans: horizontal follows vw, vertical follows vh. */
+    --caravan-gap-x: clamp(calc(var(--card-w) * 0.25), 2.5vw, calc(var(--card-w) * 0.75));
+    --caravan-gap-y: clamp(calc(var(--card-h) * 0.15), 2.5vh, calc(var(--card-h) * 0.5));
+    /* Lead-in from the track edge facing board center: empty-slot marker and
+       first-card landing spot share it, so the stack keys off the marker. */
+    --slot-lead: calc(var(--card-offset-y) / 2);
     --fan-step: 5.5deg;
     --fan-pivot: 1.67;
     --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
@@ -43,6 +66,14 @@
     --card-border: 0.1875rem dashed var(--c-dim);
     --transition-fast: 0.15s ease;
     --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
+    /* Fluid type: each step mixes vw AND vh so fonts track either dimension. */
+    --fs-xs: clamp(0.625rem, 0.35rem + 0.45vw + 0.55vh, 0.8125rem);
+    --fs-sm: clamp(0.6875rem, 0.4rem + 0.5vw + 0.65vh, 0.9375rem);
+    --fs-md: clamp(0.8125rem, 0.45rem + 0.6vw + 0.8vh, 1.0625rem);
+    --fs-lg: clamp(0.9375rem, 0.55rem + 0.7vw + 0.9vh, 1.3125rem);
+    --fs-xl: clamp(1.125rem, 0.65rem + 0.9vw + 1.1vh, 1.625rem);
+    /* Fluid chrome widths: track vw, floored in rem so narrow phones still fit. */
+    --activity-w: clamp(16rem, 12rem + 14vw, 21.25rem);
 }
 
 /* ── 02 — Reset & base ── */
@@ -58,10 +89,14 @@ body,
     overflow: hidden;
 }
 
+html {
+    /* 1rem itself tracks vw AND vh, so every rem-sized component reacts. */
+    font-size: clamp(12px, 0.5vw + 1.05vh, 19px);
+}
 body {
     background: var(--c-felt);
     color: var(--c-fg);
-    font: 0.875rem/1.4 var(--font-base);
+    font: var(--fs-sm)/1.4 var(--font-base);
     letter-spacing: 0.02em;
 }
 
@@ -107,6 +142,90 @@ body {
     border-radius: 0.5rem;
     z-index: 100;
 }
+.gameover-banner {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    padding-right: 2.5rem;
+    border-radius: 1rem;
+    border: 0.125rem solid var(--c-accent);
+    background: rgba(10, 40, 20, 0.92);
+    box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    white-space: nowrap;
+    animation: gameover-pop 0.45s ease;
+    pointer-events: auto;
+}
+.gameover-banner.human {
+    border-color: var(--c-human);
+    box-shadow:
+        0 0 1.5rem rgba(var(--c-human-rgb), 0.55),
+        0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
+}
+.gameover-banner.ai {
+    border-color: var(--c-ai);
+    box-shadow:
+        0 0 1.5rem rgba(var(--c-ai-rgb), 0.55),
+        0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
+}
+.gameover-banner-title {
+    letter-spacing: 0.04em;
+}
+.gameover-banner.human .gameover-banner-title {
+    color: var(--c-human);
+}
+.gameover-banner.ai .gameover-banner-title {
+    color: var(--c-ai);
+}
+.gameover-banner-detail {
+    color: var(--c-dim);
+    font-variant-numeric: tabular-nums;
+}
+.gameover-banner .close {
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    color: var(--c-dim);
+    font-size: var(--fs-lg);
+}
+.gameover-banner .close:hover {
+    color: var(--c-fg);
+}
+@keyframes gameover-pop {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}
+/* Winner side glows. Loser side stays at full brightness: no dimming. */
+.board.gameover-human .caravans.human .caravan::before,
+.board.gameover-ai .caravans.ai .caravan::before {
+    animation: gameover-glow 1.6s ease-in-out infinite;
+}
+@keyframes gameover-glow {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0.75rem rgba(var(--player-rgb), 0.35),
+            inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
+    }
+    50% {
+        box-shadow:
+            0 0 1.5rem rgba(var(--player-rgb), 0.7),
+            inset 0 0 1rem rgba(var(--player-rgb), 0.3);
+    }
+}
 
 .board {
     position: relative;
@@ -119,13 +238,13 @@ body {
     overflow-y: auto;
 }
 
-.sidebar {
+.sidebar-log {
     overflow: visible;
     padding: var(--sp-2);
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-    width: 22.5rem;
+    width: var(--sidebar-w);
     flex-shrink: 0;
 }
 
@@ -156,6 +275,7 @@ body {
 .board .column.caravans {
     flex: 1 1 auto;
     min-width: 0;
+    gap: var(--caravan-gap-y);
 }
 
 .board .column.hands {
@@ -307,21 +427,61 @@ body {
 }
 
 .deck .count {
-    font-size: 0.75rem;
+    font-size: var(--fs-xs);
     font-weight: 700;
     color: var(--c-fg);
+}
+/* Discard pile: placeholder beside each deck showing the last discard
+   face-up under a big red X (single card, no history). */
+.deck-pair {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+.discard-slot {
+    position: relative;
+    width: var(--card-w);
+    height: var(--card-h);
+}
+.discard-slot .empty {
+    width: var(--card-w);
+    height: var(--card-h);
+    border: var(--card-border);
+    border-radius: var(--radius);
+    background: transparent;
+    opacity: 0.5;
+}
+.discard-slot.filled::before,
+.discard-slot.filled::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 88%;
+    height: 11%;
+    border-radius: 0.25rem;
+    background: rgba(195, 25, 15, 0.88);
+    box-shadow: 0 0 0.75rem rgba(195, 25, 15, 0.55);
+    pointer-events: none;
+}
+.discard-slot.filled::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+.discard-slot.filled::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 /* ── 08 — Caravans wrapper (player vars) ── */
 /* Caravans wrapper */
-.caravans {
+.board .field .caravans {
     flex: 1;
     display: flex;
     justify-content: center;
-    gap: var(--relief);
+    gap: var(--caravan-gap-x);
     min-height: 0;
     padding-left: 0;
     padding-right: 0;
+    container-type: inline-size;
 }
 
 .caravans.human {
@@ -356,11 +516,12 @@ body {
 
 /* ── 09 — Caravan ── */
 /* Caravan — base: .caravan (outer column) */
+/* Width tracks --caravan-w (derived from --card-w) exactly: no flex stretch. */
 .caravan {
     display: flex;
     flex-direction: var(--caravan-direction, column);
-    flex: 1 1 0;
-    min-width: var(--caravan-w);
+    flex: 0 0 auto;
+    width: var(--caravan-w);
     min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
     position: relative;
     align-items: center;
@@ -396,32 +557,62 @@ body {
         0 0 0.75rem rgba(var(--player-rgb), 0.35),
         inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
 }
+/* Branding-iron SOLD stamp: no plate — cards show through. Seared edge and
+   ember shadows brand the cards beneath. --sold-top staggers the three
+   across; --sold-rot inverts tilt around -12deg within ±5deg. */
+.sold-stamp {
+    position: absolute;
+    top: var(--sold-top, 45%);
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(var(--sold-rot, -12deg));
+    z-index: 30;
+    padding: 0.25rem 1rem;
+    border: 0.25rem double rgba(46, 10, 3, 0.92);
+    border-radius: var(--radius);
+    background: transparent;
+    color: rgba(26, 6, 2, 0.92);
+    font: 700 var(--fs-xl)/1 var(--font-base);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+    white-space: nowrap;
+    text-shadow:
+        0 0 0.0625rem rgba(0, 0, 0, 0.95),
+        0 0 0.375rem rgba(255, 92, 26, 0.95),
+        0 0 1rem rgba(255, 60, 20, 0.55),
+        0 0.125rem 0.25rem rgba(0, 0, 0, 0.7);
+    box-shadow:
+        0 0.25rem 0.75rem rgba(0, 0, 0, 0.65),
+        0 0 1.5rem rgba(255, 70, 25, 0.45),
+        inset 0 0 1rem rgba(30, 6, 1, 0.35);
+    pointer-events: none;
+}
 
 .caravan header {
     width: 100%;
     height: 1.5rem;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: var(--sp-2);
-    justify-content: space-between;
+    transform: translateY(calc(-1 * var(--sp-2)));
 }
 
 .caravan .title {
-    flex: 0 0 auto;
-    width: calc(var(--card-w) * 1.5);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--c-dim);
-    font-size: 0.8125rem;
+    font-size: var(--fs-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     white-space: nowrap;
 }
-
+/* Score (left) and direction (right) pin to the outer edges so the title
+   stays dead-center over the caravan track and its placeholder. */
 .caravan .score {
-    flex: 1;
+    justify-self: end;
     height: 1.5rem;
     display: flex;
     align-items: center;
@@ -453,24 +644,51 @@ body {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
-
 .caravan .direction {
-    flex: 1;
+    justify-self: start;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    text-align: left;
-    font-size: 1.125rem;
+    gap: var(--sp-1);
     line-height: 1;
+    min-width: var(--fs-xl);
+}
+
+.caravan .direction .suit {
+    font-size: var(--fs-md);
     font-weight: 700;
+    line-height: 1;
+}
+.caravan .direction .suit[data-suit="hearts"],
+.caravan .direction .suit[data-suit="diamonds"] {
+    color: #ff7b72;
+}
+.caravan .direction .suit[data-suit="spades"],
+.caravan .direction .suit[data-suit="clubs"] {
+    color: var(--c-fg);
 }
 
-.caravan .direction[data-dir="asc"]::before {
-    content: "\25B2";
+/* Direction sort icons (Bootstrap Icons, MIT, public/icons): the class picks
+   the file per data-dir; the mask tints it with the player color. 16-grid
+   glyphs stay crisp at header size where the old 576-grid paths blurred. */
+.caravan .direction .sort-icon {
+    display: block;
+    width: var(--fs-lg);
+    height: var(--fs-lg);
+    background-color: var(--player-color, var(--c-dim));
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
 }
-
-.caravan .direction[data-dir="desc"]::before {
-    content: "\25BC";
+.caravan .direction[data-dir="asc"] .sort-icon {
+    -webkit-mask-image: url("/icons/sort-asc.svg");
+    mask-image: url("/icons/sort-asc.svg");
+}
+.caravan .direction[data-dir="desc"] .sort-icon {
+    -webkit-mask-image: url("/icons/sort-desc.svg");
+    mask-image: url("/icons/sort-desc.svg");
 }
 
 /* ── 10 — Track (stack) ── */
@@ -523,12 +741,6 @@ body {
     left: auto;
     right: calc(var(--c, 0) * var(--card-offset-x));
 }
-
-.caravan .card > .card .confirm {
-    pointer-events: auto;
-}
-
-/* ── 12 — Empty placeholder & dismiss ── */
 /* Empty placeholder */
 .caravan .empty {
     position: absolute;
@@ -544,15 +756,32 @@ body {
     padding: 0;
 }
 
-/* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
-.caravan.is-empty {
+/* Empty slots sit half a stack step away from the board's vertical center,
+   which both rows face: human slots drop, AI slots rise. Tracks start their
+   stacks on the same lead, so cards land where the marker was. */
+.caravans.human .caravan .empty {
+    top: var(--slot-lead);
 }
 
-.caravan .dismiss {
+.caravans.ai .caravan .empty {
+    bottom: var(--slot-lead);
+}
+
+.caravans.human .caravan .track {
+    padding-top: var(--slot-lead);
+}
+
+.caravans.ai .caravan .track {
+    padding-bottom: var(--slot-lead);
+}
+
+/* Empty caravan container — driven by cardRow size (rows.length === 0) on high DOM element */
+
+.caravan .disband {
     order: 1;
     margin-top: auto;
     font: inherit;
-    font-size: 0.6875rem;
+    font-size: var(--fs-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -564,11 +793,11 @@ body {
     cursor: pointer;
 }
 
-.caravan .dismiss:hover {
+.caravan .disband:hover {
     background: #a93226;
 }
 
-.caravan .dismiss:focus-visible {
+.caravan .disband:focus-visible {
     outline: 0.125rem solid #fff;
     outline-offset: 0.0625rem;
 }
@@ -588,7 +817,7 @@ body {
     border-radius: 0.5625rem;
     background: var(--c-accent);
     color: #1a160c;
-    font: 700 0.6875rem/1 var(--font-base);
+    font: 700 var(--fs-xs)/1 var(--font-base);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -671,6 +900,11 @@ body {
     background: #a93226;
 }
 
+.confirm:focus-visible {
+    outline: 0.125rem solid #fff;
+    outline-offset: 0.125rem;
+}
+
 @keyframes cardRemove {
     to {
         opacity: 0;
@@ -678,14 +912,26 @@ body {
     }
 }
 
-.caravan .card.pending::after {
+.caravan .card.pending::after,
+.caravan .card.lastmove::after {
     content: "";
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
     border-radius: inherit;
-    /* z-index: 6; */
     pointer-events: none;
+    animation: pending-blink 0.9s ease-in-out infinite;
+}
+
+/* Greyed removal overlay blinks on/off until the player confirms the X. */
+@keyframes pending-blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.2;
+    }
 }
 
 .caravan .card.pending-remove {
@@ -699,12 +945,16 @@ body {
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
     border-radius: inherit;
-    /* z-index: 6; */
     pointer-events: none;
 }
 
 /* ── 15 — Controls ── */
 /* Controls / buttons */
+.activity-actions {
+    display: flex;
+    gap: var(--sp-2);
+    align-items: center;
+}
 .controls {
     display: flex;
     gap: var(--sp-2);
@@ -712,7 +962,7 @@ body {
 }
 
 .btn {
-    font: 700 0.75rem var(--font-base);
+    font: 700 var(--fs-xs) var(--font-base);
     background: var(--c-accent);
     color: #1a160c;
     border: 0.0625rem solid var(--c-accent);
@@ -744,7 +994,7 @@ body {
     padding: var(--sp-2) var(--sp-3);
     overflow-y: auto;
     color: #000;
-    font-size: 0.6875rem;
+    font-size: var(--fs-xs);
     margin: 0;
     list-style: none;
     counter-reset: log-line;
@@ -785,7 +1035,7 @@ body {
     align-items: center;
     justify-content: flex-end;
     gap: 0.5ch;
-    font-size: 0.75rem;
+    font-size: var(--fs-xs);
 }
 .log .score {
     width: 2ch;
@@ -802,7 +1052,6 @@ body {
     color: var(--c-human);
     filter: brightness(0.85);
 }
-
 .log .row.ai .score.sellable {
     color: var(--c-ai);
     filter: brightness(0.85);
@@ -818,22 +1067,16 @@ body {
     min-width: 0;
     text-align: center;
 }
-.log .wins {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-weight: 700;
-    font-size: 0.75rem;
-    color: #1a160c;
-}
-
 .activity {
-    position: absolute;
-    right: var(--sp-3);
+    /* Dialog mode (narrow): fixed to the viewport so board scroll never
+       uncenters it; height always fits within the viewport height. */
+    position: fixed;
+    left: var(--sp-3);
     top: 50%;
     transform: translateY(-50%);
-    width: 21.25rem;
+    width: var(--activity-w);
     max-height: 70vh;
+    max-height: 70dvh;
     display: flex;
     flex-direction: column;
     background: var(--c-panel);
@@ -841,6 +1084,28 @@ body {
     border-radius: var(--radius);
     box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.45);
     z-index: 50;
+}
+.log .wins {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 700;
+    font-size: var(--fs-xs);
+    color: #1a160c;
+}
+
+/* Wide viewport: activity docks as a persistent left column of the board. */
+@media (min-width: 70rem) {
+    .activity {
+        position: static;
+        order: -1;
+        transform: none;
+        max-height: none;
+        min-height: 0;
+        align-self: stretch;
+        flex-shrink: 0;
+        margin-right: var(--relief);
+    }
 }
 
 .activity header {
@@ -856,15 +1121,11 @@ body {
 
 /* copy now uses .btn — same as New game / Activity */
 
-.activity .close {
+.activity .close,
+.gameover-banner .close {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
     background: transparent;
     border: none;
-    color: var(--c-fg);
-    font-size: 1.5rem;
-    line-height: 1;
     cursor: pointer;
     padding: 0;
     width: 1.5rem;
@@ -872,6 +1133,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    line-height: 1;
+}
+.activity .close {
+    top: 0.5rem;
+    right: 0.5rem;
+    color: var(--c-fg);
+    font-size: var(--fs-xl);
 }
 
 .activity .log {
@@ -914,15 +1182,12 @@ body {
     font-weight: 700;
 }
 
-.log .who {
-}
-
 .log .caravan-ref {
     margin-left: -0.25em;
 }
 
 .log .who-ref {
-    font-size: 0.6875rem;
+    font-size: var(--fs-xs);
     font-weight: 700;
     color: var(--c-brown);
     margin-left: -0.25em;
@@ -935,7 +1200,7 @@ body {
 .log .card-name.diamonds,
 .log .card-name.clubs {
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: var(--fs-sm);
 }
 
 .log .card-name.red,
@@ -977,7 +1242,7 @@ body {
     background: none;
     border: none;
     color: var(--c-fg);
-    font-size: 1.375rem;
+    font-size: var(--fs-lg);
     line-height: 1;
     cursor: pointer;
 }
@@ -1006,7 +1271,7 @@ body {
 }
 
 .modal .panel {
-    max-width: 35rem;
+    max-width: min(35rem, 92vw);
     width: 100%;
     border: 0.0625rem solid var(--c-accent);
     border-radius: var(--radius);
@@ -1022,7 +1287,17 @@ body {
     margin-top: 0;
 }
 
-.rules {
+@media (prefers-reduced-motion: reduce) {
+    .hand .slot,
+    .btn {
+        transition: none;
+    }
+    .gameover-banner,
+    .board.gameover-human .caravans.human .caravan::before,
+    .board.gameover-ai .caravans.ai .caravan::before,
+    .caravan .card.pending::after {
+        animation: none;
+    }
 }
 
 /* ── 19 — Selection outlines ── */
@@ -1055,6 +1330,11 @@ body {
     .hand .slot,
     .btn {
         transition: none;
+    }
+    .gameover-banner,
+    .board.gameover-human .caravans.human .caravan::before,
+    .board.gameover-ai .caravans.ai .caravan::before {
+        animation: none;
     }
 }
 

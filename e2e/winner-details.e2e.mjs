@@ -39,7 +39,7 @@ const state = {
 
 await page.evaluate(s=> window.__setCaravanState(s), state);
 await page.waitForTimeout(800);
-await page.getByRole("button", { name: "Activity" }).click();
+if ((await page.locator(".activity").count()) === 0) await page.getByRole("button", { name: "Activity" }).click();
 await page.waitForSelector(".activity", {timeout:3000});
 await page.waitForTimeout(500);
 

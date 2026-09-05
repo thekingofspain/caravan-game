@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { publishTestHooks } from "../app/testHooks";
-import { Move, Ai, GameState, Human } from "../model/types";
+import { GameConfig, Move, Ai, GameState, Human } from "../model/types";
 import { applyMove, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
 
-export interface GameConfig {
-    seed?: number;
-}
+export type { GameConfig };
 
 export interface GameStore {
     state: GameState;

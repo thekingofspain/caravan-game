@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../model/cards";
@@ -38,6 +38,19 @@ interface PortalRemoveProps {
 function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: PortalRemoveProps) {
     const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
+    // Web pages cannot move the system cursor; keyboard focus on the X plus
+    // revealing its card is the closest equivalent.
+
+    const focusRef = useCallback(
+        (node: HTMLSpanElement | null) => {
+            if (!node) return;
+
+            node.focus({ preventScroll: true });
+            anchorRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+        },
+        [anchorRef]
+    );
+
     useLayoutEffect(() => {
         const update = () => {
             const el = anchorRef.current;
@@ -69,6 +82,7 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
 
     return createPortal(
         <span
+            ref={focusRef}
             role="button"
             className="confirm portal"
             tabIndex={0}
@@ -142,6 +156,8 @@ function CaravanImpl({
         if (isTarget) classes.push("target");
 
         if (selection.pendingRemovalSet.has(key)) classes.push("pending");
+
+        if (selection.flashKeys?.has(key)) classes.push("lastmove");
 
         if (selection.removingSet.has(key)) classes.push("pending-remove");
 

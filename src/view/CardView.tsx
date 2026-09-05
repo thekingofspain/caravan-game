@@ -10,5 +10,3 @@ interface CardViewProps {
 export const CardView = memo(function CardView({ card, className }: CardViewProps) {
     return <div className={cardClassName(className ?? "card", card)} />;
 });
-
-export default CardView;
