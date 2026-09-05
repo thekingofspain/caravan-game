@@ -17,11 +17,11 @@ console.log(`  size: ${phBox.width.toFixed(1)} x ${phBox.height.toFixed(1)}`);
 const stacks = page.locator(".caravans.human .caravan");
 const stackCount = await stacks.count();
 for (let i = 0; i < stackCount; i++) {
-  const ph2 = stacks.nth(i).locator(".empty");
-  if ((await ph2.count()) === 0) continue;
-  const b = await ph2.boundingBox();
-  assert.ok(Math.abs(b.width - phBox.width) < 1, `placeholder ${i} width matches`);
-  assert.ok(Math.abs(b.height - phBox.height) < 1, `placeholder ${i} height matches`);
+    const ph2 = stacks.nth(i).locator(".empty");
+    if ((await ph2.count()) === 0) continue;
+    const b = await ph2.boundingBox();
+    assert.ok(Math.abs(b.width - phBox.width) < 1, `placeholder ${i} width matches`);
+    assert.ok(Math.abs(b.height - phBox.height) < 1, `placeholder ${i} height matches`);
 }
 console.log("  PASS");
 
@@ -39,9 +39,9 @@ await page.waitForTimeout(500);
 const wrap = page.locator(".caravans.human .caravan button.card[data-index]").first();
 await wrap.waitFor({ state: "visible", timeout: 5000 });
 const boxes = await wrap.evaluate((el) => {
-  const r = el.getBoundingClientRect();
-  const t = el.parentElement.getBoundingClientRect();
-  return { wx: r.x, ww: r.width, tx: t.x, tw: t.width, th: t.height };
+    const r = el.getBoundingClientRect();
+    const t = el.parentElement.getBoundingClientRect();
+    return { wx: r.x, ww: r.width, tx: t.x, tw: t.width, th: t.height };
 });
 
 const gapL = boxes.wx - boxes.tx;
@@ -51,10 +51,13 @@ console.log(`  track: ${boxes.tw.toFixed(1)} x ${boxes.th.toFixed(1)}`);
 console.log(`  card: ${boxes.ww.toFixed(1)}`);
 console.log(`  gaps: left=${gapL.toFixed(1)}  right=${gapR.toFixed(1)}`);
 
-assert.ok(gapL >= 0 && gapR >= 0, `card should sit inside its track, got left=${gapL.toFixed(1)} right=${gapR.toFixed(1)}`);
 assert.ok(
-  Math.abs(gapL - gapR) < 1,
-  `card should be horizontally centered in its track (left=${gapL.toFixed(1)}, right=${gapR.toFixed(1)})`
+    gapL >= 0 && gapR >= 0,
+    `card should sit inside its track, got left=${gapL.toFixed(1)} right=${gapR.toFixed(1)}`
+);
+assert.ok(
+    Math.abs(gapL - gapR) < 1,
+    `card should be horizontally centered in its track (left=${gapL.toFixed(1)}, right=${gapR.toFixed(1)})`
 );
 console.log("  PASS");
 
@@ -63,96 +66,96 @@ console.log("\nTEST 3: Border rendered at 3px and corners rounded");
 
 const buf = await wrap.screenshot();
 const cornerCheck = JSON.parse(
-  await page.evaluate(async (b64) => {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: "image/png" });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.src = url;
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-    URL.revokeObjectURL(url);
-    const c = document.createElement("canvas");
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
-    const ctx = c.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    const d = ctx.getImageData(0, 0, c.width, c.height).data;
-    const w = c.width,
-      h = c.height;
+    await page.evaluate(async (b64) => {
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const blob = new Blob([bytes], { type: "image/png" });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.src = url;
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+        });
+        URL.revokeObjectURL(url);
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const d = ctx.getImageData(0, 0, c.width, c.height).data;
+        const w = c.width,
+            h = c.height;
 
-    function px(x, y) {
-      const i = (y * w + x) * 4;
-      return [d[i], d[i + 1], d[i + 2]];
-    }
+        function px(x, y) {
+            const i = (y * w + x) * 4;
+            return [d[i], d[i + 1], d[i + 2]];
+        }
 
-    function isGreen(c) {
-      return c[1] > 60 && c[1] > c[0] * 2 && c[1] > c[2];
-    }
+        function isGreen(c) {
+            return c[1] > 60 && c[1] > c[0] * 2 && c[1] > c[2];
+        }
 
-    // Count non-green pixels at 1px inset from each edge (inside the 3px border)
-    let borderPixels = 0;
-    let totalPixels = 0;
-    const band = 1;
-    for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
-      totalPixels++;
-      if (!isGreen(px(band, y))) borderPixels++;
-    }
-    for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
-      totalPixels++;
-      if (!isGreen(px(w - 1 - band, y))) borderPixels++;
-    }
-    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
-      totalPixels++;
-      if (!isGreen(px(x, band))) borderPixels++;
-    }
-    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
-      totalPixels++;
-      if (!isGreen(px(x, h - 1 - band))) borderPixels++;
-    }
+        // Count non-green pixels at 1px inset from each edge (inside the 3px border)
+        let borderPixels = 0;
+        let totalPixels = 0;
+        const band = 1;
+        for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
+            totalPixels++;
+            if (!isGreen(px(band, y))) borderPixels++;
+        }
+        for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y++) {
+            totalPixels++;
+            if (!isGreen(px(w - 1 - band, y))) borderPixels++;
+        }
+        for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
+            totalPixels++;
+            if (!isGreen(px(x, band))) borderPixels++;
+        }
+        for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x++) {
+            totalPixels++;
+            if (!isGreen(px(x, h - 1 - band))) borderPixels++;
+        }
 
-    const borderRatio = totalPixels > 0 ? borderPixels / totalPixels : 0;
+        const borderRatio = totalPixels > 0 ? borderPixels / totalPixels : 0;
 
-    // Corners should show background (green felt), not card-white. Headers sit
-    // clear of the cards, so all four corners prove rounding here.
-    const corners = [
-      { label: "tl", x: 0, y: 0 },
-      { label: "tr", x: w - 1, y: 0 },
-      { label: "bl", x: 0, y: h - 1 },
-      { label: "br", x: w - 1, y: h - 1 },
-    ];
-    const cornerResults = corners.map(({ label, x, y }) => {
-      const c = px(x, y);
-      return { label, isBackground: isGreen(c) };
-    });
+        // Corners should show background (green felt), not card-white. Headers sit
+        // clear of the cards, so all four corners prove rounding here.
+        const corners = [
+            { label: "tl", x: 0, y: 0 },
+            { label: "tr", x: w - 1, y: 0 },
+            { label: "bl", x: 0, y: h - 1 },
+            { label: "br", x: w - 1, y: h - 1 }
+        ];
+        const cornerResults = corners.map(({ label, x, y }) => {
+            const c = px(x, y);
+            return { label, isBackground: isGreen(c) };
+        });
 
-    return JSON.stringify({
-      w,
-      h,
-      borderPixels,
-      totalPixels,
-      borderRatio: +borderRatio.toFixed(3),
-      corners: cornerResults,
-    });
-  }, buf.toString("base64"))
+        return JSON.stringify({
+            w,
+            h,
+            borderPixels,
+            totalPixels,
+            borderRatio: +borderRatio.toFixed(3),
+            corners: cornerResults
+        });
+    }, buf.toString("base64"))
 );
 
 console.log(`  image: ${cornerCheck.w}x${cornerCheck.h}`);
 console.log(
-  `  border pixels at 1px inset: ${cornerCheck.borderPixels}/${cornerCheck.totalPixels} (${(cornerCheck.borderRatio * 100).toFixed(0)}%)`
+    `  border pixels at 1px inset: ${cornerCheck.borderPixels}/${cornerCheck.totalPixels} (${(cornerCheck.borderRatio * 100).toFixed(0)}%)`
 );
 
 assert.ok(
-  cornerCheck.borderRatio > 0.3,
-  `border should be visible at 1px inset, got ${(cornerCheck.borderRatio * 100).toFixed(0)}%`
+    cornerCheck.borderRatio > 0.3,
+    `border should be visible at 1px inset, got ${(cornerCheck.borderRatio * 100).toFixed(0)}%`
 );
 
 for (const c of cornerCheck.corners) {
-  assert.ok(c.isBackground, `${c.label} corner should show background (rounded)`);
+    assert.ok(c.isBackground, `${c.label} corner should show background (rounded)`);
 }
 console.log("  corners: all 4 show background (rounded)");
 console.log("  PASS");
