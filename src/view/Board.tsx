@@ -92,25 +92,19 @@ function CaravanColumn({
                                 Sold
                             </div>
                         ) : null}
-                        <header>
+                        <header data-dir={caravan.direction ?? undefined}>
                             <CaravanScore
                                 caravan={caravan}
                                 isSeller={seller === playerId}
                                 playerId={playerId}
                             />
                             <span className="title">{caravanName(playerId, ci)}</span>
-                            <span
-                                className="direction"
-                                data-dir={caravan.direction}
-                                aria-hidden="true"
-                            >
                                 <span className="sort-icon" aria-hidden="true" />
                                 {caravan.suit !== null ? (
                                     <span className={`suit card-name ${caravan.suit}`}>
                                         {SUIT_SYMBOL[caravan.suit]}
                                     </span>
                                 ) : null}
-                            </span>
                         </header>
                         <Caravan
                             caravan={caravan}

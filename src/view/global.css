@@ -51,9 +51,8 @@
     --caravan-gap-y: clamp(calc(var(--card-h) * 0.15), 2.5vh, calc(var(--card-h) * 0.5));
     /* Lead-in from the track edge facing board center: empty-slot marker and
        first-card landing spot share it, so the stack keys off the marker. */
-    --slot-lead: calc(var(--card-offset-y) / 2);
-    /* Caravan header height (score/title/icon row) and high-contrast sort accent. */
-    --caravan-head-h: 2rem;
+    --slot-lead: var(--sp-2);
+    /* High-contrast sort accent. */
     --c-sort: #e9c46a;
     --fan-step: 5.5deg;
     --fan-pivot: 1.67;
@@ -588,51 +587,81 @@ body {
 }
 .caravan header {
     width: 100%;
-    height: var(--caravan-head-h);
-    display: flex;
+    height: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
-    /* Human and AI share this rule: --head-dir (±1) times 1.5 heights pushes
-       each header away from the board center — AI stays above the 50vh line,
-       human stays below it. Click-through so rows stay playable. */
-    transform: translateY(calc(var(--head-dir, 0) * var(--caravan-head-h) * 1.5));
+    row-gap: var(--sp-1);
     position: relative;
-    z-index: 60;
     pointer-events: none;
 }
-/* Score and direction pin at one card width off the caravan center line, so
-   every caravan shows them in the same spot regardless of title width. */
-.caravan .score,
-.caravan .direction {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-}
 .caravan .score {
-    right: calc(50% + var(--card-w));
-}
-.caravan .direction {
-    left: calc(50% + var(--card-w));
-}
-.caravan .direction:not([data-dir]) .sort-icon {
-    visibility: hidden;
+    grid-column: 1;
+    justify-self: end;
 }
 .caravan .title {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--c-dim);
+    grid-column: 2;
+    justify-self: center;
     font-size: var(--fs-md);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    /* Single line at fs-xl: row height matches suit/score rows exactly. */
+    line-height: var(--fs-xl);
+    width: 100px;
+    max-width: 100%;
+    text-align: center;
     white-space: nowrap;
-    /* Trailing tracking offsets ink left; shift back half of it so the name
-       itself — not just its box — centers on the placeholder. */
-    transform: translateX(0.05em);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-/* Score (left) and direction (right) pin to the outer edges so the title
-   stays dead-center over the caravan track and its placeholder. */
+.caravan .sort-icon,
+.caravan .suit {
+    grid-column: 3;
+    grid-row: 1;
+}
+.caravan .suit {
+    justify-self: start;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    line-height: 1;
+}
+/* Flat-DOM sort icon: same gold-mask treatment as the .direction rules.
+   No direction signal survives in this markup, so the glyph defaults to
+   asc; a header[data-dir] hook overrides it the moment one exists. */
+.caravans.ai .caravan {
+    margin-bottom: 0.23rem;
+}
+.caravans.human .caravan {
+    margin-top: 0.23rem;
+}
+.caravans.human .caravan header {
+    padding-top: var(--sp-2);
+    padding-bottom: 0;
+}
+.caravans.ai .caravan header {
+    padding-bottom: var(--sp-2);
+    padding-top: 0;
+}
+.caravan .sort-icon {
+    display: block;
+    width: var(--fs-xl);
+    height: var(--fs-xl);
+    background-color: var(--c-sort);
+    justify-self: start;
+    font-size: var(--fs-xl);
+    margin-left: calc(0.61em + 0.05rem);
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    -webkit-mask-image: url("/icons/sort-asc.svg");
+    mask-image: url("/icons/sort-asc.svg");
+}
+.caravan header[data-dir="desc"] .sort-icon {
+    -webkit-mask-image: url("/icons/sort-desc.svg");
+    mask-image: url("/icons/sort-desc.svg");
+}
+/* Score readout text styling; placement is handled by the header grid above. */
 .caravan .score {
     height: 1.5rem;
     display: flex;
