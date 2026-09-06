@@ -438,11 +438,8 @@ body {
    face-up under a big red X (single card, no history). */
 .deck-pair {
     display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-}
-.hand-half.human .deck-pair {
     align-items: flex-start;
+    gap: var(--sp-2);
 }
 .discard-slot {
     position: relative;
