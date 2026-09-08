@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { publishTestHooks } from "../app/testHooks";
 import { GameConfig, Move, Ai, GameState, Human } from "../model/types";
-import { applyMove, legalMoves, setupGame } from "../model/engine";
+import { applyMove, forfeitNoMoves, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
 
@@ -74,6 +74,14 @@ export function useGame(initial: GameConfig): GameStore {
         if (state.phase === "over" || state.current !== Ai) return;
 
         if (transition?.needsConfirmation && transition.confirmer === Human) return;
+
+        // AI with no legal moves (e.g. unfillable empties, no value cards)
+        // forfeits at turn start instead of crashing move selection.
+        if (legalMoves(state).length === 0) {
+            dispatch({ type: "__setState", state: forfeitNoMoves(state) });
+
+            return;
+        }
 
         const t = window.setTimeout(() => {
             setThinking(true);

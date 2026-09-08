@@ -60,21 +60,12 @@ describe("shoe / setup deal", () => {
 });
 
 describe("shoe exhaustion (unfillable empties)", () => {
-    it("offers moves when empties are unfillable and the shoe has cards", () => {
+    it("offers no moves when empties are unfillable, even with a stocked shoe", () => {
         const { s } = unfillableShoeSituation(
             [makeCard(1, "2", "clubs")],
             [makeCard(1, "K", "clubs"), makeCard(1, "J", "diamonds")]
         );
-        expect(legalMoves(s).length).toBeGreaterThan(0);
-    });
-    it("offers only discards when empties are unfillable and the shoe has cards", () => {
-        const { s } = unfillableShoeSituation(
-            [makeCard(1, "2", "clubs")],
-            [makeCard(1, "K", "clubs"), makeCard(1, "J", "diamonds")]
-        );
-        for (const a of legalMoves(s)) {
-            expect(a.type).toBe("discardCard");
-        }
+        expect(legalMoves(s)).toEqual([]);
     });
     it("has no moves when empties are unfillable and the shoe is empty", () => {
         const { s } = unfillableShoeSituation([], [makeCard(1, "K", "clubs")]);

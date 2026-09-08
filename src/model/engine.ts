@@ -301,10 +301,8 @@ function handleOperationCard(
 function handleDiscardCard(next: GameState, action: Extract<Move, { type: "discardCard" }>): void {
     const player = next.players[action.player];
     const wasOpening = inOpeningRound(player);
-    const mustFillEmpty =
-        player.caravans.some((c) => !(c.started ?? c.rows.length > 0)) &&
-        player.hand.some((c) => isValueCard(c));
-    if (mustFillEmpty) throw new IllegalMoveError("discardCard: must fill empty caravans first");
+
+    if (inOpeningRound(player)) throw new IllegalMoveError("discardCard: must fill empty caravans first");
 
     if (action.handIndex < 0 || action.handIndex >= player.hand.length)
         throw new IllegalMoveError("discardCard: invalid hand index");
@@ -321,7 +319,7 @@ function handleDisbandCaravan(
 ): void {
     const player = next.players[action.player];
 
-    if (player.caravans.some((c) => !(c.started ?? c.rows.length > 0)))
+    if (inOpeningRound(player))
         throw new IllegalMoveError("disbandCaravan: cannot disband before all caravans started");
 
     if (player.caravans[action.caravan].rows.length === 0)
@@ -360,10 +358,36 @@ export function appendActionLog(
     next.log = [...next.log, log({ ...entryData, detail: jokerDetail ?? undefined })];
 }
 
+// Shared no-moves loss: loser and their log line in one place.
+
+function applyNoMovesLoss(next: GameState, loser: PlayerId): void {
+    next.phase = "over";
+    next.winner = loser === Human ? Ai : Human;
+    next.log = [
+        ...next.log,
+        log({
+            segments:
+                loser === Human
+                    ? [actor(Human, "subject"), " ran out of moves — ", actor(Ai, "subject"), " wins."]
+                    : [actor(Ai, "subject"), " ran out of moves — ", actor(Human, "subject"), " win!"]
+        })
+    ];
+}
+
+// Turn player has no legal moves at turn start (e.g. unfillable empties
+// with no value cards): they lose immediately.
+
+export function forfeitNoMoves(state: GameState): GameState {
+    const forfeited: GameState = structuredClone(state);
+
+    applyNoMovesLoss(forfeited, state.current);
+
+    return forfeited;
+}
 export function resolveTerminal(next: GameState): void {
     const winner = gameWinner(next);
-    if (winner !== null) {
 
+    if (winner !== null) {
         next.phase = "over";
         next.winner = winner;
         next.log = [
@@ -404,21 +428,7 @@ export function resolveTerminal(next: GameState): void {
     }
 
     next.current = next.current === Human ? Ai : Human;
-    if (legalMoves(next).length === 0) {
-        const loser = next.current;
-
-        next.phase = "over";
-        next.winner = loser === Human ? Ai : Human;
-        next.log = [
-            ...next.log,
-            log({
-                segments:
-                    loser === Human
-                        ? [actor(Human, "subject"), " ran out of moves — ", actor(Ai, "subject"), " wins."]
-                        : [actor(Ai, "subject"), " ran out of moves — ", actor(Human, "subject"), " win!"]
-            })
-        ];
-    }
+    if (legalMoves(next).length === 0) applyNoMovesLoss(next, next.current);
 }
 export function applyMove(state: GameState, action: Move): GameState {
     const { next, jokerDetail } = cloneAndApply(state, action);
@@ -492,24 +502,14 @@ export function legalMoves(state: GameState): Move[] {
 
     const pid = state.current;
     const player = state.players[pid];
-    const mustStart = player.caravans.some((c) => !(c.started ?? c.rows.length > 0));
+    // Opening only (the first 6 value moves): `started` is set on placement
+    // and never cleared, so this is false for the rest of the game — even
+    // with an emptied caravan. No discards or disbands until it clears.
+    const isOpening = inOpeningRound(player);
 
-    if (mustStart) {
-        const valueMoves = valueCardMoves(player, pid, true);
-
-        if (valueMoves.length > 0) return valueMoves;
-
-        // Opening bind: empty slots unfillable (operation cards only), so the
-        // only move is discard — and only with cards left in the shoe. With an
-        // empty shoe there are no moves and resolveTerminal ends the game.
-
-        if (player.deck.length === 0) return [];
-
-        return player.hand.map((_, hi) => ({
-            type: "discardCard" as const,
-            player: pid,
-            handIndex: hi
-        }));
+    if (isOpening) {
+        // Value cards into the empties, or no moves (stuck player loses).
+        return valueCardMoves(player, pid, true);
     }
 
     return [

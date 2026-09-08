@@ -1,3 +1,8 @@
+#!/usr/bin/env node
+// Defect: AI-played cards not displayed — placeholder goes away but the
+// card never renders (missing backgroundImage / zero-size box).
+// Programs AI caravans with cards, asserts each card is visible, then
+// plays a Human value card and asserts AI cards stay visible.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 let id=5000;

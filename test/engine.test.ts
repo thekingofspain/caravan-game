@@ -102,6 +102,19 @@ describe("initial round (must-start constraint)", () => {
         const discards = legalMoves(s).filter((a) => a.type === "discardCard");
         expect(discards.length).toBe(0);
     });
+    it("does not restrict moves for a started caravan emptied mid-game", () => {
+        const emptied: Caravan = { rows: [], direction: null, suit: null, started: true };
+        const p0 = mkPlayer(
+            [emptied, caravanOf(["10"], "clubs"), caravanOf(["9"], "hearts")],
+            [makeCard(1, "5", "spades"), makeCard(1, "J", "diamonds")]
+        );
+        const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
+        const moves = legalMoves(s);
+        expect(moves.some((m) => m.type === "discardCard")).toBe(true);
+        expect(moves.some((m) => m.type === "disbandCaravan")).toBe(true);
+        expect(moves.some((m) => m.type === "playValueCard" && m.caravan !== 0)).toBe(true);
+    });
+
     it("throws when discarding while a value card could fill an empty", () => {
         const p0: PlayerState = {
             deck: [],
@@ -536,7 +549,10 @@ describe("reddit atomic coverage", () => {
     it("reverses again on a second Queen", () => {
         const p0: PlayerState = {
             deck: [makeCard(1, "9", "diamonds")],
-            hand: [makeCard(1, "Q", "hearts"), makeCard(1, "Q", "clubs")],
+            // 5♥ keeps Human out of the opening bind (no discards until
+            // every caravan is initialized): without it s1a would end the
+            // game with Human to move and no legal moves.
+            hand: [makeCard(1, "Q", "hearts"), makeCard(1, "Q", "clubs"), makeCard(1, "5", "hearts")],
             discard: null,
             caravans: EMPTY
         };
