@@ -30,9 +30,15 @@ const state = {
   players: [mkPlayer([hBoneyard,hRedding,hShady],[],[]), mkPlayer([aDayglow,aNewReno,aHub],[],[])],
   current: 1, phase:"over", winner:1,
   log: [
-    {id:1, segments:["You played {9♦} to Boneyard"], text:"You played {9♦} to Boneyard", detail:[]},
-    {id:2, segments:["AI played {Red Joker} on your Boneyard {5♣}"], text:"AI played {Red Joker} on your Boneyard {5♣}", detail: [["your caravan Boneyard: {5♣}, {5♦}"], ["AI's caravan New Reno: {5♠}"], ["your caravan Shady Sands: {5♥}"], ["AI's caravan The Hub: {5♣}"]]},
-    {id:3, segments:["AI wins the caravan."], text:"AI wins the caravan.", detail:[]}
+    {id:1, segments:[{type:"actor",player:0,form:"subject"}," played ",makeCard(11,"9","diamonds")," to ",{type:"caravan",player:0,caravan:0}], text:"You played {9♦} to Boneyard", detail:[]},
+    {id:2, segments:[{type:"actor",player:1,form:"subject"}," played ",makeCard(12,"Joker",null,"Red")," on ",{type:"actor",player:0,form:"possessive"},{type:"caravan",player:0,caravan:0}," ",makeCard(13,"5","clubs")], text:"AI played {Red Joker} on You's Boneyard {5♣}", detail: [
+      ["removal of ",makeCard(6,"5","spades")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,caravan:1}],
+      ["removal of ",makeCard(7,"5","clubs")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,caravan:2}],
+      ["removal of ",makeCard(1,"5","clubs")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:0}],
+      ["removal of ",makeCard(2,"5","diamonds")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:0}],
+      ["removal of ",makeCard(4,"5","hearts")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:2}]
+    ]},
+    {id:3, segments:[{type:"actor",player:1,form:"subject"}," wins the caravan."], text:"AI wins the caravan.", detail:[]}
   ],
   started:true
 };

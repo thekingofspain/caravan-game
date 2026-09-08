@@ -5,16 +5,15 @@ import {
     Human,
     PlayerId,
     TargetRef,
-    isJokerCard,
     isValueCard,
     type Move
 } from "../model/types";
-import type { Caravan as CaravanModel, Card, PlayerState, SelectionState } from "../model/types";
+import type { Caravan as CaravanModel, PlayerState, SelectionState } from "../model/types";
 import { SUIT_SYMBOL } from "../model/types";
 import { getCaravanScores, type GameScores } from "../model/scoring";
-import { calculateCaravanState } from "../model/rules/caravanCardRules";
 import { caravanName } from "../model/names";
 import { cardLabel } from "../model/cards";
+import { segmentsText } from "../model/gameLog";
 import { Caravan, CaravanScore } from "./Caravan";
 import { PlayerHand } from "./PlayerHand";
 import { CardView } from "./CardView";
@@ -195,12 +194,13 @@ export function Board({
             lines.push(
                 `${label} — hand:${String(p.hand.length)} deck:${String(p.deck.length)} | hand: ${p.hand.map(cardLabel).join(", ")}`
             );
+            const metas = pid === Human ? scores.humanScores : scores.aiScores;
+
             p.caravans.forEach((c, idx) => {
-                const st = calculateCaravanState(c);
-                const total = st.total;
+                const meta = metas[idx];
 
                 lines.push(
-                    `  ${caravanName(pid, idx)}: ${String(total)} (${st.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
+                    `  ${caravanName(pid, idx)}: ${String(meta.total)} (${meta.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
                 );
             });
         }
@@ -214,19 +214,10 @@ export function Board({
                 lines.push(`- ${e.text.replace(BRACE_RE, "$1")}`);
                 if (e.detail)
                     e.detail.forEach((d) => {
-                        const detailText = Array.isArray(d)
-                            ? (d as (string | Card)[])
-                                  .map((s) =>
-                                      typeof s === "string"
-                                          ? s
-                                          : isJokerCard(s)
-                                            ? "Joker"
-                                            : `${s.rank}${SUIT_SYMBOL[s.suit]}`
-                                  )
-                                  .join("")
-                            : ((BRACE_RE.lastIndex = 0), (d as string).replace(BRACE_RE, "$1"));
+                        BRACE_RE.lastIndex = 0;
+                        const row = Array.isArray(d) ? segmentsText(d) : d;
 
-                        lines.push(`  - ${detailText}`);
+                        lines.push(`  - ${row.replace(BRACE_RE, "$1")}`);
                     });
             });
 
@@ -322,7 +313,7 @@ export function Board({
         humanPlayer.caravans.every((c) => c.started ?? c.rows.length > 0);
 
     // Blink the AI's last board move while the human turn starts; value plays
-    // flash their fresh row, face cards flash their target. Cleared on select.
+    // flash their fresh row, operation cards flash their target. Cleared on select.
 
     const aiFlashKey = useMemo(() => {
         if (!humanCanAct) return null;
@@ -339,7 +330,7 @@ export function Board({
             return targetKey({ player: Ai, caravan: m.caravan, cardIndex: rows.length - 1 });
         }
 
-        if (m.type === "playFaceCard") return targetKey(m.target);
+        if (m.type === "playOperationCard") return targetKey(m.target);
 
         return null;
     }, [humanCanAct, store.lastMove, displayedState]);
@@ -442,7 +433,7 @@ export function Board({
 
             if (target.player === Ai) {
                 if (targetSet.has(targetKey(target))) {
-                    tryAct({ type: "playFaceCard", player: Human, target, handIndex: sel });
+                    tryAct({ type: "playOperationCard", player: Human, target, handIndex: sel });
                     setSel(null);
                 }
 
@@ -467,7 +458,7 @@ export function Board({
             }
 
             if (targetSet.has(targetKey(target))) {
-                tryAct({ type: "playFaceCard", player: Human, target, handIndex: sel });
+                tryAct({ type: "playOperationCard", player: Human, target, handIndex: sel });
                 setSel(null);
             }
         },

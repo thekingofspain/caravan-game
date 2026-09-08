@@ -52,7 +52,7 @@ async function run(){
   // Play Joker on Redding 7♥ (Human, caravan 1, idx 0)
   await page.evaluate(()=> {
     const w = window;
-    w.__act({type:"playFaceCard", player:1, target:{player:0, caravan:1, cardIndex:0}, handIndex:0});
+    w.__act({type:"playOperationCard", player:1, target:{player:0, caravan:1, cardIndex:0}, handIndex:0});
   });
   await page.waitForTimeout(600);
 

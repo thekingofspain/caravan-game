@@ -92,7 +92,7 @@ console.log("Human plays Jack on 8♠ (Boneyard index1) — should remove 8♠+K
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="J");
-  window.__act({ type:"playFaceCard", player:0, target:{player:0, caravan:0, cardIndex:1}, handIndex: idx });
+  window.__act({ type:"playOperationCard", player:0, target:{player:0, caravan:0, cardIndex:1}, handIndex: idx });
 });
 await page.waitForTimeout(600);
 

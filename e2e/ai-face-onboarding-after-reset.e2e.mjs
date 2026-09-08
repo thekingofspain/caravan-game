@@ -23,7 +23,7 @@ const completedState = {
     mkPlayer([caravanOf([[{id:"h1",rank:"10",suit:"clubs"}]]), caravanOf([[{id:"h2",rank:"10",suit:"spades"}]]), caravanOf([[{id:"h3",rank:"10",suit:"hearts"}]])], [], []),
     mkPlayer([caravanOf([[{id:"a1",rank:"10",suit:"diamonds"}]]), caravanOf([[{id:"a2",rank:"10",suit:"hearts"}]]), caravanOf([[{id:"a3",rank:"10",suit:"spades"}]])], [], [])
   ],
-  current: 0, phase:"over", winner:0, log:[{id:1,text:"You win the caravan!",detail:[]}], started:true
+  current: 0, phase:"over", winner:0, log:[{id:1,text:"You win the caravan!",segments:[{type:"actor",player:0,form:"subject"}," win the caravan!"],detail:[]}], started:true
 };
 await page.evaluate(s=> window.__setCaravanState(s), completedState);
 await page.waitForTimeout(500);
@@ -79,7 +79,7 @@ let onboardingCheck = await page.evaluate(()=>{
     phase: s.phase,
     hasEmpty: s.players[s.current].caravans.some(c=>c.rows.length===0),
     legalCount: legal.length,
-    legalTypes: legal.map(m=>m.type + (m.type==="playFaceCard" ? `:${m.handIndex}->${m.target.player}-${m.target.caravan}` : m.type==="playValueCard" ? `:${m.handIndex}->${m.caravan}` : "")),
+    legalTypes: legal.map(m=>m.type + (m.type==="playOperationCard" ? `:${m.handIndex}->${m.target.player}-${m.target.caravan}` : m.type==="playValueCard" ? `:${m.handIndex}->${m.caravan}` : "")),
     legal: legal
   };
 });
@@ -95,7 +95,7 @@ console.log("AI legal moves:", onboardingCheck.legalTypes);
 
 // The bug: AI places a face card during onboarding (when hasEmpty true)
 // It should ONLY place value cards to empty caravans during onboarding
-let hasFaceCardMove = onboardingCheck.legal.some(m=> m.type==="playFaceCard");
+let hasFaceCardMove = onboardingCheck.legal.some(m=> m.type==="playOperationCard");
 let hasValueToEmpty = onboardingCheck.legal.some(m=> m.type==="playValueCard" && m.caravan===0); // Dayglow is 0
 
 console.log(`hasFaceCardMove: ${hasFaceCardMove}, hasValueToEmpty: ${hasValueToEmpty}`);
@@ -106,7 +106,7 @@ let bestMoveInfo = await page.evaluate(async ()=>{
     const mod = await import("/src/model/ai.ts");
     const state = window.__caravanStore.state;
     const move = mod.determineBestMove(state, state.current, ()=>0.5);
-    return { move, moveType: move.type, isFace: move.type==="playFaceCard" };
+    return { move, moveType: move.type, isFace: move.type==="playOperationCard" };
   } catch(e){
     return { error: String(e) };
   }
@@ -115,7 +115,7 @@ console.log("AI best move:", JSON.stringify(bestMoveInfo,null,2));
 
 let failures=[];
 if(hasFaceCardMove){
-  failures.push(`AI legalMoves during onboarding (hasEmpty=true, Dayglow 0) includes face card moves: ${onboardingCheck.legalTypes.filter(t=>t.startsWith("playFaceCard")).join(", ")} — should NOT include face cards during caravan onboarding`);
+  failures.push(`AI legalMoves during onboarding (hasEmpty=true, Dayglow 0) includes face card moves: ${onboardingCheck.legalTypes.filter(t=>t.startsWith("playOperationCard")).join(", ")} — should NOT include face cards during caravan onboarding`);
 }
 if(bestMoveInfo.isFace){
   failures.push(`AI determineBestMove picks face card ${JSON.stringify(bestMoveInfo.move)} during onboarding with empty caravan — should pick value card to Dayglow`);

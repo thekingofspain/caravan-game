@@ -1,17 +1,17 @@
-import { CARAVAN_INDICES, GameState, Human, Ai, PlayerId, Move, CaravanState } from "./types";
+import { CARAVAN_INDICES, GameState, Human, Ai, PlayerId, Move, Caravan } from "./types";
 import { applyMove, legalMoves } from "./engine";
-import { calculateCaravanState } from "./rules/caravanCardRules";
+import { calculateScore, isSellable, MAX_SELLABLE } from "./rules/caravanCardRules";
 
 const OTHER: Record<PlayerId, PlayerId> = { [Human]: Ai, [Ai]: Human };
 const EVAL_SOLD_WEIGHT = 100;
 const EVAL_BUST_WEIGHT = 80;
 const EVAL_TIE_WEIGHT = 20;
 
-function calculateCaravanAdvantage(current: CaravanState, opposing: CaravanState): number {
-    const currentSellable = current.status === "sellable";
-    const opposingSellable = opposing.status === "sellable";
-    const currentTotal = current.total;
-    const opposingTotal = opposing.total;
+function calculateCaravanAdvantage(current: Caravan, opposing: Caravan): number {
+    const currentTotal = calculateScore(current);
+    const opposingTotal = calculateScore(opposing);
+    const currentSellable = isSellable(current);
+    const opposingSellable = isSellable(opposing);
 
     if (currentSellable && opposingSellable) {
         if (currentTotal > opposingTotal) return EVAL_SOLD_WEIGHT + (currentTotal - 21);
@@ -25,9 +25,9 @@ function calculateCaravanAdvantage(current: CaravanState, opposing: CaravanState
 
     if (opposingSellable) return -EVAL_SOLD_WEIGHT - (26 - opposingTotal);
 
-    if (current.status === "busted") return -EVAL_BUST_WEIGHT;
+    if (currentTotal > MAX_SELLABLE) return -EVAL_BUST_WEIGHT;
 
-    if (opposing.status === "busted") return 8;
+    if (opposingTotal > MAX_SELLABLE) return 8;
 
     return (currentTotal / 21) * 5;
 }
@@ -36,8 +36,8 @@ export function evaluateBoard(state: GameState, actingPlayerId: PlayerId): numbe
     let score = 0;
 
     for (const i of CARAVAN_INDICES) {
-        const current = calculateCaravanState(state.players[actingPlayerId].caravans[i]);
-        const opposing = calculateCaravanState(state.players[OTHER[actingPlayerId]].caravans[i]);
+        const current = state.players[actingPlayerId].caravans[i];
+        const opposing = state.players[OTHER[actingPlayerId]].caravans[i];
 
         score += calculateCaravanAdvantage(current, opposing);
     }

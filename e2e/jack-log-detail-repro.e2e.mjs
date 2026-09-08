@@ -18,12 +18,18 @@ function caravanOf(rows) {
   return { rows, direction, suit };
 }
 function mkPlayer(caravans, hand, deck = []) { return { deck, hand, caravans }; }
+const OWNER_NAME = [["Boneyard","Redding","Shady Sands"],["Dayglow","New Reno","The Hub"]];
+function flatSeg(s) {
+  if (typeof s === "string") return s;
+  if (s.type === "actor") {
+    const who = s.player === 0 ? "You" : "AI";
+    return s.form === "subject" ? who : `${who}'s `;
+  }
+  if (s.type === "caravan") return OWNER_NAME[s.player][s.caravan];
+  return s.rank + (s.suit ? s.suit : s.jokerType);
+}
 function flatDetail(detail) {
-  return detail.map((d) =>
-    (Array.isArray(d) ? d : [d])
-      .map((s) => (typeof s === "string" ? s : s.rank + (s.suit ? s.suit : s.jokerType)))
-      .join("")
-  );
+  return detail.map((d) => (Array.isArray(d) ? d : [d]).map(flatSeg).join(""));
 }
 
 const browser = await chromium.launch();
@@ -53,7 +59,7 @@ await page.evaluate((s) => window.__setCaravanState(s), {
   current: 0, phase: "play", winner: null, log: [], started: true,
 });
 // --- Jack: line 1 is the play line, then one removal line per card ---
-await page.evaluate(() => window.__caravanDispatch({ type: "playFaceCard", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 }));
+await page.evaluate(() => window.__caravanDispatch({ type: "playOperationCard", player: 0, target: { player: 1, caravan: 0, cardIndex: 0 }, handIndex: 0 }));
 await page.waitForTimeout(300);
 
 const jack = await page.evaluate(() => {
@@ -81,7 +87,7 @@ await page.waitForTimeout(300);
 await page.evaluate(() => {
   const s = window.__caravanStore.state;
   const hi = s.players[1].hand.findIndex((c) => c.rank === "Joker");
-  window.__caravanDispatch({ type: "playFaceCard", player: 1, target: { player: 1, caravan: 1, cardIndex: 0 }, handIndex: hi });
+  window.__caravanDispatch({ type: "playOperationCard", player: 1, target: { player: 1, caravan: 1, cardIndex: 0 }, handIndex: hi });
 });
 await page.waitForTimeout(300);
 
@@ -109,7 +115,7 @@ await page.waitForTimeout(300);
 await page.evaluate(() => {
   const s = window.__caravanStore.state;
   const hi = s.players[0].hand.findIndex((c) => c.rank === "Q");
-  window.__caravanDispatch({ type: "playFaceCard", player: 0, target: { player: 0, caravan: 1, cardIndex: 0 }, handIndex: hi });
+  window.__caravanDispatch({ type: "playOperationCard", player: 0, target: { player: 0, caravan: 1, cardIndex: 0 }, handIndex: hi });
 });
 await page.waitForTimeout(300);
 const queen = await page.evaluate(() => {
@@ -137,7 +143,7 @@ await page.evaluate((s) => window.__setCaravanState(s), {
   current: 1, phase: "play", winner: null, log: [], started: true,
 });
 await page.waitForTimeout(300);
-await page.evaluate(() => window.__act({ type: "playFaceCard", player: 1, target: { player: 0, caravan: 0, cardIndex: 0 }, handIndex: 0 }));
+await page.evaluate(() => window.__act({ type: "playOperationCard", player: 1, target: { player: 0, caravan: 0, cardIndex: 0 }, handIndex: 0 }));
 await page.waitForTimeout(500);
 const staged = await page.evaluate(() => {
   const s = window.__caravanStore.state;

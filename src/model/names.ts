@@ -5,8 +5,6 @@ const NAMES: Record<PlayerId, [string, string, string]> = {
     [Ai]: ["Dayglow", "New Reno", "The Hub"]
 };
 
-export const CARAVAN_NAMES = NAMES;
-
 export const ALL_CARAVAN_NAMES = Object.values(NAMES).flat();
 
 export function caravanName(player: PlayerId, index: number): string {

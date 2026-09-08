@@ -131,7 +131,7 @@ export function isHumanTurn(state: GameState): boolean {
 export function handSelectable(state: GameState, legal: Move[], handIndex: number): boolean {
     return legal.some(
         (a) =>
-            (a.type === "playValueCard" || a.type === "playFaceCard" || a.type === "discardCard") &&
+            (a.type === "playValueCard" || a.type === "playOperationCard" || a.type === "discardCard") &&
             a.player === state.current &&
             a.handIndex === handIndex
     );

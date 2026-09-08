@@ -1,32 +1,9 @@
-export const SUITS = ["spades", "hearts", "diamonds", "clubs"] as const;
-export type Suit = (typeof SUITS)[number];
-
-export type JokerType = "Red" | "Black";
-
-export const STANDARD_RANKS = [
-    "A",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "J",
-    "Q",
-    "K",
-    "Joker"
-] as const;
-export type Rank = (typeof STANDARD_RANKS)[number];
-export type SuitedRank = Exclude<Rank, "Joker">;
-
+// #region Utilities
 export type Nullable<T> = T | null;
-export type Direction = "asc" | "desc";
-export type GamePhase = "play" | "over";
-export type ScoredStatus = "sellable" | "busted" | "unsellable";
+// #endregion
 
+// #region Suits
+export const SUITS = ["spades", "hearts", "diamonds", "clubs"] as const;
 export const SUIT_SYMBOL: Record<Suit, string> = {
     spades: "♠",
     hearts: "♥",
@@ -34,7 +11,50 @@ export const SUIT_SYMBOL: Record<Suit, string> = {
     clubs: "♣"
 };
 
-export interface StandardCard {
+// ---- Types ----
+
+export type Suit = (typeof SUITS)[number];
+
+// ---- Functions ----
+
+export function isSuit(value: string): value is Suit {
+    return (SUITS as readonly string[]).includes(value);
+}
+// #endregion
+
+// #region Ranks
+export const VALUE_RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10"] as const;
+export const FACE_RANKS = ["J", "Q", "K"] as const;
+export const JOKER_RANK = "Joker" as const;
+export const OPERATION_RANKS = [...FACE_RANKS, JOKER_RANK] as const;
+export const STANDARD_RANKS = [...VALUE_RANKS, ...OPERATION_RANKS] as const;
+export const SUITED_RANKS: SuitedRank[] = [...VALUE_RANKS, ...FACE_RANKS];
+
+// ---- Types ----
+
+export type ValueRank = (typeof VALUE_RANKS)[number];
+export type FaceRank = (typeof FACE_RANKS)[number];
+export type JokerRank = typeof JOKER_RANK;
+export type SuitedRank = ValueRank | FaceRank;
+export type OperationRank = (typeof OPERATION_RANKS)[number];
+export type Rank = (typeof STANDARD_RANKS)[number];
+
+// ---- Functions ----
+
+export function isValueRank(rank: string): rank is ValueRank {
+    return (VALUE_RANKS as readonly string[]).includes(rank);
+}
+export function isFaceRank(rank: string): rank is FaceRank {
+    return (FACE_RANKS as readonly string[]).includes(rank);
+}
+export function isOperationRank(rank: string): rank is OperationRank {
+    return (OPERATION_RANKS as readonly string[]).includes(rank);
+}
+// #endregion
+
+// #region Cards
+export type JokerType = "Red" | "Black";
+export interface SuitedCard {
     id: string;
     rank: SuitedRank;
     suit: Suit;
@@ -42,19 +62,56 @@ export interface StandardCard {
 }
 export interface JokerCard {
     id: string;
-    rank: "Joker";
+    rank: JokerRank;
     suit: null;
     jokerType: JokerType;
 }
-export type Card = StandardCard | JokerCard;
+export type Card = SuitedCard | JokerCard;
+export interface ValueCard {
+    id: string;
+    rank: ValueRank;
+    suit: Suit;
+    jokerType?: never;
+}
+export interface FaceCard {
+    id: string;
+    rank: FaceRank;
+    suit: Suit;
+    jokerType?: never;
+}
+export type OperationCard = FaceCard | JokerCard;
+
+// ---- Functions ----
 
 export function isJokerCard(card: Card): card is JokerCard {
-    return card.rank === "Joker";
+    return card.rank === JOKER_RANK;
 }
+export function isValueCard(card: Card): card is ValueCard {
+    return isValueRank(card.rank);
+}
+export function isFaceCard(card: Card): card is FaceCard {
+    return isFaceRank(card.rank);
+}
+export function isOperationCard(card: Card): card is OperationCard {
+    return isOperationRank(card.rank);
+}
+export function baseValue(card: Card): number {
+    if (card.rank === "A") return 1;
 
+    if (isJokerCard(card)) return 0;
+
+    const n = Number(card.rank);
+
+    return Number.isNaN(n) ? 0 : n;
+}
+// #endregion
+
+// #region Caravans
+export type Direction = "asc" | "desc";
+export type ScoredStatus = "sellable" | "busted" | "unsellable";
 export type CaravanRow = Card[];
 
-// Invariant: row[0] is a value card (A,2-10), row[1..4] are face cards (J/Q/K/Joker), length 1..5.
+// Invariant: row[0] is a value card (A,2-10), row[1..4] are operation cards (J/Q/K/Joker), length 1..5.
 
 export interface Caravan {
     rows: CaravanRow[];
@@ -66,11 +123,34 @@ export interface Caravan {
 
     started?: boolean;
 }
-
 export interface CaravanState {
     status: ScoredStatus;
     total: number;
 }
+// #endregion
+
+// #region Players & game
+export const Human = 0 as const;
+export const Ai = 1 as const;
+export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
+export const CARAVAN_INDICES = [0, 1, 2] as const satisfies readonly CaravanIndex[];
+export type PlayerId = typeof Human | typeof Ai;
+export type CaravanIndex = 0 | 1 | 2;
+export interface ActorRef {
+    type: "actor";
+    player: PlayerId;
+
+    // subject renders Who alone ("You"); possessive appends "'s " ("AI's ").
+
+    form: "subject" | "possessive";
+}
+export interface CaravanRef {
+    type: "caravan";
+    player: PlayerId;
+    caravan: CaravanIndex;
+}
+export type LogSegment = string | Card | ActorRef | CaravanRef;
+export type GamePhase = "play" | "over";
 export interface GameConfig {
     seed?: number;
 }
@@ -84,15 +164,6 @@ export interface PlayerState {
 
     discard: Nullable<Card>;
 }
-export const Human = 0 as const;
-export const Ai = 1 as const;
-export type PlayerId = typeof Human | typeof Ai;
-export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
-export const CARAVAN_COUNT = 3 as const;
-export type CaravanIndex = 0 | 1 | 2;
-export const CARAVAN_INDICES = [0, 1, 2] as const satisfies readonly CaravanIndex[];
-export type LogSegment = string | Card;
-
 export interface GameState {
     players: [PlayerState, PlayerState];
     current: PlayerId;
@@ -112,8 +183,8 @@ interface PlayValueCardMove {
     caravan: CaravanIndex;
     handIndex: number;
 }
-interface PlayFaceCardMove {
-    type: "playFaceCard";
+interface PlayOperationCardMove {
+    type: "playOperationCard";
     player: PlayerId;
     target: TargetRef;
     handIndex: number;
@@ -128,7 +199,7 @@ interface DisbandCaravanMove {
     player: PlayerId;
     caravan: CaravanIndex;
 }
-export type Move = PlayValueCardMove | PlayFaceCardMove | DiscardCardMove | DisbandCaravanMove;
+export type Move = PlayValueCardMove | PlayOperationCardMove | DiscardCardMove | DisbandCaravanMove;
 export interface LogEntry {
     id: number;
     player?: PlayerId;
@@ -146,24 +217,9 @@ export class IllegalMoveError extends Error {
         this.name = "IllegalMoveError";
     }
 }
-export function isValueCard(card: Card): boolean {
-    return card.rank !== "J" && card.rank !== "Q" && card.rank !== "K" && card.rank !== "Joker";
-}
+// #endregion
 
-export function isFaceCard(card: Card): boolean {
-    return card.rank === "J" || card.rank === "Q" || card.rank === "K";
-}
-
-export function baseValue(card: Card): number {
-    if (card.rank === "A") return 1;
-
-    if (isJokerCard(card)) return 0;
-
-    const n = Number(card.rank);
-
-    return Number.isNaN(n) ? 0 : n;
-}
-
+// #region Selection (view state)
 export interface SelectionState {
     selectedHandIndex: Nullable<number>;
     selectedCard: Nullable<Card>;
@@ -177,3 +233,4 @@ export interface SelectionState {
 
     flashKeys?: ReadonlySet<string>;
 }
+// #endregion

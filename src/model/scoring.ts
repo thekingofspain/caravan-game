@@ -1,23 +1,29 @@
-import { calculateCaravanState } from "./rules/caravanCardRules";
-import { Ai, GameState, Human, PlayerId } from "./types";
+import { calculateCaravanState, calculateScore, isSellable } from "./rules/caravanCardRules";
+import { Ai, GameState, Human, PlayerId, type ScoredStatus } from "./types";
 
 export function caravanSeller(state: GameState, i: 0 | 1 | 2): PlayerId | null {
-    const s0 = calculateCaravanState(state.players[Human].caravans[i]);
-    const s1 = calculateCaravanState(state.players[Ai].caravans[i]);
-    const r0 = s0.status === "sellable";
-    const r1 = s1.status === "sellable";
+    const h = state.players[Human].caravans[i];
+    const a = state.players[Ai].caravans[i];
+    const hSell = isSellable(h);
+    const aSell = isSellable(a);
 
-    if (r0 && r1) return s0.total > s1.total ? Human : s1.total > s0.total ? Ai : null;
+    if (hSell && aSell) {
+        const hTotal = calculateScore(h);
+        const aTotal = calculateScore(a);
 
-    if (r0) return Human;
+        return hTotal > aTotal ? Human : aTotal > hTotal ? Ai : null;
+    }
 
-    if (r1) return Ai;
+    if (hSell) return Human;
+
+    if (aSell) return Ai;
 
     return null;
 }
 
 export interface CaravanScoreMeta {
     total: number;
+    status: ScoredStatus;
     isSellable: boolean;
     isSold: boolean;
 }
@@ -35,20 +41,22 @@ export function getCaravanScores(state: GameState): GameScores {
     const sellers: (PlayerId | null)[] = [];
 
     for (const ci of rows) {
-        const hSt = calculateCaravanState(state.players[Human].caravans[ci]);
-        const aSt = calculateCaravanState(state.players[Ai].caravans[ci]);
+        const hCar = state.players[Human].caravans[ci];
+        const aCar = state.players[Ai].caravans[ci];
         const seller = caravanSeller(state, ci);
 
         sellers[ci] = seller;
         humanScores[ci] = {
-            total: hSt.total,
-            isSellable: hSt.status === "sellable",
-            isSold: hSt.status === "sellable" && seller === Human
+            total: calculateScore(hCar),
+            status: calculateCaravanState(hCar).status,
+            isSellable: isSellable(hCar),
+            isSold: isSellable(hCar) && seller === Human
         };
         aiScores[ci] = {
-            total: aSt.total,
-            isSellable: aSt.status === "sellable",
-            isSold: aSt.status === "sellable" && seller === Ai
+            total: calculateScore(aCar),
+            status: calculateCaravanState(aCar).status,
+            isSellable: isSellable(aCar),
+            isSold: isSellable(aCar) && seller === Ai
         };
     }
     const humanWins = sellers.filter((s) => s === Human).length;

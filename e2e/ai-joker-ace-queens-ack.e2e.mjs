@@ -55,7 +55,7 @@ await page.evaluate((s) => window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(500);
 
 console.log("Forcing AI Joker Red on Human Shady Ace via __act...");
-await page.evaluate(() => window.__act({ type: "playFaceCard", player: 1, target: { player: 0, caravan: 2, cardIndex: 0 }, handIndex: 0 }));
+await page.evaluate(() => window.__act({ type: "playOperationCard", player: 1, target: { player: 0, caravan: 2, cardIndex: 0 }, handIndex: 0 }));
 await page.waitForTimeout(800);
 
 let afterAI = await page.evaluate(() => {
@@ -80,8 +80,18 @@ assert.ok(afterAI.hasAck, "should be awaiting human ack via confirm X");
 console.log("Log detail:", afterAI.logLast?.detail);
 assert.ok(afterAI.logLast?.detail?.length >= 5, "Joker log entry must list removals before ack X is shown");
 {
+  const OWNER_NAME = [["Boneyard","Redding","Shady Sands"],["Dayglow","New Reno","The Hub"]];
+  const flatSeg = (s) => {
+    if (typeof s === "string") return s;
+    if (s.type === "actor") {
+      const who = s.player === 0 ? "You" : "AI";
+      return s.form === "subject" ? who : `${who}'s `;
+    }
+    if (s.type === "caravan") return OWNER_NAME[s.player][s.caravan];
+    return s.rank + (s.suit ? s.suit : s.jokerType);
+  };
   const detailStr = afterAI.logLast.detail
-    .map((d) => (Array.isArray(d) ? d.map((s) => (typeof s === "string" ? s : s.rank + (s.suit ? s.suit : s.jokerType))).join("") : String(d)))
+    .map((d) => (Array.isArray(d) ? d.map(flatSeg).join("") : String(d)))
     .join(" | ");
   assert.match(detailStr, /Q/, "log detail should mention queens");
   assert.match(detailStr, /5.*Boneyard/, "Boneyard detail should have 5");

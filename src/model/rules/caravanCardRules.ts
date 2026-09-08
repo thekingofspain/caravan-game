@@ -1,4 +1,4 @@
-import { baseValue, Caravan, CaravanRow, Card, type CaravanState } from "../types";
+import { baseValue, Caravan, CaravanRow, ValueCard, type CaravanState } from "../types";
 
 export const MIN_SELLABLE = 21;
 export const MAX_SELLABLE = 26;
@@ -33,7 +33,7 @@ export function calculateCaravanState(caravan: Caravan): CaravanState {
     return { status: "unsellable", total };
 }
 
-export function canPlaceCard(card: Card, caravan: Caravan): boolean {
+export function canPlaceCard(card: ValueCard, caravan: Caravan): boolean {
     if (caravan.rows.length === 0) return true;
 
     const prevRow = caravan.rows[caravan.rows.length - 1];

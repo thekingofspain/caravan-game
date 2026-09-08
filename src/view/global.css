@@ -8,7 +8,6 @@
     --c-line: #1a4a2a;
     --c-bad: #c0392b;
     --c-good: #2ecc71;
-    --c-suit-diamonds: #ffd166;
     --c-human: #8ab4f8;
     --c-ai: #ff8a8a;
     --c-human-rgb: 138, 180, 248;
@@ -22,7 +21,6 @@
     --radius: 0.375rem;
     --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
     /* Card + type scale react to BOTH vw and vh (dv* preferred, vw/vh fallback). */
-    --card-h: clamp(3.5rem, min(13.5vh, 10.5vw), 12.5rem);
     --card-h: clamp(3.5rem, min(13.5vh, 13.5dvh, 10.5vw, 10.5dvw), 12.5rem);
     --card-w: calc(var(--card-h) * 212 / 329);
     --card-offset-x: calc(var(--card-w) * 0.275);
@@ -110,26 +108,6 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
-
-.start {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-3);
-    padding: var(--sp-4);
-    min-height: 0;
-}
-
-.start .intro {
-    margin: 0;
-    color: var(--c-dim);
-    line-height: 1.5;
-}
-
-.start .intro b,
-.rules b {
-    color: var(--c-fg);
 }
 
 /* ── 04 — Board layout ── */
@@ -247,7 +225,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-    width: var(--sidebar-w);
     flex-shrink: 0;
 }
 
@@ -311,14 +288,6 @@ body {
     border: none;
     padding: 0;
     outline: none;
-}
-
-.card.hidden {
-    visibility: hidden;
-}
-
-.card.selectable {
-    cursor: pointer;
 }
 
 /* ── 06 — Hand ── */
@@ -500,7 +469,6 @@ body {
     --badge-right: -0.5rem;
     --badge-top: -0.5rem;
     --badge-bottom: auto;
-    --head-dir: 1;
 }
 
 .caravans.ai {
@@ -516,7 +484,6 @@ body {
     --badge-right: auto;
     --badge-top: auto;
     --badge-bottom: -0.5625rem;
-    --head-dir: -1;
 }
 
 /* ── 09 — Caravan ── */
@@ -620,9 +587,8 @@ body {
     font-weight: 700;
     line-height: 1;
 }
-/* Flat-DOM sort icon: same gold-mask treatment as the .direction rules.
-   No direction signal survives in this markup, so the glyph defaults to
-   asc; a header[data-dir] hook overrides it the moment one exists. */
+/* Flat-DOM sort icon: empty placeholder by default (no direction yet) that
+   reserves its box; header[data-dir] hooks paint the mask when one exists. */
 .caravans.ai .caravan {
     margin-bottom: 0.23rem;
 }
@@ -641,7 +607,7 @@ body {
     display: block;
     width: var(--fs-xl);
     height: var(--fs-xl);
-    background-color: var(--c-sort);
+    background-color: transparent;
     justify-self: start;
     font-size: var(--fs-xl);
     margin-left: calc(0.61em + 0.05rem);
@@ -651,10 +617,14 @@ body {
     mask-position: center;
     mask-repeat: no-repeat;
     mask-size: contain;
+}
+.caravan header[data-dir="asc"] .sort-icon {
+    background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-asc.svg");
     mask-image: url("/icons/sort-asc.svg");
 }
 .caravan header[data-dir="desc"] .sort-icon {
+    background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-desc.svg");
     mask-image: url("/icons/sort-desc.svg");
 }
@@ -687,48 +657,6 @@ body {
     display: inline-block;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-}
-.caravan .direction {
-    width: calc(var(--fs-xl) * 2 + var(--sp-1));
-    height: var(--fs-xl);
-}
-
-.caravan .direction .suit {
-    position: absolute;
-    left: calc(var(--fs-xl) + var(--sp-1));
-    top: 0;
-    display: inline-flex;
-    align-items: center;
-    height: var(--fs-xl);
-    font-size: var(--fs-xl);
-    font-weight: 700;
-    line-height: 1;
-}
-/* Direction sort icons (Bootstrap Icons, MIT, public/icons): the class picks
-   the file per data-dir; the mask tints it gold. 16-grid glyphs stay crisp
-   at header size where the old 576-grid paths blurred. */
-.caravan .direction .sort-icon {
-    position: absolute;
-    left: 0;
-    top: 0;
-    display: block;
-    width: var(--fs-xl);
-    height: var(--fs-xl);
-    background-color: var(--c-sort);
-    -webkit-mask-position: center;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-size: contain;
-    mask-position: center;
-    mask-repeat: no-repeat;
-    mask-size: contain;
-}
-.caravan .direction[data-dir="asc"] .sort-icon {
-    -webkit-mask-image: url("/icons/sort-asc.svg");
-    mask-image: url("/icons/sort-asc.svg");
-}
-.caravan .direction[data-dir="desc"] .sort-icon {
-    -webkit-mask-image: url("/icons/sort-desc.svg");
-    mask-image: url("/icons/sort-desc.svg");
 }
 
 /* ── 10 — Track (stack) ── */
@@ -900,14 +828,6 @@ body {
     cursor: pointer;
     z-index: 10;
     padding: 0;
-}
-
-.confirm.row {
-    top: 0.5rem;
-    right: 0.5rem;
-    left: auto;
-    transform: none;
-    z-index: 20;
 }
 
 .confirm.portal {
@@ -1200,27 +1120,15 @@ body {
 .log .line::before {
     content: counter(log-line) ".";
     flex: none;
-    min-width: 2ch;
+    min-width: 3ch;
     text-align: right;
+    font-variant-numeric: tabular-nums;
     margin-right: var(--sp-1);
 }
 
 .log .text {
     min-width: 0;
     white-space: pre-wrap;
-}
-
-.log .line.key {
-    color: var(--c-fg);
-}
-
-.log .sellable,
-.log .sold {
-    color: var(--c-accent);
-}
-
-.log .sold {
-    font-weight: 700;
 }
 
 .log .caravan-ref {
@@ -1299,36 +1207,6 @@ body {
     overflow-y: auto;
 }
 
-/* ── 18 — Modal ── */
-/* Modal — base: .modal */
-.modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--sp-4);
-    z-index: 10;
-}
-
-.modal .panel {
-    max-width: min(35rem, 92vw);
-    width: 100%;
-    border: 0.0625rem solid var(--c-accent);
-    border-radius: var(--radius);
-    background: var(--c-panel);
-    padding: var(--sp-5);
-    box-shadow: 0 0 1.5rem rgba(201, 162, 75, 0.2);
-}
-
-.modal .title {
-    color: var(--c-accent);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-top: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .hand .slot,
     .btn {
@@ -1368,17 +1246,6 @@ body {
 }
 
 /* ── 20 — Motion & forced-colors ── */
-@media (prefers-reduced-motion: reduce) {
-    .hand .slot,
-    .btn {
-        transition: none;
-    }
-    .gameover-banner,
-    .board.gameover-human .caravans.human .caravan::before,
-    .board.gameover-ai .caravans.ai .caravan::before {
-        animation: none;
-    }
-}
 
 @media (forced-colors: active) {
     .card {

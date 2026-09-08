@@ -2,7 +2,7 @@ import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, ReactNode } from "react";
 import { cardClassName } from "../model/cards";
-import { calculateCaravanState } from "../model/rules/caravanCardRules";
+import { calculateScore, isSellable } from "../model/rules/caravanCardRules";
 import {
     CaravanRow,
     Caravan as CaravanType,
@@ -13,7 +13,7 @@ import {
     isJokerCard,
     CaravanIndex
 } from "../model/types";
-import { sortAttachments, targetKey } from "../viewmodel/transition";
+import { targetKey } from "../viewmodel/transition";
 
 interface CaravanProps {
     caravan: CaravanType;
@@ -231,12 +231,11 @@ function CaravanRowButton({
         targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k })
     );
     const attachments = caravanRow.slice(1);
-    const sorted = sortAttachments(attachments);
     let lastKingIndex = -1;
     let jackIdx = -1;
     let kingCount = 0;
 
-    sorted.forEach((c, i) => {
+    attachments.forEach((c, i) => {
         if (c.rank === "K") {
             kingCount += 1;
             lastKingIndex = i;
@@ -257,7 +256,7 @@ function CaravanRowButton({
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}
         >
-            {sorted.map((a, j) => {
+            {attachments.map((a, j) => {
                 const isJackConfirm = a.rank === "J" && j === jackIdx && !!confirmationSymbol;
                 const isJokerConfirm = isJokerCard(a) && !!confirmationSymbol;
                 const showConfirmation = isJackConfirm || isJokerConfirm;
@@ -295,16 +294,15 @@ export function CaravanScore({
     isSeller: boolean;
     playerId?: PlayerId;
 }) {
-    const state = calculateCaravanState(caravan);
-    const isSellable = state.status === "sellable";
-    const total = state.total;
-    const isSold = isSellable && highestSold;
+    const total = calculateScore(caravan);
+    const sellable = isSellable(caravan);
+    const isSold = sellable && highestSold;
 
     return (
         <span
-            className={`score ${isSellable ? "sellable" : "unsellable"} ${isSold ? "sold bold" : ""} ${highestSold ? "highest" : ""}`}
+            className={`score ${sellable ? "sellable" : "unsellable"} ${isSold ? "sold bold" : ""} ${highestSold ? "highest" : ""}`}
             data-total={total}
-            data-sellable={isSellable ? "1" : "0"}
+            data-sellable={sellable ? "1" : "0"}
         >
             <span className="total">{total}</span>
         </span>

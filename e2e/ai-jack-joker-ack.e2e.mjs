@@ -50,7 +50,7 @@ await page.evaluate(() => {
   const w = window;
   const s = w.__caravanStore.state;
   const idx = s.players[1].hand.findIndex(c=> c.rank==="Joker");
-  const move = { type:"playFaceCard", player:1, target:{player:0, caravan:0, cardIndex:0}, handIndex: idx };
+  const move = { type:"playOperationCard", player:1, target:{player:0, caravan:0, cardIndex:0}, handIndex: idx };
   w.__act(move);
 });
 await page.waitForTimeout(500);
@@ -96,7 +96,7 @@ console.log("Programmed Jack state: AI Jack on Human 3c");
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[1].hand.findIndex(c=> c.rank==="J");
-  window.__act({ type:"playFaceCard", player:1, target:{player:0, caravan:1, cardIndex:0}, handIndex: idx });
+  window.__act({ type:"playOperationCard", player:1, target:{player:0, caravan:1, cardIndex:0}, handIndex: idx });
 });
 await page.waitForTimeout(500);
 let pendingJack = await page.locator(".card.pending").count();

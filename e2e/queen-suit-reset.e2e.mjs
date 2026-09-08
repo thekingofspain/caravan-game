@@ -85,7 +85,7 @@ const targets = await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const qi = s.players[0].hand.findIndex((c) => c.rank === "Q");
     return window.__caravanStore.legal
-        .filter((m) => m.type === "playFaceCard" && m.handIndex === qi)
+        .filter((m) => m.type === "playOperationCard" && m.handIndex === qi)
         .map((m) => `${m.target.caravan}:${m.target.cardIndex}`);
 });
 console.log("queen targets:", targets.join(", "));
@@ -99,7 +99,7 @@ await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const qi = s.players[0].hand.findIndex((c) => c.rank === "Q" && c.suit === "hearts");
     window.__act({
-        type: "playFaceCard",
+        type: "playOperationCard",
         player: 0,
         target: { player: 0, caravan: 0, cardIndex: 1 },
         handIndex: qi

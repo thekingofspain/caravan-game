@@ -47,7 +47,7 @@ console.log("Programming dense Shady 6-row...");
 await page.evaluate(s=> window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(600);
 console.log("AI plays J♣ on Shady Sands {5♥} k=4");
-await page.evaluate(()=> window.__act({ type:"playFaceCard", player:1, target:{ player:0, caravan:2, cardIndex:4 }, handIndex:0 }));
+await page.evaluate(()=> window.__act({ type:"playOperationCard", player:1, target:{ player:0, caravan:2, cardIndex:4 }, handIndex:0 }));
 await page.waitForTimeout(800);
 
 // --- PLAYWRIGHT SKILL: capture images ---

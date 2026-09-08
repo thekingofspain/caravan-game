@@ -8,7 +8,7 @@ function sameMove(a: Move, b: Move): boolean {
     if (a.type !== b.type) return false;
     if (a.type === "playValueCard" && b.type === "playValueCard")
         return a.player === b.player && a.caravan === b.caravan && a.handIndex === b.handIndex;
-    if (a.type === "playFaceCard" && b.type === "playFaceCard")
+    if (a.type === "playOperationCard" && b.type === "playOperationCard")
         return (
             a.player === b.player &&
             a.handIndex === b.handIndex &&

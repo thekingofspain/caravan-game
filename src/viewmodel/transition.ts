@@ -1,5 +1,5 @@
-import { CARAVAN_INDICES, CaravanRow, PLAYERS } from "../model/types";
 import type { Move, Card, GameState, PlayerId, TargetRef } from "../model/types";
+import { allCaravanRows } from "../model/gameLog";
 
 export interface TransitionInfo {
     needsConfirmation: boolean;
@@ -12,20 +12,6 @@ export function targetKey(t: TargetRef): string {
     return `${String(t.player)}-${String(t.caravan)}-${String(t.cardIndex)}`;
 }
 
-function forEachCaravanRow(state: GameState, fn: (row: CaravanRow, ref: TargetRef) => void): void {
-    for (const player of PLAYERS) {
-        for (const ci of CARAVAN_INDICES) {
-            const car = state.players[player].caravans[ci];
-
-            for (let idx = 0; idx < car.rows.length; idx++) {
-                const row = car.rows[idx];
-
-                fn(row, { player, caravan: ci, cardIndex: idx });
-            }
-        }
-    }
-}
-
 export function getTransitionInfo(
     previous: GameState,
     move: Move,
@@ -36,7 +22,7 @@ export function getTransitionInfo(
     let needsConfirmation = false;
     let confirmer: PlayerId | null = null;
 
-    if (move.type === "playFaceCard") {
+    if (move.type === "playOperationCard") {
         const prevCar = previous.players[move.target.player].caravans[move.target.caravan];
         const currCar = current.players[move.target.player].caravans[move.target.caravan];
 
@@ -47,13 +33,13 @@ export function getTransitionInfo(
 
             if (card !== undefined) addedTemp = { card: card, at: move.target };
         } else {
-            forEachCaravanRow(previous, (row, ref) => {
+            for (const { ref, cards } of allCaravanRows(previous)) {
                 const carCurr = current.players[ref.player].caravans[ref.caravan];
-                const rowId = row[0]?.id;
+                const rowId = cards[0]?.id;
                 const stillExists = carCurr.rows.some((r) => r[0]?.id === rowId);
 
                 if (!stillExists) impacted.push(ref);
-            });
+            }
             const card = previous.players[move.player].hand.at(move.handIndex);
 
             if (card !== undefined) addedTemp = { card, at: move.target };
@@ -83,15 +69,4 @@ export function getDisplayedState(
     if (row !== undefined) row.push(card);
 
     return cloned;
-}
-
-const ATTACHMENT_ORDER: Record<string, number> = { K: 0, J: 1, Joker: 2, Q: 3 };
-
-export function sortAttachments(cards: Card[]): Card[] {
-    return [...cards].sort((a, b) => {
-        const oa = ATTACHMENT_ORDER[a.rank] ?? 99;
-        const ob = ATTACHMENT_ORDER[b.rank] ?? 99;
-
-        return oa - ob;
-    });
 }

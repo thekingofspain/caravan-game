@@ -26,7 +26,7 @@ export function useBoardSelection(
             if (a.handIndex !== sel) continue;
 
             if (a.type === "playValueCard") caravans.push(a.caravan);
-            else if (a.type === "playFaceCard") targets.add(targetKey(a.target));
+            else if (a.type === "playOperationCard") targets.add(targetKey(a.target));
             else discard = true;
         }
 

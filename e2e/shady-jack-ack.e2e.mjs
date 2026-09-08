@@ -98,7 +98,7 @@ console.log("Human plays J♦ on 2♥ on Shady Sands (index3) — marked 2♥ fo
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="J" && c.suit==="diamonds");
-  window.__act({ type:"playFaceCard", player:0, target:{player:0, caravan:2, cardIndex:3}, handIndex: idx });
+  window.__act({ type:"playOperationCard", player:0, target:{player:0, caravan:2, cardIndex:3}, handIndex: idx });
 });
 await page.waitForTimeout(600);
 

@@ -34,19 +34,22 @@ const aNew = caravanOf([[makeCard(2,"9","diamonds"), makeCard(2,"K","hearts")]],
 const aHub = caravanOf([[makeCard(2,"10","hearts"), makeCard(2,"K","spades")],[makeCard(2,"5","clubs")]], "desc","hearts");
 const humanHand = [makeCard(1,"2","hearts"), makeCard(1,"6","hearts")];
 const aiHand = [makeCard(2,"4","diamonds")];
+const A = (player, form) => ({type:"actor", player, form});
+const R = (player, caravan) => ({type:"caravan", player, caravan});
+const C = (id, rank, suit) => makeCard(id, rank, suit);
 let log = [
-  {id:100, text:"You played {9♣} to Shady Sands"},
-  {id:101, text:"AI played {7♣} to Dayglow"},
-  {id:102, text:"You played {9♥} to Redding"},
-  {id:103, text:"AI played {9♦} to New Reno"},
-  {id:104, text:"You played {2♦} to Boneyard"},
-  {id:105, text:"AI played {10♥} to The Hub"},
-  {id:106, text:"You played {7♦} to Redding"},
-  {id:107, text:"AI played {K♠} on AI's The Hub {10♥}"},
-  {id:108, text:"You played {8♠} to Shady Sands"},
-  {id:109, text:"AI played {5♣} to The Hub"},
-  {id:110, text:"You played {7♠} to Shady Sands"},
-  {id:111, text:"AI played {K♥} on AI's New Reno {9♦}"},
+  {id:100, text:"You played {9♣} to Shady Sands", segments:[A(0,"subject")," played ",C(901,"9","clubs")," to ",R(0,2)]},
+  {id:101, text:"AI played {7♣} to Dayglow", segments:[A(1,"subject")," played ",C(902,"7","clubs")," to ",R(1,0)]},
+  {id:102, text:"You played {9♥} to Redding", segments:[A(0,"subject")," played ",C(903,"9","hearts")," to ",R(0,1)]},
+  {id:103, text:"AI played {9♦} to New Reno", segments:[A(1,"subject")," played ",C(904,"9","diamonds")," to ",R(1,1)]},
+  {id:104, text:"You played {2♦} to Boneyard", segments:[A(0,"subject")," played ",C(905,"2","diamonds")," to ",R(0,0)]},
+  {id:105, text:"AI played {10♥} to The Hub", segments:[A(1,"subject")," played ",C(906,"10","hearts")," to ",R(1,2)]},
+  {id:106, text:"You played {7♦} to Redding", segments:[A(0,"subject")," played ",C(907,"7","diamonds")," to ",R(0,1)]},
+  {id:107, text:"AI played {K♠} on AI's The Hub {10♥}", segments:[A(1,"subject")," played ",C(908,"K","spades")," on ",A(1,"possessive"),R(1,2)," ",C(909,"10","hearts")]},
+  {id:108, text:"You played {8♠} to Shady Sands", segments:[A(0,"subject")," played ",C(910,"8","spades")," to ",R(0,2)]},
+  {id:109, text:"AI played {5♣} to The Hub", segments:[A(1,"subject")," played ",C(911,"5","clubs")," to ",R(1,2)]},
+  {id:110, text:"You played {7♠} to Shady Sands", segments:[A(0,"subject")," played ",C(912,"7","spades")," to ",R(0,2)]},
+  {id:111, text:"AI played {K♥} on AI's New Reno {9♦}", segments:[A(1,"subject")," played ",C(913,"K","hearts")," on ",A(1,"possessive"),R(1,1)," ",C(914,"9","diamonds")]},
 ];
 const programmedState = {
   players:[

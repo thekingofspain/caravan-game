@@ -52,7 +52,7 @@ let legal = await page.evaluate(() => window.__caravanStore.legal);
 console.log("legalMoves", legal.map((m) => m.type));
 assert.ok(legal.length > 0, "should have discard moves");
 assert.ok(legal.every((m) => m.type === "discardCard"), "only discards legal while empties unfillable");
-assert.ok(!legal.some((m) => m.type === "playFaceCard"), "face plays locked while an empty remains");
+assert.ok(!legal.some((m) => m.type === "playOperationCard"), "face plays locked while an empty remains");
 
 // Discard one through the real engine path: pile shows it, turn passes.
 await page.evaluate(() => {

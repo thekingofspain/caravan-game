@@ -1,0 +1,75 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - banner:
+            - generic: "0"
+            - generic: Dayglow
+          - button [ref=e11] [cursor=pointer]
+        - generic [ref=e12]:
+          - banner:
+            - generic: "0"
+            - generic: New Reno
+          - button [ref=e14] [cursor=pointer]
+        - generic [ref=e15]:
+          - banner:
+            - generic: "0"
+            - generic: The Hub
+          - button [ref=e17] [cursor=pointer]
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - banner:
+            - generic: "0"
+            - generic: Boneyard
+          - button [ref=e21] [cursor=pointer]
+        - generic [ref=e22]:
+          - banner:
+            - generic: "0"
+            - generic: Redding
+          - button [ref=e24] [cursor=pointer]
+        - generic [ref=e25]:
+          - banner:
+            - generic: "0"
+            - generic: Shady Sands
+          - button [ref=e27] [cursor=pointer]
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - button "AI deck, 22 cards remaining." [disabled] [ref=e31] [cursor=pointer]:
+            - generic [ref=e33]: "22"
+          - generic "AI discard pile, empty" [ref=e34]
+        - region "AI hand, 8 cards"
+      - generic [ref=e53]:
+        - button "New game" [ref=e54] [cursor=pointer]
+        - button "Activity" [expanded] [ref=e55] [cursor=pointer]
+      - generic [ref=e56]:
+        - region "You hand, 8 cards":
+          - generic [ref=e57]:
+            - button "K of clubs" [ref=e58] [cursor=pointer]:
+              - img "K of clubs" [ref=e59]
+            - button "6 of spades, playable" [ref=e60] [cursor=pointer]:
+              - img "6 of spades" [ref=e61]
+            - button "K of hearts" [ref=e62] [cursor=pointer]:
+              - img "K of hearts" [ref=e63]
+            - button "8 of spades, playable" [ref=e64] [cursor=pointer]:
+              - img "8 of spades" [ref=e65]
+            - button "5 of hearts, playable" [ref=e66] [cursor=pointer]:
+              - img "5 of hearts" [ref=e67]
+            - button "Q of spades" [ref=e68] [cursor=pointer]:
+              - img "Q of spades" [ref=e69]
+            - button "6 of diamonds, playable" [ref=e70] [cursor=pointer]:
+              - img "6 of diamonds" [ref=e71]
+            - button "3 of spades, playable" [ref=e72] [cursor=pointer]:
+              - img "3 of spades" [ref=e73]
+        - generic [ref=e74]:
+          - button "Your deck, 22 cards remaining. Click to discard the selected card and draw a new one." [ref=e75] [cursor=pointer]:
+            - generic [ref=e77]: "22"
+          - generic "Your discard pile, empty" [ref=e78]
+  - dialog "Activity log" [ref=e80]:
+    - banner [ref=e81]:
+      - generic [ref=e82]: Activity
+      - button "Copy activity log and debug info" [ref=e84] [cursor=pointer]: Copy
+    - button "Close activity log" [ref=e85] [cursor=pointer]: ×
+    - complementary "Game log" [ref=e86]:
+      - log "Game activity" [ref=e87]

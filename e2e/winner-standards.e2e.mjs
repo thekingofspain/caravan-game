@@ -32,7 +32,7 @@ const programmedState = {
   current: 0,
   phase: "over",
   winner: 0,
-  log: [{ id: 1, text: "You win the caravan!", detail: [] }],
+  log: [{ id: 1, text: "You win the caravan!", segments: [{type:"actor",player:0,form:"subject"}," win the caravan!"], detail: [] }],
   started: true,
 };
 

@@ -1,12 +1,19 @@
 import {
     Card,
     JokerType,
+    JokerRank,
+    FaceRank,
+    FaceCard,
+    JokerCard,
     Nullable,
     Rank,
     Suit,
     SUITS,
-    STANDARD_RANKS,
-    SuitedRank,
+    SUIT_SYMBOL,
+    VALUE_RANKS,
+    FACE_RANKS,
+    ValueCard,
+    ValueRank,
     isJokerCard
 } from "./types";
 
@@ -29,8 +36,9 @@ function cardId(
 
 // Strict overloads — deck, rank, then var param (suit | jokerType); every card belongs to a deck; joker has no suit
 
-export function makeCard(deckId: number, rank: SuitedRank, suit: Suit): Card;
-export function makeCard(deckId: number, rank: "Joker", jokerType: JokerType): Card;
+export function makeCard(deckId: number, rank: ValueRank, suit: Suit): ValueCard;
+export function makeCard(deckId: number, rank: FaceRank, suit: Suit): FaceCard;
+export function makeCard(deckId: number, rank: JokerRank, jokerType: JokerType): JokerCard;
 export function makeCard(deckId: number, rank: Rank, x: Suit | JokerType): Card {
     if (rank === "Joker") {
         const jokerType = x as JokerType;
@@ -49,11 +57,18 @@ export function cardLabel(card: Card): string {
 
     return `${card.rank} of ${card.suit}`;
 }
+export function cardNameText(card: Card): string {
+    if (isJokerCard(card)) return `${card.jokerType} Joker`;
+
+    return `${card.rank}${SUIT_SYMBOL[card.suit]}`;
+}
 
 export function buildDeck(deckId: number): Card[] {
     const out: Card[] = [];
 
-    for (const r of STANDARD_RANKS.filter((r): r is SuitedRank => r !== "Joker"))
+    for (const r of VALUE_RANKS)
+        for (const s of SUITS) out.push(makeCard(deckId, r, s));
+    for (const r of FACE_RANKS)
         for (const s of SUITS) out.push(makeCard(deckId, r, s));
     out.push(makeCard(deckId, "Joker", "Red"));
     out.push(makeCard(deckId, "Joker", "Black"));
