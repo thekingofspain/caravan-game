@@ -48,7 +48,7 @@ describe("allSold / gameWinner", () => {
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9"]), caravanOf(["10"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "8"]), caravanOf(["9"])],
     );
-    expect([0, 1, 2].every((i) => caravanSeller(g, i as 0 | 1 | 2) !== null)).toBe(false);
+    expect([0, 1, 2].every((caravanColumnIndex) => caravanSeller(g, caravanColumnIndex as 0 | 1 | 2) !== null)).toBe(false);
   });
 
   it("a player with 2+ sold caravans wins", () => {
@@ -56,7 +56,7 @@ describe("allSold / gameWinner", () => {
       [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "4"]), caravanOf(["10", "9", "7"])],
       [caravanOf(["10", "8", "4"]), caravanOf(["10", "9", "6"]), caravanOf(["10", "9", "2"])],
     );
-    expect([0, 1, 2].every((i) => caravanSeller(g, i as 0 | 1 | 2) !== null)).toBe(true);
+    expect([0, 1, 2].every((caravanColumnIndex) => caravanSeller(g, caravanColumnIndex as 0 | 1 | 2) !== null)).toBe(true);
     expect(gameWinner(g)).toBe(Human);
   });
 

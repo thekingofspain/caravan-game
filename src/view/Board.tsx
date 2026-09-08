@@ -58,16 +58,16 @@ function CaravanColumn({
     scores: GameScores;
     isGameOver: boolean;
     onCardClick: (t: TargetRef) => void;
-    onPlaceholderClick: (ci: number) => void;
+    onPlaceholderClick: (caravanColumnIndex: number) => void;
     onAcknowledge: () => void;
-    childrenFor?: (ci: number) => React.ReactNode;
+    childrenFor?: (caravanColumnIndex: number) => React.ReactNode;
 }) {
     return (
         <>
-            {[0, 1, 2].map((ci) => {
-                const seller = scores.sellers[ci as 0 | 1 | 2];
-                const caravan = caravans[ci];
-                const sellable = (playerId === Human ? scores.humanScores[ci] : scores.aiScores[ci])
+            {[0, 1, 2].map((caravanColumnIndex) => {
+                const seller = scores.sellers[caravanColumnIndex as 0 | 1 | 2];
+                const caravan = caravans[caravanColumnIndex];
+                const sellable = (playerId === Human ? scores.humanScores[caravanColumnIndex] : scores.aiScores[caravanColumnIndex])
                     .isSellable;
                 const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && sellable && seller === playerId;
@@ -75,15 +75,15 @@ function CaravanColumn({
                 return (
                     <div
                         className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""} ${sold ? "is-sold" : ""}`}
-                        key={ci}
+                        key={caravanColumnIndex}
                     >
                         {sold ? (
                             <div
                                 className="sold-stamp"
                                 style={
                                     {
-                                        "--sold-top": SOLD_STAMP_TOPS[ci as 0 | 1 | 2],
-                                        "--sold-rot": SOLD_STAMP_ROTS[ci as 0 | 1 | 2]
+                                        "--sold-top": SOLD_STAMP_TOPS[caravanColumnIndex as 0 | 1 | 2],
+                                        "--sold-rot": SOLD_STAMP_ROTS[caravanColumnIndex as 0 | 1 | 2]
                                     } as React.CSSProperties
                                 }
                                 aria-hidden="true"
@@ -97,7 +97,7 @@ function CaravanColumn({
                                 isSeller={seller === playerId}
                                 playerId={playerId}
                             />
-                            <span className="title">{caravanName(playerId, ci)}</span>
+                            <span className="title">{caravanName(playerId, caravanColumnIndex)}</span>
                                 <span className="sort-icon" aria-hidden="true" />
                                 {caravan.suit !== null ? (
                                     <span className={`suit card-name ${caravan.suit}`}>
@@ -107,7 +107,7 @@ function CaravanColumn({
                         </header>
                         <Caravan
                             caravan={caravan}
-                            caravanIndex={ci as 0 | 1 | 2}
+                            caravanIndex={caravanColumnIndex as 0 | 1 | 2}
                             playerId={playerId}
                             highestSold={seller === playerId}
                             selection={selection}
@@ -115,7 +115,7 @@ function CaravanColumn({
                             onPlaceholderClick={onPlaceholderClick}
                             onAcknowledge={onAcknowledge}
                         >
-                            {childrenFor?.(ci)}
+                            {childrenFor?.(caravanColumnIndex)}
                         </Caravan>
                     </div>
                 );
@@ -196,11 +196,11 @@ export function Board({
             );
             const metas = pid === Human ? scores.humanScores : scores.aiScores;
 
-            p.caravans.forEach((c, idx) => {
-                const meta = metas[idx];
+            p.caravans.forEach((c, caravanColumnIndex) => {
+                const meta = metas[caravanColumnIndex];
 
                 lines.push(
-                    `  ${caravanName(pid, idx)}: ${String(meta.total)} (${meta.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
+                    `  ${caravanName(pid, caravanColumnIndex)}: ${String(meta.total)} (${meta.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
                 );
             });
         }
@@ -394,16 +394,16 @@ export function Board({
 
             if (!isValueCard(card)) return;
 
-            const ci = humanPlayer.caravans.findIndex((c) => c.rows.length === 0);
+            const caravanColumnIndex = humanPlayer.caravans.findIndex((c) => c.rows.length === 0);
 
-            if (ci === -1) return;
+            if (caravanColumnIndex === -1) return;
 
             const move = legal.find(
                 (a) =>
                     a.type === "playValueCard" &&
                     a.player === Human &&
                     a.handIndex === i &&
-                    a.caravan === ci
+                    a.caravan === caravanColumnIndex
             );
 
             if (move) {
@@ -466,14 +466,13 @@ export function Board({
     );
 
     const onPlaceholderClick = useCallback(
-        (caravanIndex: number) => {
+        (caravanColumnIndex: number) => {
             if (sel === null) return;
 
             const card = humanPlayer.hand[sel];
-            const ci = caravanIndex as 0 | 1 | 2;
 
-            if (isValueCard(card) && legalCaravans.includes(ci)) {
-                tryAct({ type: "playValueCard", player: Human, caravan: ci, handIndex: sel });
+            if (isValueCard(card) && legalCaravans.includes(caravanColumnIndex)) {
+                tryAct({ type: "playValueCard", player: Human, caravan: caravanColumnIndex as 0 | 1 | 2, handIndex: sel });
                 setSel(null);
             }
         },
@@ -509,13 +508,13 @@ export function Board({
     }, []);
 
     const onDisbandCaravan = useCallback(
-        (ci: number) => {
-            if (!canDisbandAny || humanPlayer.caravans[ci].rows.length === 0) return;
+        (caravanColumnIndex: number) => {
+            if (!canDisbandAny || humanPlayer.caravans[caravanColumnIndex].rows.length === 0) return;
 
-            if (!confirm(`Disband ${caravanName(Human, ci)}? All its cards will be removed.`))
+            if (!confirm(`Disband ${caravanName(Human, caravanColumnIndex)}? All its cards will be removed.`))
                 return;
 
-            tryAct({ type: "disbandCaravan", player: Human, caravan: ci as 0 | 1 | 2 });
+            tryAct({ type: "disbandCaravan", player: Human, caravan: caravanColumnIndex as 0 | 1 | 2 });
             setSel(null);
         },
         [canDisbandAny, humanPlayer, tryAct, confirm]
@@ -614,15 +613,15 @@ export function Board({
                                 onCardClick={onCardClick}
                                 onPlaceholderClick={onPlaceholderClick}
                                 onAcknowledge={onAcknowledge}
-                                childrenFor={(ci) =>
-                                    canDisbandAny && humanPlayer.caravans[ci].rows.length > 0 ? (
+                                childrenFor={(caravanColumnIndex) =>
+                                    canDisbandAny && humanPlayer.caravans[caravanColumnIndex].rows.length > 0 ? (
                                         <button
                                             type="button"
                                             className="disband"
                                             onClick={() => {
-                                                onDisbandCaravan(ci);
+                                                onDisbandCaravan(caravanColumnIndex);
                                             }}
-                                            aria-label={`Disband your ${caravanName(Human, ci)}`}
+                                            aria-label={`Disband your ${caravanName(Human, caravanColumnIndex)}`}
                                         >
                                             Disband
                                         </button>

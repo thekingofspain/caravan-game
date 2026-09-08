@@ -124,7 +124,6 @@ function CaravanImpl({
     children
 }: CaravanProps) {
     const isHuman = playerId === Human;
-    const caravanIdx = caravanIndex;
 
     function handleCardClick(e: React.MouseEvent) {
         const wrap = (e.target as HTMLElement).closest("[data-index]");
@@ -133,7 +132,7 @@ function CaravanImpl({
 
         const cardIndex = Number(wrap.getAttribute("data-index"));
 
-        onCardClick({ player: playerId, caravan: caravanIdx, cardIndex });
+        onCardClick({ player: playerId, caravan: caravanIndex, cardIndex });
     }
     function handleCardKeyDown(e: React.KeyboardEvent) {
         if (e.key === "Enter" || e.key === " ") {
@@ -144,12 +143,12 @@ function CaravanImpl({
 
             const cardIndex = Number(wrap.getAttribute("data-index"));
 
-            onCardClick({ player: playerId, caravan: caravanIdx, cardIndex });
+            onCardClick({ player: playerId, caravan: caravanIndex, cardIndex });
         }
     }
     function getCardClasses(caravanRow: CaravanRow, index: number): string {
         const head = caravanRow[0];
-        const key = targetKey({ player: playerId, caravan: caravanIdx, cardIndex: index });
+        const key = targetKey({ player: playerId, caravan: caravanIndex, cardIndex: index });
         const isTarget = selection.targetSet.has(key);
         const classes = [cardClassName("card", head)];
 
@@ -178,7 +177,7 @@ function CaravanImpl({
                     caravanRow={caravanRow}
                     k={k}
                     playerId={playerId}
-                    caravanIdx={caravanIdx}
+                    caravanColumnIndex={caravanIndex}
                     selection={selection}
                     isHuman={isHuman}
                     getCardClasses={getCardClasses}
@@ -205,7 +204,7 @@ function CaravanRowButton({
     caravanRow,
     k,
     playerId,
-    caravanIdx,
+    caravanColumnIndex,
     selection,
     isHuman,
     getCardClasses,
@@ -217,7 +216,7 @@ function CaravanRowButton({
     caravanRow: CaravanRow;
     k: number;
     playerId: PlayerId;
-    caravanIdx: 0 | 1 | 2;
+    caravanColumnIndex: 0 | 1 | 2;
     selection: SelectionState;
     isHuman: boolean;
     getCardClasses: (r: CaravanRow, i: number) => string;
@@ -228,7 +227,7 @@ function CaravanRowButton({
 }) {
     const head = caravanRow[0];
     const removable = selection.pendingRemovalSet.has(
-        targetKey({ player: playerId, caravan: caravanIdx, cardIndex: k })
+        targetKey({ player: playerId, caravan: caravanColumnIndex, cardIndex: k })
     );
     const attachments = caravanRow.slice(1);
     let lastKingIndex = -1;

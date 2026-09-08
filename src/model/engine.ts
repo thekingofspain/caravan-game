@@ -133,22 +133,22 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
     const refs: TargetRef[] = [];
 
     for (const player of PLAYERS) {
-        for (const ci of CARAVAN_INDICES) {
-            const car = state.players[player].caravans[ci];
+        for (const caravanColumnIndex of CARAVAN_INDICES) {
+            const car = state.players[player].caravans[caravanColumnIndex];
 
             for (let cidx = 0; cidx < car.rows.length; cidx++) {
                 const card = car.rows.at(cidx)?.at(0);
 
                 if (card === undefined) continue;
 
-                if (player === target.player && ci === target.caravan && cidx === target.cardIndex)
+                if (player === target.player && caravanColumnIndex === target.caravan && cidx === target.cardIndex)
                     continue;
 
                 if (isAce) {
-                    if (card.suit === suit) refs.push({ player, caravan: ci, cardIndex: cidx });
+                    if (card.suit === suit) refs.push({ player, caravan: caravanColumnIndex, cardIndex: cidx });
                 } else {
                     if (baseValue(card) === rankVal)
-                        refs.push({ player, caravan: ci, cardIndex: cidx });
+                        refs.push({ player, caravan: caravanColumnIndex, cardIndex: cidx });
                 }
             }
         }
@@ -445,8 +445,8 @@ function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number
     const out: Move[] = [];
 
     for (const p of PLAYERS)
-        for (const ci of CARAVAN_INDICES) {
-            const targetCar = state.players[p].caravans[ci];
+        for (const caravanColumnIndex of CARAVAN_INDICES) {
+            const targetCar = state.players[p].caravans[caravanColumnIndex];
 
             for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
                 const row = targetCar.rows[cidx];
@@ -462,7 +462,7 @@ function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number
                 out.push({
                     type: "playOperationCard",
                     player: pid,
-                    target: { player: p, caravan: ci, cardIndex: cidx },
+                    target: { player: p, caravan: caravanColumnIndex, cardIndex: cidx },
                     handIndex
                 });
             }
@@ -473,8 +473,8 @@ function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number
 function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boolean): Move[] {
     const out: Move[] = [];
 
-    for (let ci = 0; ci < player.caravans.length; ci++) {
-        const car = player.caravans[ci];
+    for (let caravanColumnIndex = 0; caravanColumnIndex < player.caravans.length; caravanColumnIndex++) {
+        const car = player.caravans[caravanColumnIndex];
 
         if (filterEmptyOnly && car.rows.length !== 0) continue;
 
@@ -488,7 +488,7 @@ function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boo
             out.push({
                 type: "playValueCard",
                 player: pid,
-                caravan: ci as CaravanIndex,
+                caravan: caravanColumnIndex as CaravanIndex,
                 handIndex: hi
             });
         }
@@ -522,10 +522,10 @@ export function legalMoves(state: GameState): Move[] {
             player: pid,
             handIndex: hi
         })),
-        ...CARAVAN_INDICES.filter((ci) => player.caravans[ci].rows.length > 0).map((ci) => ({
+        ...CARAVAN_INDICES.filter((caravanColumnIndex) => player.caravans[caravanColumnIndex].rows.length > 0).map((caravanColumnIndex) => ({
             type: "disbandCaravan" as const,
             player: pid,
-            caravan: ci
+            caravan: caravanColumnIndex
         }))
     ];
 }
