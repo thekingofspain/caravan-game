@@ -68,3 +68,36 @@ describe("allSold / gameWinner", () => {
     expect(gameWinner(g)).toBe(Ai);
   });
 });
+
+describe("reddit atomic coverage", () => {
+  it("pairs each caravan against the same-index opponent", () => {
+    const g = mkGame(
+      [caravanOf([["10", 1], "4"]), caravanOf(["10"]), caravanOf(["10"])],
+      [caravanOf(["10", "9"]), caravanOf([["10", 1], "4"]), caravanOf(["9"])]
+    );
+    expect(caravanSeller(g, 0)).toBe(Human);
+    expect(caravanSeller(g, 1)).toBe(Ai);
+  });
+  it("wins with two higher-bid caravans", () => {
+    const g = mkGame(
+      [caravanOf(["10", "9", "2"]), caravanOf([["10", 1], "4", "2"]), caravanOf(["10"])],
+      [caravanOf(["9"]), caravanOf(["9"]), caravanOf(["10", "9", "2"])]
+    );
+    expect(gameWinner(g)).toBe(Human);
+  });
+});
+
+describe("reddit gap coverage", () => {
+  it("wins by disbanding the tied track", () => {
+    const tied = mkGame(
+      [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "3"]), caravanOf(["10", "9", "5"])],
+      [caravanOf(["10", "9"]), caravanOf(["10", "9", "A"]), caravanOf(["10", "9", "5"])]
+    );
+    expect(gameWinner(tied)).toBe(null);
+    const freed = mkGame(
+      [caravanOf([["10", 1], "4"]), caravanOf(["10", "9", "3"]), caravanOf([])],
+      [caravanOf(["10", "9"]), caravanOf(["10", "9", "A"]), caravanOf(["10", "9", "5"])]
+    );
+    expect(gameWinner(freed)).toBe(Human);
+  });
+});
