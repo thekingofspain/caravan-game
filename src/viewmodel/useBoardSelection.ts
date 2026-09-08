@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import type { Move } from "../model/types";
 import { targetKey, type TransitionInfo } from "./transition";
 

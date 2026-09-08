@@ -1,4 +1,4 @@
-import { baseValue, Caravan, CaravanRow, ValueCard, type CaravanState } from "../types";
+import { baseValue, Caravan, CaravanRow, type CaravanState,ValueCard } from "../types";
 
 export const MIN_SELLABLE = 21;
 export const MAX_SELLABLE = 26;

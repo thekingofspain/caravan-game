@@ -1,21 +1,20 @@
 import {
     Card,
-    JokerType,
-    JokerRank,
-    FaceRank,
+    FACE_RANKS,
     FaceCard,
+    FaceRank,
+    isJokerCard,
     JokerCard,
+    JokerRank,
+    JokerType,
     Nullable,
     Rank,
     Suit,
-    SUITS,
     SUIT_SYMBOL,
+    SUITS,
     VALUE_RANKS,
-    FACE_RANKS,
     ValueCard,
-    ValueRank,
-    isJokerCard
-} from "./types";
+    ValueRank} from "./types";
 
 function cardId(
     deckId: number,

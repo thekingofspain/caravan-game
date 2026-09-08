@@ -1,18 +1,18 @@
+import type { CSSProperties, ReactNode } from "react";
 import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { CSSProperties, ReactNode } from "react";
+
 import { cardClassName } from "../model/cards";
 import { calculateScore, isSellable } from "../model/rules/caravanCardRules";
 import {
-    CaravanRow,
     Caravan as CaravanType,
+    CaravanIndex,
+    CaravanRow,
     Human,
+    isJokerCard,
     PlayerId,
     SelectionState,
-    TargetRef,
-    isJokerCard,
-    CaravanIndex
-} from "../model/types";
+    TargetRef} from "../model/types";
 import { targetKey } from "../viewmodel/transition";
 
 interface CaravanProps {

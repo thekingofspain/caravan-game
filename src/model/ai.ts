@@ -1,6 +1,6 @@
-import { CARAVAN_INDICES, GameState, Human, Ai, PlayerId, Move, Caravan } from "./types";
 import { applyMove, legalMoves } from "./engine";
 import { calculateScore, isSellable, MAX_SELLABLE } from "./rules/caravanCardRules";
+import { Ai, Caravan,CARAVAN_INDICES, GameState, Human, Move, PlayerId } from "./types";
 
 const OTHER: Record<PlayerId, PlayerId> = { [Human]: Ai, [Ai]: Human };
 const EVAL_SOLD_WEIGHT = 100;

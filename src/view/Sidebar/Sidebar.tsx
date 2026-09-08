@@ -1,8 +1,9 @@
 import { memo, useLayoutEffect, useRef } from "react";
-import type { GameState, LogEntry } from "../../model/types";
+
+import { truncateSegments } from "../../model/gameLog";
 import type { GameScores } from "../../model/scoring";
 import { getCaravanScores } from "../../model/scoring";
-import { truncateSegments } from "../../model/gameLog";
+import type { GameState, LogEntry } from "../../model/types";
 import { DecoratedLog } from "./DecoratedLog";
 import { GameOverScores } from "./GameOverScores";
 

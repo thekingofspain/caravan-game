@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+
 import { publishTestHooks } from "../app/testHooks";
-import { GameConfig, Move, Ai, GameState, Human } from "../model/types";
-import { applyMove, forfeitNoMoves, legalMoves, setupGame } from "../model/engine";
 import { determineBestMove } from "../model/ai";
+import { applyMove, forfeitNoMoves, legalMoves, setupGame } from "../model/engine";
+import { Ai, GameConfig, GameState, Human,Move } from "../model/types";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
 
 export type { GameConfig };
@@ -77,6 +78,7 @@ export function useGame(initial: GameConfig): GameStore {
 
         // AI with no legal moves (e.g. unfillable empties, no value cards)
         // forfeits at turn start instead of crashing move selection.
+
         if (legalMoves(state).length === 0) {
             dispatch({ type: "__setState", state: forfeitNoMoves(state) });
 

@@ -1,5 +1,5 @@
-import type { Move, Card, GameState, PlayerId, TargetRef } from "../model/types";
 import { allCaravanRows } from "../model/gameLog";
+import type { Card, GameState, Move, PlayerId, TargetRef } from "../model/types";
 
 export interface TransitionInfo {
     needsConfirmation: boolean;

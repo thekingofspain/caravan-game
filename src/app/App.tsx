@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+
+import { Board } from "../view/Board";
 import { GameConfig, useGame } from "../viewmodel/useGame";
 import { publishTestHooks } from "./testHooks";
-import { Board } from "../view/Board";
 
 export default function App() {
     const [seed] = useState(() => {

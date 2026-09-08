@@ -1,9 +1,9 @@
-import { caravanName } from "./names";
 import { cardNameText } from "./cards";
+import { caravanName } from "./names";
 import {
     ActorRef,
-    CARAVAN_INDICES,
     Ai,
+    CARAVAN_INDICES,
     CaravanIndex,
     CaravanRef,
     Card,
@@ -14,8 +14,8 @@ import {
     LogSegment,
     Move,
     Nullable,
-    PLAYERS,
     PlayerId,
+    PLAYERS,
     TargetRef,
 } from "./types";
 

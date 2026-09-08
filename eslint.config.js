@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import stylistic from "@stylistic/eslint-plugin";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 import globals from "globals";
 
 const regionEndsTight = {
@@ -112,6 +113,15 @@ export default tseslint.config(
                     ignorePattern: "#(end)?region"
                 }
             ]
+        }
+    },
+    {
+        plugins: {
+            "simple-import-sort": simpleImportSort
+        },
+        rules: {
+            "simple-import-sort/imports": "error",
+            "simple-import-sort/exports": "error"
         }
     },
     {

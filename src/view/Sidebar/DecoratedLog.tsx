@@ -1,10 +1,11 @@
-import { memo } from "react";
 import type { ReactNode } from "react";
+import { memo } from "react";
+
 import { caravanName } from "../../model/names";
-import { Human } from "../../model/types";
 import type { LogSegment } from "../../model/types";
-import { Who } from "./Who";
+import { Human } from "../../model/types";
 import { CardName } from "./CardName";
+import { Who } from "./Who";
 
 function renderSegments(segments: LogSegment[], keyBase: string | number): ReactNode[] {
     const nodes: ReactNode[] = [];

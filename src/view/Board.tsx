@@ -1,25 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
+
+import { cardLabel } from "../model/cards";
+import { segmentsText } from "../model/gameLog";
+import { caravanName } from "../model/names";
+import { type GameScores,getCaravanScores } from "../model/scoring";
+import type { Caravan as CaravanModel, PlayerState, SelectionState } from "../model/types";
 import {
     Ai,
     Human,
-    PlayerId,
-    TargetRef,
     isValueCard,
-    type Move
-} from "../model/types";
-import type { Caravan as CaravanModel, PlayerState, SelectionState } from "../model/types";
+    type Move,
+    PlayerId,
+    TargetRef} from "../model/types";
 import { SUIT_SYMBOL } from "../model/types";
-import { getCaravanScores, type GameScores } from "../model/scoring";
-import { caravanName } from "../model/names";
-import { cardLabel } from "../model/cards";
-import { segmentsText } from "../model/gameLog";
-import { Caravan, CaravanScore } from "./Caravan";
-import { PlayerHand } from "./PlayerHand";
-import { CardView } from "./CardView";
-import { Sidebar } from "./Sidebar";
-import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
+import { useBoardSelection } from "../viewmodel/useBoardSelection";
+import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
+import { Caravan, CaravanScore } from "./Caravan";
+import { CardView } from "./CardView";
+import { PlayerHand } from "./PlayerHand";
+import { Sidebar } from "./Sidebar";
 
 const EMPTY_SET: ReadonlySet<number> = new Set();
 const EMPTY_STRINGS: ReadonlySet<string> = new Set();

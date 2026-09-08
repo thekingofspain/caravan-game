@@ -877,7 +877,7 @@ describe("reddit red coverage", () => {
         expect(s.players[Human].caravans.every((c) => c.rows.length === 1)).toBe(true);
         expect(s.players[Ai].caravans.every((c) => c.rows.length === 1)).toBe(true);
     });
-    it("sends disbanded cards to the discard pile", () => {
+    it("disbanded cards vanish with the caravan (no discard pile)", () => {
         const target = makeCard(1, "10", "spades");
         const loaded: Caravan = { rows: [[target]], direction: null, suit: "spades" };
         const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["9"], "spades"), loaded], []);
@@ -886,7 +886,8 @@ describe("reddit red coverage", () => {
             player: 0,
             caravan: 2
         });
-        expect(next.players[Human].discard?.id).toBe(target.id);
+        expect(next.players[Human].caravans[2].rows).toHaveLength(0);
+        expect(next.players[Human].discard).toBeNull();
     });
     it("affects only cards played before the Joker", () => {
         const p0 = mkPlayer(
@@ -930,7 +931,7 @@ describe("reddit red coverage", () => {
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(1);
     });
-    it("sends Joker-removed cards to the discard pile", () => {
+    it("Joker-removed cards vanish (no discard pile)", () => {
         const target = makeCard(1, "10", "spades");
         const p0 = mkPlayer(
             [{ rows: [[target]], direction: null, suit: "spades" }, caravanOf(["5"], "hearts"), caravanOf(["A"], "spades")],
@@ -947,7 +948,7 @@ describe("reddit red coverage", () => {
             handIndex: 0
         });
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
-        expect(next.players[Human].discard?.id).toBe(target.id);
+        expect(next.players[Human].discard).toBeNull();
     });
     it("leaves empty caravans unfilled while playing elsewhere", () => {
         const emptied: Caravan = { rows: [], direction: null, suit: null, started: true };
@@ -962,7 +963,7 @@ describe("reddit red coverage", () => {
             legalMoves(s).filter((m) => m.type === "playOperationCard").length
         ).toBeGreaterThan(0);
     });
-    it("adds discarded and removed cards to separated piles", () => {
+    it("removed cards leave the face-up discard untouched", () => {
         const removed = makeCard(1, "10", "spades");
         const loaded: Caravan = {
             rows: [[removed]],
@@ -996,7 +997,8 @@ describe("reddit red coverage", () => {
                 handIndex: 0
             }
         );
-        expect(s2.players[Human].discard?.id).toBe(removed.id);
+        expect(s2.players[Human].caravans[2].rows).toHaveLength(0);
+        expect(s2.players[Human].discard?.rank).toBe("K");
     });
     it("keeps discard-pile cards unrecoverable", () => {
         const p0: PlayerState = {

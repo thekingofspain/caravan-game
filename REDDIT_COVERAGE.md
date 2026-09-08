@@ -48,7 +48,7 @@ Format: `| Reddit | Seq | Atomic rule | Implement | File | Test case name |`
 | 5.1 | R1 | after opening, play any card on alternating turns | yes | src/model/engine.ts | alternates turns after each move |
 | 5.1 | R2 | turn option: play a card from hand, then draw a new card | yes | src/model/engine.ts | refills the hand after a value play |
 | 5.1 | R3 | turn option: discard a card from hand, then draw a new card | yes | src/model/engine.ts | refills the hand after a discard |
-| 5.1 | R4 | turn option: disband one caravan track, removing all its cards to the discard pile | no — no discard pile | | sends disbanded cards to the discard pile |
+| 5.1 | R4 | turn option: disband one caravan track, removing all its cards to the discard pile | no — no discard pile | | disbanded cards vanish with the caravan (no discard pile) |
 | 5.2 | R1 | number cards rank A=1, 2–10 at face value | yes | src/model/types.ts | ranks number cards A=1, 2-10 at face value |
 | 5.21 | R1 | number card must follow the suit or numerical sequence of the last card played | yes | src/model/rules/caravanCardRules.ts | follows the suit or sequence of the last card |
 | 5.21 | R2 | with one card in the caravan, the next number card sets direction and suit | yes | src/model/engine.ts | sets direction and suit on the second card |
@@ -84,7 +84,7 @@ Format: `| Reddit | Seq | Atomic rule | Implement | File | Test case name |`
 | 5.37 | R3 | Joker on a non-ace removes all other same value/instance number cards from both players | yes | src/model/engine.ts | removes same-rank rows on Joker-on-value |
 | 5.37 | R4 | Joker affects only cards played before it | yes | src/model/engine.ts | affects only cards played before the Joker |
 | 5.37 | R5 | Joker's own number card is spared | yes | src/model/engine.ts | spares the Jokered card |
-| 5.37 | R6 | all removed cards and attached faces go to the discard pile | no — no discard pile | | sends Joker-removed cards to the discard pile |
+| 5.37 | R6 | all removed cards and attached faces go to the discard pile | no — no discard pile | | Joker-removed cards vanish (no discard pile) |
 | 5.38 | R1 | faces/Jokers keep full effect on cards that already carry faces/Jokers | yes | src/model/engine.ts | keeps full effect on loaded rows |
 | 5.38 | R2 | at most three faces/Jokers attached to a single number card | yes | src/model/engine.ts | allows at most three faces on one number card |
 | 5.38 | R3 | a maxed (three-picture) card is removable only by Joker on another card or by disbanding | yes | src/model/engine.ts | disbands a maxed row |
@@ -94,7 +94,7 @@ Format: `| Reddit | Seq | Atomic rule | Implement | File | Test case name |`
 | 5.4 | R2 | otherwise recompute the sequence after removal (e.g. 2-6hearts-4hearts minus 6 → 2-4 ascending) | yes | src/model/engine.ts | recomputes direction after removal otherwise |
 | 5.5 | R1 | empty caravan tracks need not be bid on immediately | yes | src/model/engine.ts | leaves empty caravans unfilled while playing elsewhere |
 | 5.5 | R2 | you can win with only two caravans | yes | src/model/scoring.ts | a player with 2+ sold caravans wins |
-| 5.6 | R1 | discarded or removed cards go to separated per-player discard piles | no — no discard pile | | adds discarded and removed cards to separated piles |
+| 5.6 | R1 | discarded or removed cards go to separated per-player discard piles | no — no discard pile | | removed cards leave the face-up discard untouched |
 | 5.6 | R2 | discard-pile cards cannot be recovered | | | keeps discard-pile cards unrecoverable |
 | 6.1 | R1 | score a caravan by summing number cards plus King value to get the bid | yes | src/model/rules/caravanCardRules.ts | adds number cards plus King value to the bid |
 | 6.2 | R1 | win text truncated in paste — no rule extracted | | | |

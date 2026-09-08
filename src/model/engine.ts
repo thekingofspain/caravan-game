@@ -1,32 +1,31 @@
 import { buildDeck } from "./cards";
+import { actor, cardsToRemove, describe, log, removalDetail, resetLogIds } from "./gameLog";
+import { mulberry32, shuffle } from "./rng";
 import { canPlaceCard, isValidCardIndex } from "./rules/caravanCardRules";
 import { gameWinner } from "./scoring";
-import { mulberry32, shuffle } from "./rng";
-import { actor, cardsToRemove, describe, log, removalDetail, resetLogIds } from "./gameLog";
 import {
-    Move,
     Ai,
+    baseValue,
     Caravan,
-    CaravanIndex,
     CARAVAN_INDICES,
-    PLAYERS,
+    CaravanIndex,
+    FaceCard,
     GameState,
     Human,
     IllegalMoveError,
-    LogSegment,
-    Nullable,
-    PlayerId,
-    PlayerState,
-    SetupOptions,
-    SuitedCard,
-    FaceCard,
-    JokerCard,
-    Suit,
-    TargetRef,
     isOperationCard,
     isValueCard,
-    baseValue
-} from "./types";
+    JokerCard,
+    LogSegment,
+    Move,
+    Nullable,
+    PlayerId,
+    PLAYERS,
+    PlayerState,
+    SetupOptions,
+    Suit,
+    SuitedCard,
+    TargetRef} from "./types";
 
 function emptyCaravan(): Caravan {
     return { rows: [], direction: null, suit: null };
@@ -502,13 +501,16 @@ export function legalMoves(state: GameState): Move[] {
 
     const pid = state.current;
     const player = state.players[pid];
+
     // Opening only (the first 6 value moves): `started` is set on placement
     // and never cleared, so this is false for the rest of the game — even
     // with an emptied caravan. No discards or disbands until it clears.
+
     const isOpening = inOpeningRound(player);
 
     if (isOpening) {
         // Value cards into the empties, or no moves (stuck player loses).
+
         return valueCardMoves(player, pid, true);
     }
 

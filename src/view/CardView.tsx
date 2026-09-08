@@ -1,6 +1,7 @@
 import { memo } from "react";
-import { Card } from "../model/types";
+
 import { cardClassName } from "../model/cards";
+import { Card } from "../model/types";
 
 interface CardViewProps {
     card: Card;
