@@ -50,7 +50,7 @@ let programmedState = {
   current: Ai, phase: "play", winner: null, log: [], started: true,
 };
 
-console.log("Programming 4-queens board: AI will Joker Red on Human Shady Ace, removing 5 rows (4 queens + Ace)");
+console.log("Programming 4-queens board: AI will Joker Red on Human Shady Ace, removing 4 hearts rows (queens ride along; Ace target keeps the Joker)");
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(500);
 
@@ -74,7 +74,7 @@ let afterAI = await page.evaluate(() => {
   };
 });
 console.log("After AI Joker:", JSON.stringify(afterAI, null, 2));
-assert.equal(afterAI.impactedLen, 5, "Joker should impact 5 rows (4 queens + Ace)");
+assert.equal(afterAI.impactedLen, 4, "Joker should impact 4 rows (hearts rows; Ace target excluded)");
 assert.ok(afterAI.hasAck, "should be awaiting human ack via confirm X");
 
 console.log("Log detail:", afterAI.logLast?.detail);
@@ -123,7 +123,7 @@ let afterAck = await page.evaluate(() => {
 console.log("After ack:", afterAck);
 assert.equal(afterAck.hBoneyardRows, 0, "Boneyard should be empty after Joker removal");
 assert.equal(afterAck.hReddingRows, 0, "Redding should be empty after Joker removal");
-assert.equal(afterAck.hShadyRows, 0, "Shady (Ace) should be empty after Joker removal");
+assert.equal(afterAck.hShadyRows, 1, "Shady keeps its Ace (Joker target is excluded from removals)");
 assert.equal(afterAck.aDayglowRows, 0, "Dayglow should be empty after Joker removal");
 assert.equal(afterAck.aNewRenoRows, 0, "New Reno should be empty after Joker removal");
 assert.equal(afterAck.hasAck, false, "ack should be gone after confirming");
@@ -132,5 +132,5 @@ assert.equal(afterAck.current, Human, "after ack, should be Human turn");
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);
 console.log("\n=== AI JOKER ACE 4-QUEENS ACK TEST PASSED ===");
-console.log("Joker on Ace removed 5 rows including 4 queens, detail includes queens, ack works, turn passes to Human");
+console.log("Joker on Ace removed 4 hearts rows including queens, Ace target kept, detail includes queens, ack works, turn passes to Human");
 await browser.close();

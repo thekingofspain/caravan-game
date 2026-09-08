@@ -244,7 +244,14 @@ function CaravanRowButton({
         if (c.rank === "J" && jackIdx === -1) jackIdx = i;
     });
     const kingBadge = kingCount > 0 ? `×${String(Math.pow(2, kingCount))}` : "";
-    const confirmationSymbol = removable ? "×" : null;
+
+    // Joker removals clear other rows, so the played Joker sits on a target
+    // row that is NOT in the pending set and would otherwise show no X.
+    // Pin the confirm X to the Joker itself while removals await ack.
+
+    const isJokerTargetConfirm =
+        !removable && selection.pendingRemovalSet.size > 0 && attachments.some(isJokerCard);
+    const confirmationSymbol = removable || isJokerTargetConfirm ? "×" : null;
     const anchorRef = useRef<HTMLDivElement>(null);
 
     return (
@@ -274,7 +281,7 @@ function CaravanRowButton({
                     </div>
                 );
             })}
-            {removable && confirmationSymbol && (
+            {confirmationSymbol && (removable || isJokerTargetConfirm) && (
                 <PortalRemove
                     anchorRef={anchorRef}
                     isHuman={isHuman}
