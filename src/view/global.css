@@ -771,6 +771,57 @@ body {
     outline-offset: 0.0625rem;
 }
 
+/* Modern disband confirmation: in-app alertdialog over a backdrop.
+ * Safe action (Keep) is the autofocused default; the destructive action
+ * wears the danger treatment and is never pre-selected. */
+.disband-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.disband-confirm {
+    max-width: 24rem;
+    margin: var(--sp-4);
+    padding: var(--sp-4);
+    border-radius: 1rem;
+    border: 0.125rem solid var(--c-bad);
+    background: rgba(10, 40, 20, 0.96);
+    box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
+    color: var(--c-fg);
+}
+
+.disband-confirm h2 {
+    margin: 0 0 var(--sp-2);
+    font-size: var(--fs-md);
+}
+
+.disband-confirm p {
+    margin: 0 0 var(--sp-4);
+    color: var(--c-dim);
+}
+
+.disband-confirm .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+}
+
+.btn-danger {
+    background: var(--c-bad);
+    border-color: var(--c-bad);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #a93226;
+    border-color: #a93226;
+}
+
 .board:has(.slot.selected) .caravan .empty.selectable:hover {
     border-color: var(--c-good);
     opacity: 0.9;

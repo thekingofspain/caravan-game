@@ -149,16 +149,11 @@ function DiscardSlot({ player, label }: { player: PlayerState; label: string }) 
     );
 }
 
-export function Board({
-    store,
-    confirm = typeof window !== "undefined" ? window.confirm.bind(window) : () => true
-}: {
-    store: GameStore;
-    confirm?: (msg: string) => boolean;
-}) {
+export function Board({ store }: { store: GameStore }) {
     const { state, legal, act, transition, acknowledgeRemovals } = store;
     const [sel, setSel] = useState<number | null>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
+    const [pendingDisband, setPendingDisband] = useState<number | null>(null);
 
     // Wide viewport (matches the docked-activity media query): panel stays open.
 
@@ -245,6 +240,22 @@ export function Board({
         };
     }, [toast]);
 
+    // Escape cancels a staged disband; the safe action stays the easy default.
+
+    useEffect(() => {
+        if (pendingDisband === null) return;
+
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setPendingDisband(null);
+        };
+
+        window.addEventListener("keydown", onKey);
+
+        return () => {
+            window.removeEventListener("keydown", onKey);
+        };
+    }, [pendingDisband]);
+
     const isGameOver = state.phase === "over";
     const humanWon = state.winner === Human;
 
@@ -281,6 +292,7 @@ export function Board({
             const id = setTimeout(() => {
                 setSel(null);
                 setPendingRemove(new Set());
+                setPendingDisband(null);
                 setToast(null);
                 setViewDeck(null);
                 setFlashOffKey(null);
@@ -493,6 +505,7 @@ export function Board({
     const onNewGame = useCallback(() => {
         setSel(null);
         setPendingRemove(new Set());
+        setPendingDisband(null);
         setToast(null);
         setViewDeck(null);
         setFlashOffKey(null);
@@ -507,18 +520,31 @@ export function Board({
         setViewDeck(Ai);
     }, []);
 
+    // Modern confirmation: stage the disband and let the in-app alertdialog
+    // confirm it. No window.confirm — blocking native dialogs are unstyleable,
+    // untrappable in tests, and dropped from cross-origin iframes.
+
     const onDisbandCaravan = useCallback(
         (caravanColumnIndex: number) => {
-            if (!canDisbandAny || humanPlayer.caravans[caravanColumnIndex].rows.length === 0) return;
-
-            if (!confirm(`Disband ${caravanName(Human, caravanColumnIndex)}? All its cards will be removed.`))
+            if (!canDisbandAny || humanPlayer.caravans[caravanColumnIndex].rows.length === 0)
                 return;
 
-            tryAct({ type: "disbandCaravan", player: Human, caravan: caravanColumnIndex as 0 | 1 | 2 });
-            setSel(null);
+            setPendingDisband(caravanColumnIndex);
         },
-        [canDisbandAny, humanPlayer, tryAct, confirm]
+        [canDisbandAny, humanPlayer]
     );
+
+    const onConfirmDisband = useCallback(() => {
+        if (pendingDisband === null) return;
+
+        tryAct({ type: "disbandCaravan", player: Human, caravan: pendingDisband as 0 | 1 | 2 });
+        setPendingDisband(null);
+        setSel(null);
+    }, [pendingDisband, tryAct]);
+
+    const onCancelDisband = useCallback(() => {
+        setPendingDisband(null);
+    }, []);
 
     const aiSelection = useMemo(
         () => ({
@@ -771,6 +797,54 @@ export function Board({
                         {state.players[viewDeck].deck.map((c) => (
                             <CardView key={c.id} card={c} />
                         ))}
+                    </div>
+                </div>
+            ) : null}
+            {pendingDisband !== null ? (
+                <div
+                    className="disband-backdrop"
+                    onClick={() => {
+                        onCancelDisband();
+                    }}
+                >
+                    <div
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="disband-confirm-title"
+                        aria-describedby="disband-confirm-detail"
+                        aria-label={`Disband your ${caravanName(Human, pendingDisband)}`}
+                        className="disband-confirm"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                    >
+                        <h2 id="disband-confirm-title">
+                            Disband your {caravanName(Human, pendingDisband)}?
+                        </h2>
+                        <p id="disband-confirm-detail">
+                            This removes all{" "}
+                            {String(humanPlayer.caravans[pendingDisband].rows.flat().length)} cards
+                            (total {String(scores.humanScores[pendingDisband].total)}) and cannot be
+                            undone.
+                        </p>
+                        <div className="actions">
+                            <button
+                                type="button"
+                                className="btn"
+                                onClick={onCancelDisband}
+                                autoFocus
+                            >
+                                Keep caravan
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-danger"
+                                onClick={onConfirmDisband}
+                                aria-label={`Disband your ${caravanName(Human, pendingDisband)}`}
+                            >
+                                Disband
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : null}
