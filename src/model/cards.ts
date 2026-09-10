@@ -51,11 +51,13 @@ export function makeCard(deckId: number, rank: Rank, x: Suit | JokerType): Card 
         return { id, suit, rank: rank };
     }
 }
+
 export function cardLabel(card: Card): string {
     if (isJokerCard(card)) return `${card.jokerType} Joker`;
 
     return `${card.rank} of ${card.suit}`;
 }
+
 export function cardNameText(card: Card): string {
     if (isJokerCard(card)) return `${card.jokerType} Joker`;
 
@@ -66,14 +68,17 @@ export function buildDeck(deckId: number): Card[] {
     const out: Card[] = [];
 
     for (const r of VALUE_RANKS)
-        for (const s of SUITS) out.push(makeCard(deckId, r, s));
+        {for (const s of SUITS) out.push(makeCard(deckId, r, s));}
+
     for (const r of FACE_RANKS)
-        for (const s of SUITS) out.push(makeCard(deckId, r, s));
+        {for (const s of SUITS) out.push(makeCard(deckId, r, s));}
+
     out.push(makeCard(deckId, "Joker", "Red"));
     out.push(makeCard(deckId, "Joker", "Black"));
 
     return out;
 }
+
 const RANK_CLASS: Record<Rank, string> = {
     A: "ace",
     "2": "two",

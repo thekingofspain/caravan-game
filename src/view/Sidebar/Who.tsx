@@ -1,6 +1,8 @@
+import type { Nullable } from "../../model/types";
+
 export const SIDE_ICON = { human: "👤", ai: "🤖" } as const;
 
-export function Who({ side, caravan }: { side: "ai" | "human"; caravan?: string | null }) {
+export function Who({ side, caravan }: { side: "ai" | "human"; caravan?: Nullable<string> }) {
     return (
         <span className={`who ${side}`} aria-label={side === "ai" ? "AI" : "You"}>
             {caravan != null ? (

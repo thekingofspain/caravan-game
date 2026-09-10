@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
 import { Caravan, CaravanRow } from "../src/model/types";
-import { calculateScore, canPlaceCard, calculateCaravanRowValue, isSellable } from "../src/model/rules/caravanCardRules";
+import { canPlaceCard } from "../src/model/rules/caravanCardRules";
+import { calculateRowPoints, calculatePoints, isSellable } from "../src/model/scoring";
 
 function row(rank: string, suit: string = "spades", kings: number = 0): CaravanRow {
   const base = makeCard(1, rank as any, suit as any);
@@ -47,23 +48,23 @@ describe("canPlaceCard", () => {
   });
 });
 
-describe("calculateScore / calculateCaravanRowValue", () => {
+describe("calculatePoints / calculateRowPoints", () => {
   it("sums base values", () => {
-    expect(calculateScore(caravan([row("10"), row("6")]))).toBe(16);
+    expect(calculatePoints(caravan([row("10"), row("6")]))).toBe(16);
   });
   it("ace counts as 1", () => {
-    expect(calculateScore(caravan([row("A")]))).toBe(1);
+    expect(calculatePoints(caravan([row("A")]))).toBe(1);
   });
   it("one king doubles the target", () => {
-    expect(calculateScore(caravan([row("10", "spades", 1)]))).toBe(20);
-    expect(calculateCaravanRowValue(row("10", "spades", 1))).toBe(20);
+    expect(calculatePoints(caravan([row("10", "spades", 1)]))).toBe(20);
+    expect(calculateRowPoints(row("10", "spades", 1))).toBe(20);
   });
   it("two kings quadruple the target", () => {
-    expect(calculateScore(caravan([row("10", "spades", 2)]))).toBe(40);
+    expect(calculatePoints(caravan([row("10", "spades", 2)]))).toBe(40);
   });
   it("ranks number cards A=1, 2-10 at face value", () => {
-    expect(calculateScore(caravan([row("A")]))).toBe(1);
-    expect(calculateScore(caravan([row("7")]))).toBe(7);
+    expect(calculatePoints(caravan([row("A")]))).toBe(1);
+    expect(calculatePoints(caravan([row("7")]))).toBe(7);
   });
   it("sells at 21 and 26", () => {
     expect(isSellable(caravan([row("10"), row("9"), row("2")]))).toBe(true);
@@ -74,7 +75,7 @@ describe("calculateScore / calculateCaravanRowValue", () => {
     expect(isSellable(caravan([row("10"), row("9"), row("8")]))).toBe(false);
   });
   it("adds number cards plus King value to the bid", () => {
-    expect(calculateScore(caravan([row("10"), row("6"), row("10", "spades", 1)]))).toBe(36);
+    expect(calculatePoints(caravan([row("10"), row("6"), row("10", "spades", 1)]))).toBe(36);
   });
 });
 describe("reddit gap coverage", () => {

@@ -12,12 +12,13 @@ import {
     Human,
     Ai,
     Suit,
-    ValueRank
+    ValueRank,
+    Nullable
 } from "../src/model/types";
 
 function caravanOf(ranks: ValueRank[], suit: Suit): Caravan {
     const rows: CaravanRow[] = ranks.map((r) => [makeCard(1, r, suit)]);
-    let direction: Direction | null = null;
+    let direction: Nullable<Direction> = null;
     if (rows.length >= 2) {
         const av = rows[0][0].rank === "A" ? 1 : Number(rows[0][0].rank) || 0;
         const bv = rows[1][0].rank === "A" ? 1 : Number(rows[1][0].rank) || 0;

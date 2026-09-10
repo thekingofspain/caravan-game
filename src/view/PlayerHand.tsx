@@ -1,14 +1,14 @@
 import { memo } from "react";
 
 import { cardClassName, cardLabel } from "../model/cards";
-import { Human, PlayerId, PlayerState } from "../model/types";
+import { Human, Nullable, PlayerId, PlayerState } from "../model/types";
 
 const SLOT_KEYS = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"];
 
 interface PlayerHandProps {
     playerId: PlayerId;
     player: PlayerState;
-    selectedHandIndex: number | null;
+    selectedHandIndex: Nullable<number>;
     selectableIndices: ReadonlySet<number>;
     onCardClick: (handIndex: number) => void;
     onCardDoubleClick: (handIndex: number) => void;

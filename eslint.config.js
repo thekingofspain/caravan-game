@@ -1,3 +1,4 @@
+import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -47,7 +48,7 @@ const regionEndsTight = {
     }
 };
 
-export default tseslint.config(
+export default defineConfig(
     {
         ignores: [
             "dist/**",
@@ -57,10 +58,17 @@ export default tseslint.config(
             ".playwright*/**",
             "test/**",
             "scripts/**",
+            ".claude/**",
             "vite.config.*",
             "eslint.config.*",
             "svgo.config.*"
         ]
+    },
+    {
+        files: [".agents/skills/setup-ts-deep-modules/dependency-cruiser.config.cjs"],
+        languageOptions: {
+            globals: globals.node
+        }
     },
     js.configs.recommended,
     ...tseslint.configs.strictTypeChecked,
@@ -92,7 +100,8 @@ export default tseslint.config(
                 { blankLine: "any", prev: "cjs-import", next: "cjs-import" },
                 { blankLine: "always", prev: ["const", "let", "var"], next: "*" },
                 { blankLine: "any", prev: ["const", "let", "var"], next: ["const", "let", "var"] },
-                { blankLine: "always", prev: "if", next: "*" }
+                { blankLine: "always", prev: "if", next: "*" },
+                { blankLine: "always", prev: "block-like", next: "*" }
             ],
             "@stylistic/lines-between-class-members": ["error", "always"],
             "@stylistic/lines-around-comment": [
@@ -133,6 +142,7 @@ export default tseslint.config(
                         "*.js",
                         "*.mjs",
                         "*.cjs",
+                        ".agents/skills/setup-ts-deep-modules/dependency-cruiser.config.cjs",
                         "vite.config.ts",
                         "eslint.config.js"
                     ]
@@ -141,6 +151,7 @@ export default tseslint.config(
             }
         },
         rules: {
+            "curly": ["error", "multi-line"],
             "prefer-const": "error"
         }
     }

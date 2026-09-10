@@ -1,7 +1,7 @@
-import type { GameState, Move } from "../model/types";
+import type { GameState, Move, Nullable } from "../model/types";
 import type { GameStore, ReducerMove } from "../viewmodel/useGame";
 
-let cached: boolean | null = null;
+let cached: Nullable<boolean> = null;
 
 export function testHooksEnabled(): boolean {
     if (cached !== null) return cached;
