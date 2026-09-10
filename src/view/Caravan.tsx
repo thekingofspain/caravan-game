@@ -253,10 +253,11 @@ function CaravanRowButton({
 
     // Joker removals clear other rows, so the played Joker sits on a target
     // row that is NOT in the pending set and would otherwise show no X.
-    // Pin the confirm X to the Joker itself while removals await ack.
+    // Pin the confirm X to the pending move's Joker host only: stale Jokers
+    // from earlier moves still ride other rows and must never confirm.
 
     const isJokerTargetConfirm =
-        !removable && selection.pendingRemovalSet.size > 0 && attachments.some(isJokerCard);
+        !removable && selection.pendingJokerKey !== null && rowKey === selection.pendingJokerKey;
     const confirmationSymbol = removable || isJokerTargetConfirm ? "×" : null;
     const anchorRef = useRef<HTMLDivElement>(null);
 
@@ -271,7 +272,7 @@ function CaravanRowButton({
         >
             {attachments.map((a, j) => {
                 const isJackConfirm = a.rank === "J" && j === jackIdx && !!confirmationSymbol;
-                const isJokerConfirm = isJokerCard(a) && !!confirmationSymbol;
+                const isJokerConfirm = isJokerCard(a) && isJokerTargetConfirm;
                 const showConfirmation = isJackConfirm || isJokerConfirm;
                 const isFlashed = selection.flashKeys?.has(`${rowKey}#${a.id}`) ?? false;
 

@@ -309,7 +309,7 @@ export function Board({ store }: { store: GameStore }) {
 
         return getDisplayedState(store.previous, state, transition);
     }, [state, transition, store.previous]);
-    const { legalCaravans, targetSet, canDiscard, pendingKeys } = useBoardSelection(
+    const { legalCaravans, targetSet, canDiscard, pendingKeys, pendingJokerKey } = useBoardSelection(
         sel,
         legal,
         transition
@@ -561,11 +561,12 @@ export function Board({ store }: { store: GameStore }) {
             legalCaravans: [] as number[],
             targetSet,
             pendingRemovalSet: pendingKeys,
+            pendingJokerKey,
             removingSet: pendingRemove,
             canDiscard: false,
             flashKeys
         }),
-        [targetSet, pendingKeys, pendingRemove, flashKeys]
+        [targetSet, pendingKeys, pendingJokerKey, pendingRemove, flashKeys]
     );
     const humanSelection = useMemo(
         () => ({
@@ -574,6 +575,7 @@ export function Board({ store }: { store: GameStore }) {
             legalCaravans,
             targetSet,
             pendingRemovalSet: pendingKeys,
+            pendingJokerKey,
             removingSet: pendingRemove,
             canDiscard,
             flashKeys
@@ -584,6 +586,7 @@ export function Board({ store }: { store: GameStore }) {
             legalCaravans,
             targetSet,
             pendingKeys,
+            pendingJokerKey,
             pendingRemove,
             canDiscard,
             flashKeys

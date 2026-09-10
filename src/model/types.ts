@@ -241,6 +241,7 @@ export interface SelectionState {
     legalCaravans: number[];
     targetSet: Set<string>;
     pendingRemovalSet: Set<string>;
+    pendingJokerKey: Nullable<string>;
     removingSet: Set<string>;
     canDiscard: boolean;
 

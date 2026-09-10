@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { Human, type Move, Nullable } from "../model/types";
+import { Human, isJokerCard, type Move, Nullable } from "../model/types";
 import { targetKey, type TransitionInfo } from "./transition";
 
 export function useBoardSelection(
@@ -35,8 +35,7 @@ export function useBoardSelection(
     }, [sel, legal]);
 
     // Human moves never show the red X: only AI removals awaiting human ack
-    // display pending + confirm visuals. Otherwise the human's own Jack/Joker
-    // flashes an X until the AI auto-move clears the transition.
+    // display pending + confirm visuals.
 
     const pendingKeys = useMemo(
         () =>
@@ -46,5 +45,18 @@ export function useBoardSelection(
         [transition]
     );
 
-    return { legalCaravans, targetSet, canDiscard, pendingKeys };
+    // The ack X for a Joker pins to the pending move's host row only — never
+    // to stale Jokers from earlier moves still riding other rows.
+
+    const pendingJokerKey = useMemo(() => {
+        const ack = transition?.pendingAck;
+
+        if (ack?.confirmer !== Human || !ack.played) return null;
+
+        if (!isJokerCard(ack.played.card)) return null;
+
+        return targetKey(ack.played.at);
+    }, [transition]);
+
+    return { legalCaravans, targetSet, canDiscard, pendingKeys, pendingJokerKey };
 }
