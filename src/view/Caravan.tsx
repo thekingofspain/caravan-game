@@ -3,13 +3,14 @@ import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cardClassName } from "../model/cards";
-import { calculateScore, isSellable } from "../model/rules/caravanCardRules";
+import type { CaravanPointsMeta } from "../model/scoring";
 import {
     Caravan as CaravanType,
-    CaravanIndex,
     CaravanRow,
     Human,
     isJokerCard,
+    LaneIndex,
+    Nullable,
     PlayerId,
     SelectionState,
     TargetRef} from "../model/types";
@@ -17,18 +18,18 @@ import { targetKey } from "../viewmodel/transition";
 
 interface CaravanProps {
     caravan: CaravanType;
-    caravanIndex: CaravanIndex;
+    lane: LaneIndex;
     playerId: PlayerId;
     highestSold: boolean;
     selection: SelectionState;
     onCardClick: (target: TargetRef) => void;
-    onPlaceholderClick: (caravanIndex: CaravanIndex) => void;
+    onPlaceholderClick: (lane: LaneIndex) => void;
     onAcknowledge: () => void;
     children?: ReactNode;
 }
 
 interface PortalRemoveProps {
-    anchorRef: React.RefObject<HTMLDivElement | null>;
+    anchorRef: React.RefObject<Nullable<HTMLDivElement>>;
     isHuman: boolean;
     onAcknowledge: () => void;
     label: string;
@@ -36,13 +37,13 @@ interface PortalRemoveProps {
 }
 
 function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: PortalRemoveProps) {
-    const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+    const [pos, setPos] = useState<Nullable<{ left: number; top: number }>>(null);
 
     // Web pages cannot move the system cursor; keyboard focus on the X plus
     // revealing its card is the closest equivalent.
 
     const focusRef = useCallback(
-        (node: HTMLSpanElement | null) => {
+        (node: Nullable<HTMLSpanElement>) => {
             if (!node) return;
 
             node.focus({ preventScroll: true });
@@ -119,7 +120,7 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
 
 function CaravanImpl({
     caravan,
-    caravanIndex,
+    lane,
     playerId,
     selection,
     onCardClick,
@@ -136,8 +137,9 @@ function CaravanImpl({
 
         const cardIndex = Number(wrap.getAttribute("data-index"));
 
-        onCardClick({ player: playerId, caravan: caravanIndex, cardIndex });
+        onCardClick({ player: playerId, lane, cardIndex });
     }
+
     function handleCardKeyDown(e: React.KeyboardEvent) {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
@@ -147,12 +149,13 @@ function CaravanImpl({
 
             const cardIndex = Number(wrap.getAttribute("data-index"));
 
-            onCardClick({ player: playerId, caravan: caravanIndex, cardIndex });
+            onCardClick({ player: playerId, lane, cardIndex });
         }
     }
+
     function getCardClasses(caravanRow: CaravanRow, index: number): string {
         const head = caravanRow[0];
-        const key = targetKey({ player: playerId, caravan: caravanIndex, cardIndex: index });
+        const key = targetKey({ player: playerId, lane, cardIndex: index });
         const isTarget = selection.targetSet.has(key);
         const classes = [cardClassName("card", head)];
 
@@ -166,13 +169,14 @@ function CaravanImpl({
 
         return classes.join(" ");
     }
+
     function getCardStyle(index: number): CSSProperties {
         return { zIndex: index + 1 };
     }
 
     return (
         <div
-            className={`track ${isHuman && selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`}
+            className={`track ${isHuman && selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
         >
             {children}
             {caravan.rows.map((caravanRow, k) => (
@@ -181,7 +185,7 @@ function CaravanImpl({
                     caravanRow={caravanRow}
                     k={k}
                     playerId={playerId}
-                    caravanColumnIndex={caravanIndex}
+                    lane={lane}
                     selection={selection}
                     isHuman={isHuman}
                     getCardClasses={getCardClasses}
@@ -194,9 +198,9 @@ function CaravanImpl({
             {caravan.rows.length === 0 ? (
                 <button
                     type="button"
-                    className={`empty ${selection.legalCaravans.includes(caravanIndex) ? "selectable" : ""}`}
+                    className={`empty ${selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
                     onClick={() => {
-                        onPlaceholderClick(caravanIndex);
+                        onPlaceholderClick(lane);
                     }}
                 />
             ) : null}
@@ -208,7 +212,7 @@ function CaravanRowButton({
     caravanRow,
     k,
     playerId,
-    caravanColumnIndex,
+    lane,
     selection,
     isHuman,
     getCardClasses,
@@ -220,7 +224,7 @@ function CaravanRowButton({
     caravanRow: CaravanRow;
     k: number;
     playerId: PlayerId;
-    caravanColumnIndex: 0 | 1 | 2;
+    lane: 0 | 1 | 2;
     selection: SelectionState;
     isHuman: boolean;
     getCardClasses: (r: CaravanRow, i: number) => string;
@@ -230,7 +234,7 @@ function CaravanRowButton({
     onAcknowledge: () => void;
 }) {
     const head = caravanRow[0];
-    const rowKey = targetKey({ player: playerId, caravan: caravanColumnIndex, cardIndex: k });
+    const rowKey = targetKey({ player: playerId, lane, cardIndex: k });
     const removable = selection.pendingRemovalSet.has(rowKey);
     const attachments = caravanRow.slice(1);
     let lastKingIndex = -1;
@@ -296,26 +300,17 @@ function CaravanRowButton({
         </button>
     );
 }
-export function CaravanScore({
-    caravan,
-    isSeller: highestSold
-}: {
-    caravan: CaravanType;
-    isSeller: boolean;
-    playerId?: PlayerId;
-}) {
-    const total = calculateScore(caravan);
-    const sellable = isSellable(caravan);
-    const isSold = sellable && highestSold;
 
+export function CaravanPoints({ meta }: { meta: CaravanPointsMeta }) {
     return (
         <span
-            className={`score ${sellable ? "sellable" : "unsellable"} ${isSold ? "sold bold" : ""} ${highestSold ? "highest" : ""}`}
-            data-total={total}
-            data-sellable={sellable ? "1" : "0"}
+            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold bold" : ""} ${meta.isSold ? "highest" : ""}`}
+            data-total={meta.points}
+            data-sellable={meta.isSellable ? "1" : "0"}
         >
-            <span className="total">{total}</span>
+            <span className="total">{meta.points}</span>
         </span>
     );
 }
+
 export const Caravan = memo(CaravanImpl);

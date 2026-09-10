@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { publishTestHooks } from "../app/testHooks";
 import { determineBestMove } from "../model/ai";
 import { applyMove, forfeitNoMoves, legalMoves, setupGame } from "../model/engine";
-import { Ai, GameConfig, GameState, Human,Move } from "../model/types";
+import { Ai, GameConfig, GameState, Human,Move, Nullable } from "../model/types";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
 
 export type { GameConfig };
@@ -17,9 +17,9 @@ export interface GameStore {
 
     /** UX transition derived from f(previous, move, current) */
 
-    transition: TransitionInfo | null;
-    previous: GameState | null;
-    lastMove: Move | null;
+    transition: Nullable<TransitionInfo>;
+    previous: Nullable<GameState>;
+    lastMove: Nullable<Move>;
     acknowledgeRemovals: () => void;
 }
 
@@ -33,14 +33,15 @@ function reducer(state: GameState, action: ReducerMove): GameState {
 
     return applyMove(state, action);
 }
+
 export function useGame(initial: GameConfig): GameStore {
     const [cfg, setCfg] = useState<GameConfig>(initial);
     const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: Human }));
     const [thinking, setThinking] = useState(false);
     const [ui, setUi] = useState<{
-        previous: GameState | null;
-        lastMove: Move | null;
-        transition: TransitionInfo | null;
+        previous: Nullable<GameState>;
+        lastMove: Nullable<Move>;
+        transition: Nullable<TransitionInfo>;
     }>({ previous: null, lastMove: null, transition: null });
 
     useEffect(
@@ -64,7 +65,7 @@ export function useGame(initial: GameConfig): GameStore {
         setUi({
             previous: prev,
             lastMove: move,
-            transition: info.needsConfirmation ? info : null
+            transition: info.pendingAck ? info : null
         });
         dispatch(move);
     }, []);
@@ -74,7 +75,7 @@ export function useGame(initial: GameConfig): GameStore {
     useEffect(() => {
         if (state.phase === "over" || state.current !== Ai) return;
 
-        if (transition?.needsConfirmation && transition.confirmer === Human) return;
+        if (transition?.pendingAck?.confirmer === Human) return;
 
         // AI with no legal moves (e.g. unfillable empties, no value cards)
         // forfeits at turn start instead of crashing move selection.
@@ -134,6 +135,7 @@ export function useGame(initial: GameConfig): GameStore {
         acknowledgeRemovals
     };
 }
+
 export function isHumanTurn(state: GameState): boolean {
     return state.phase === "play" && state.current === Human;
 }

@@ -88,7 +88,7 @@ console.log("Human plays 6♥ on Shady Sands (caravan 2) — should make Shady 2
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="6" && c.suit==="hearts");
-  window.__act({ type:"playValueCard", player:0, caravan:2, handIndex: idx });
+  window.__act({ type:"playValueCard", player:0, lane: 2, handIndex: idx });
 });
 await page.waitForTimeout(700);
 

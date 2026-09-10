@@ -92,7 +92,7 @@ console.log("Human plays Jack on 8♠ (Boneyard index1) — should remove 8♠+K
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="J");
-  window.__act({ type:"playOperationCard", player:0, target:{player:0, caravan:0, cardIndex:1}, handIndex: idx });
+  window.__act({ type:"playOperationCard", player:0, target:{player:0, lane: 0, cardIndex:1}, handIndex: idx });
 });
 await page.waitForTimeout(600);
 
@@ -119,7 +119,7 @@ assert.equal(after.ackX, 0, "no ack X shown for human Jack — human has nothing
 assert.equal(after.boneyard.length, 3, "Boneyard should have 3 cards after removing 8♠+K (was 4, now 3: 9♦,6♠,3♠)");
 assert.ok(!after.boneyard.some(c=> c.rank==="8"), "8♠ should be gone");
 assert.equal(after.current, Ai, "turn should have ended — now AI's turn (1)");
-assert.equal(after.transition?.confirmer, Ai, "confirmation belongs to AI, not the human");
+assert.equal(after.transition?.pendingAck?.confirmer, Ai, "confirmation belongs to AI, not the human");
 assert.equal(after.badgeAfter, null, "2x badge should be gone with the 8♠");
 
 // Verify no half-greyed 2x remains

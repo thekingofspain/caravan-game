@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
 import { setupGame, applyMove, legalMoves, resolveTerminal } from "../src/model/engine";
-import { calculateScore } from "../src/model/rules/caravanCardRules";
+import { calculatePoints } from "../src/model/scoring";
 import {
     Card,
     Caravan,
@@ -16,7 +16,8 @@ import {
     Suit,
     ValueCard,
     ValueRank,
-    OperationCard
+    OperationCard,
+    Nullable
 } from "../src/model/types";
 import { getTransitionInfo } from "../src/viewmodel/transition";
 
@@ -25,7 +26,7 @@ function rowOf(head: ValueCard, ...attachments: OperationCard[]): CaravanRow {
 }
 function caravanOf(ranks: ValueRank[], suit: Suit): Caravan {
     const rows: CaravanRow[] = ranks.map((r) => rowOf(makeCard(1, r, suit)));
-    let direction: Direction | null = null;
+    let direction: Nullable<Direction> = null;
     if (rows.length >= 2) {
         const av = rows[0][0].rank === "A" ? 1 : Number(rows[0][0].rank) || 0;
         const bv = rows[1][0].rank === "A" ? 1 : Number(rows[1][0].rank) || 0;
@@ -94,7 +95,7 @@ describe("initial round (must-start constraint)", () => {
     it("targets only empty caravans while caravans are empty", () => {
         const s = setupGame({ seed: 7 });
         for (const a of legalMoves(s)) {
-            if (a.type === "playValueCard") expect(s.players[a.player].caravans[a.caravan].rows.length).toBe(0);
+            if (a.type === "playValueCard") expect(s.players[a.player].caravans[a.lane].rows.length).toBe(0);
         }
     });
     it("disallows discard while a caravan is empty", () => {
@@ -112,7 +113,7 @@ describe("initial round (must-start constraint)", () => {
         const moves = legalMoves(s);
         expect(moves.some((m) => m.type === "discardCard")).toBe(true);
         expect(moves.some((m) => m.type === "disbandCaravan")).toBe(true);
-        expect(moves.some((m) => m.type === "playValueCard" && m.caravan !== 0)).toBe(true);
+        expect(moves.some((m) => m.type === "playValueCard" && m.lane !== 0)).toBe(true);
     });
 
     it("throws when discarding while a value card could fill an empty", () => {
@@ -132,7 +133,7 @@ describe("initial round (must-start constraint)", () => {
         const act = legalMoves(s)[0];
         if (act.type !== "playValueCard") throw new Error("expected value open");
         const next = applyMove(s, act);
-        expect(next.players[Human].caravans[act.caravan].rows.length).toBe(1);
+        expect(next.players[Human].caravans[act.lane].rows.length).toBe(1);
     });
     it("starts the caravan in the played card's suit", () => {
         const s = setupGame({ seed: 7 });
@@ -140,13 +141,13 @@ describe("initial round (must-start constraint)", () => {
         if (act.type !== "playValueCard") throw new Error("expected value open");
         const card = s.players[Human].hand[act.handIndex];
         const next = applyMove(s, act);
-        expect(next.players[Human].caravans[act.caravan].suit).toBe(card.suit);
+        expect(next.players[Human].caravans[act.lane].suit).toBe(card.suit);
     });
     it("leaves direction unset on a single-row caravan", () => {
         const s = setupGame({ seed: 7 });
         const act = legalMoves(s)[0];
         if (act.type !== "playValueCard") throw new Error("expected value open");
-        const car = applyMove(s, act).players[Human].caravans[act.caravan];
+        const car = applyMove(s, act).players[Human].caravans[act.lane];
         expect(car.rows.length).toBe(1);
         expect(car.direction).toBeNull();
     });
@@ -171,7 +172,7 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 2, cardIndex: 0 },
+                target: { player: 1, lane: 2, cardIndex: 0 },
                 handIndex: 0
             });
             expect(next.players[Ai].caravans[2].rows.length).toBe(0);
@@ -187,7 +188,7 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 2, cardIndex: 0 },
+                target: { player: 1, lane: 2, cardIndex: 0 },
                 handIndex: 0
             });
             expect(next.current).toBe(1);
@@ -203,7 +204,7 @@ describe("operation cards", () => {
             const move = {
                 type: "playOperationCard",
                 player: 1,
-                target: { player: 0, caravan: 2, cardIndex: 0 },
+                target: { player: 0, lane: 2, cardIndex: 0 },
                 handIndex: 0
             } as const;
             const next = applyMove(s, move);
@@ -215,17 +216,16 @@ describe("operation cards", () => {
             expect(oppJackSituation().next.players[Human].caravans[2].rows.length).toBe(0);
         });
         it("flags an opponent jack for confirmation", () => {
-            expect(oppJackSituation().info.needsConfirmation).toBe(true);
+            expect(oppJackSituation().info.pendingAck).not.toBeNull();
         });
         it("names Human as the confirmer of an opponent jack", () => {
-            expect(oppJackSituation().info.confirmer).toBe(Human);
+            expect(oppJackSituation().info.pendingAck?.confirmer).toBe(Human);
         });
         it("points at the jacked card", () => {
-            const { impacted } = oppJackSituation().info;
-            expect(impacted).toEqual([{ player: 0, caravan: 2, cardIndex: 0 }]);
+            expect(oppJackSituation().info.pendingAck?.removed).toEqual([{ player: 0, lane: 2, cardIndex: 0 }]);
         });
         it("shows the Jack as the played card", () => {
-            expect(oppJackSituation().info.addedTemp?.card.rank).toBe("J");
+            expect(oppJackSituation().info.pendingAck?.played?.card.rank).toBe("J");
         });
     });
 
@@ -237,7 +237,7 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 2, cardIndex: 1 },
+                target: { player: 1, lane: 2, cardIndex: 1 },
                 handIndex: 0
             });
             return { car: next.players[Ai].caravans[2] };
@@ -260,7 +260,7 @@ describe("operation cards", () => {
                 applyMove(s, {
                     type: "playOperationCard",
                     player: 0,
-                    target: { player: 1, caravan: 2, cardIndex: 0 },
+                    target: { player: 1, lane: 2, cardIndex: 0 },
                     handIndex: 0
                 })
             ).toThrow(/last row/);
@@ -288,7 +288,7 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 0, cardIndex: 2 },
+                target: { player: 1, lane: 0, cardIndex: 2 },
                 handIndex: 0
             });
             return { car: next.players[Ai].caravans[0] };
@@ -319,10 +319,10 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 2, cardIndex: 0 },
+                target: { player: 1, lane: 2, cardIndex: 0 },
                 handIndex: 0
             });
-            expect(calculateScore(next.players[Ai].caravans[2])).toBe(20);
+            expect(calculatePoints(next.players[Ai].caravans[2])).toBe(20);
         });
     });
 
@@ -343,7 +343,7 @@ describe("operation cards", () => {
             const next = applyMove(s, {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 1, caravan: 0, cardIndex: 0 },
+                target: { player: 1, lane: 0, cardIndex: 0 },
                 handIndex: 0
             });
             expect(next.players[Ai].caravans[0].rows.length).toBe(1);
@@ -376,7 +376,7 @@ describe("operation cards", () => {
                 applyMove(s, {
                     type: "playOperationCard",
                     player: 0,
-                    target: { player: 1, caravan: 0, cardIndex: 0 },
+                    target: { player: 1, lane: 0, cardIndex: 0 },
                     handIndex: 0
                 })
             ).toThrow(/three pictures/);
@@ -389,30 +389,30 @@ describe("disbandCaravan", () => {
         const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")], []);
         const p1 = mkPlayer(EMPTY, []);
         const s = mkGame(p0, p1, 0);
-        const next = applyMove(s, { type: "disbandCaravan", player: 0, caravan: 1 });
+        const next = applyMove(s, { type: "disbandCaravan", player: 0, lane: 1 });
         expect(next.players[0].caravans[1].rows.length).toBe(0);
     });
     it("cannot disband while any empty", () => {
         const s = mkGame(mkPlayer(EMPTY, []), mkPlayer(EMPTY, []), 0);
-        expect(() => applyMove(s, { type: "disbandCaravan", player: 0, caravan: 0 })).toThrow();
+        expect(() => applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 })).toThrow();
     });
     it("cannot disband a filled caravan while others are empty", () => {
         const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf([], "spades"), caravanOf([], "spades")], []);
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
-        expect(() => applyMove(s, { type: "disbandCaravan", player: 0, caravan: 0 })).toThrow();
+        expect(() => applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 })).toThrow();
     });
     it("disbands a started caravan that was emptied", () => {
         const emptied: Caravan = { rows: [], direction: null, suit: null, started: true };
         const p0 = mkPlayer([caravanOf(["10"], "spades"), emptied, caravanOf(["9"], "spades")], []);
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
-        const next = applyMove(s, { type: "disbandCaravan", player: 0, caravan: 0 });
+        const next = applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 });
         expect(next.players[0].caravans[0].rows.length).toBe(0);
     });
     it("keeps the started marker after disbanding an emptied caravan", () => {
         const emptied: Caravan = { rows: [], direction: null, suit: null, started: true };
         const p0 = mkPlayer([caravanOf(["10"], "spades"), emptied, caravanOf(["9"], "spades")], []);
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
-        const next = applyMove(s, { type: "disbandCaravan", player: 0, caravan: 0 });
+        const next = applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 });
         expect(next.players[0].caravans[0].started).toBe(true);
     });
 });
@@ -454,7 +454,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, [makeCard(2, "4", "diamonds")]), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 0,
+            lane: 0,
             handIndex: 0
         });
         expect(next.current).toBe(1);
@@ -469,7 +469,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 0,
+            lane: 0,
             handIndex: 0
         });
         expect(next.players[Human].hand.length).toBe(1);
@@ -521,11 +521,11 @@ describe("reddit atomic coverage", () => {
         );
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
         expect(
-            legalMoves(s).filter((m) => m.type === "playValueCard" && m.caravan === 0).length
+            legalMoves(s).filter((m) => m.type === "playValueCard" && m.lane === 0).length
         ).toBe(0);
         expect(
             legalMoves(s).filter(
-                (m) => m.type === "playOperationCard" && m.target.caravan === 0
+                (m) => m.type === "playOperationCard" && m.target.lane === 0
             ).length
         ).toBeGreaterThan(0);
     });
@@ -541,7 +541,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(0);
@@ -565,15 +565,15 @@ describe("reddit atomic coverage", () => {
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 1, caravan: 2, cardIndex: 1 },
+            target: { player: 1, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(s1.players[Ai].caravans[2].direction).toBe("desc");
-        const s1a = applyMove(s1, { type: "playValueCard", player: 1, caravan: 0, handIndex: 0 });
+        const s1a = applyMove(s1, { type: "playValueCard", player: 1, lane: 0, handIndex: 0 });
         const s2 = applyMove(s1a, {
             type: "playOperationCard",
             player: 0,
-            target: { player: 1, caravan: 2, cardIndex: 1 },
+            target: { player: 1, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(s2.players[Ai].caravans[2].direction).toBe("asc");
@@ -591,7 +591,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
@@ -612,7 +612,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
@@ -631,7 +631,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
@@ -651,11 +651,11 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows[0].length).toBe(3);
-        expect(calculateScore(next.players[Human].caravans[2])).toBe(20);
+        expect(calculatePoints(next.players[Human].caravans[2])).toBe(20);
     });
     it("disbands a maxed row", () => {
         const maxed: Caravan = {
@@ -669,7 +669,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "disbandCaravan",
             player: 0,
-            caravan: 2
+            lane: 2
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(0);
     });
@@ -688,7 +688,7 @@ describe("reddit atomic coverage", () => {
             applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 0, caravan: 2, cardIndex: 0 },
+                target: { player: 0, lane: 2, cardIndex: 0 },
                 handIndex: 0
             })
         ).toThrow(/three pictures/);
@@ -705,7 +705,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 1 },
+            target: { player: 0, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(2);
@@ -723,7 +723,7 @@ describe("reddit atomic coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 1 },
+            target: { player: 0, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(2);
@@ -738,11 +738,11 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 2,
+            lane: 2,
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(4);
-        expect(calculateScore(next.players[Human].caravans[2])).toBe(26);
+        expect(calculatePoints(next.players[Human].caravans[2])).toBe(26);
     });
     it("sets direction and suit on the second card", () => {
         const p0 = mkPlayer(
@@ -752,7 +752,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 2,
+            lane: 2,
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].direction).toBe("desc");
@@ -766,7 +766,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 2,
+            lane: 2,
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].direction).toBe("desc");
@@ -780,7 +780,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 2,
+            lane: 2,
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].direction).toBe("asc");
@@ -794,7 +794,7 @@ describe("reddit gap coverage", () => {
             applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
                 type: "playValueCard",
                 player: 0,
-                caravan: 2,
+                lane: 2,
                 handIndex: 0
             })
         ).toThrow(/cannot place/);
@@ -807,7 +807,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(1);
@@ -821,7 +821,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
             player: 0,
-            caravan: 2,
+            lane: 2,
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(2);
@@ -841,7 +841,7 @@ describe("reddit gap coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 0, cardIndex: 0 },
+            target: { player: 0, lane: 0, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(0);
@@ -884,7 +884,7 @@ describe("reddit red coverage", () => {
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "disbandCaravan",
             player: 0,
-            caravan: 2
+            lane: 2
         });
         expect(next.players[Human].caravans[2].rows).toHaveLength(0);
         expect(next.players[Human].discard).toBeNull();
@@ -907,11 +907,11 @@ describe("reddit red coverage", () => {
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         const s1a = applyMove(s1, { type: "discardCard", player: 1, handIndex: 0 });
-        const s2 = applyMove(s1a, { type: "playValueCard", player: 0, caravan: 0, handIndex: 0 });
+        const s2 = applyMove(s1a, { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
         expect(s2.players[Human].caravans[0].rows.length).toBe(1);
     });
     it("spares the Jokered card", () => {
@@ -926,7 +926,7 @@ describe("reddit red coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[2].rows.length).toBe(1);
@@ -944,7 +944,7 @@ describe("reddit red coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
@@ -993,7 +993,7 @@ describe("reddit red coverage", () => {
             {
                 type: "playOperationCard",
                 player: 0,
-                target: { player: 0, caravan: 2, cardIndex: 0 },
+                target: { player: 0, lane: 2, cardIndex: 0 },
                 handIndex: 0
             }
         );
@@ -1037,7 +1037,7 @@ describe("reddit red coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 1, caravan: 2, cardIndex: 1 },
+            target: { player: 1, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(next.players[Ai].caravans[2].direction).toBe("desc");
@@ -1048,7 +1048,7 @@ describe("reddit red coverage", () => {
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 1, caravan: 2, cardIndex: 1 },
+            target: { player: 1, lane: 2, cardIndex: 1 },
             handIndex: 0
         });
         expect(next.players[Ai].caravans[2].suit).toBe("hearts");
@@ -1066,7 +1066,7 @@ describe("reddit red coverage", () => {
             applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
                 type: "playValueCard",
                 player: 0,
-                caravan: 2,
+                lane: 2,
                 handIndex: 0
             })
         ).toThrow(/cannot place/);
@@ -1087,21 +1087,21 @@ describe("reddit red coverage", () => {
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         const s1a = applyMove(s1, { type: "discardCard", player: 1, handIndex: 0 });
         const s2 = applyMove(s1a, {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         const s2a = applyMove(s2, { type: "discardCard", player: 1, handIndex: 0 });
         const s3 = applyMove(s2a, {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
         expect(s3.players[Human].caravans[2].rows[0].length).toBe(4);
@@ -1122,17 +1122,17 @@ describe("reddit red coverage", () => {
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
-        expect(calculateScore(s1.players[Human].caravans[2])).toBe(20);
-        const s1a = applyMove(s1, { type: "playValueCard", player: 1, caravan: 0, handIndex: 0 });
+        expect(calculatePoints(s1.players[Human].caravans[2])).toBe(20);
+        const s1a = applyMove(s1, { type: "playValueCard", player: 1, lane: 0, handIndex: 0 });
         const s2 = applyMove(s1a, {
             type: "playOperationCard",
             player: 0,
-            target: { player: 0, caravan: 2, cardIndex: 0 },
+            target: { player: 0, lane: 2, cardIndex: 0 },
             handIndex: 0
         });
-        expect(calculateScore(s2.players[Human].caravans[2])).toBe(40);
+        expect(calculatePoints(s2.players[Human].caravans[2])).toBe(40);
     });
 });

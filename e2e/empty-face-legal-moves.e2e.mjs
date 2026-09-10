@@ -70,7 +70,7 @@ assert.ok(discardErr && /must fill empty/.test(discardErr), "discard in the bind
 // Forcing a disband through the engine must throw.
 const disbandErr = await page.evaluate(() => {
   try {
-    window.__act({ type: "disbandCaravan", player: 0, caravan: 1 });
+    window.__act({ type: "disbandCaravan", player: 0, lane: 1 });
     return null;
   } catch (e) { return String(e && e.message || e); }
 });

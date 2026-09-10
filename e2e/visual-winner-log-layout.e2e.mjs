@@ -30,13 +30,13 @@ const state = {
   players: [mkPlayer([hBoneyard,hRedding,hShady],[],[]), mkPlayer([aDayglow,aNewReno,aHub],[],[])],
   current: 1, phase:"over", winner:1,
   log: [
-    {id:1, segments:[{type:"actor",player:0,form:"subject"}," played ",makeCard(11,"9","diamonds")," to ",{type:"caravan",player:0,caravan:0}], text:"You played {9♦} to Boneyard", detail:[]},
-    {id:2, segments:[{type:"actor",player:1,form:"subject"}," played ",makeCard(12,"Joker",null,"Red")," on ",{type:"actor",player:0,form:"possessive"},{type:"caravan",player:0,caravan:0}," ",makeCard(13,"5","clubs")], text:"AI played {Red Joker} on You's Boneyard {5♣}", detail: [
-      ["removal of ",makeCard(6,"5","spades")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,caravan:1}],
-      ["removal of ",makeCard(7,"5","clubs")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,caravan:2}],
-      ["removal of ",makeCard(1,"5","clubs")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:0}],
-      ["removal of ",makeCard(2,"5","diamonds")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:0}],
-      ["removal of ",makeCard(4,"5","hearts")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,caravan:2}]
+    {id:1, segments:[{type:"actor",player:0,form:"subject"}," played ",makeCard(11,"9","diamonds")," to ",{type:"caravan",player:0,lane: 0}], text:"You played {9♦} to Boneyard", detail:[]},
+    {id:2, segments:[{type:"actor",player:1,form:"subject"}," played ",makeCard(12,"Joker",null,"Red")," on ",{type:"actor",player:0,form:"possessive"},{type:"caravan",player:0,lane: 0}," ",makeCard(13,"5","clubs")], text:"AI played {Red Joker} on You's Boneyard {5♣}", detail: [
+      ["removal of ",makeCard(6,"5","spades")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,lane: 1}],
+      ["removal of ",makeCard(7,"5","clubs")," from ",{type:"actor",player:1,form:"possessive"},{type:"caravan",player:1,lane: 2}],
+      ["removal of ",makeCard(1,"5","clubs")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,lane: 0}],
+      ["removal of ",makeCard(2,"5","diamonds")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,lane: 0}],
+      ["removal of ",makeCard(4,"5","hearts")," from ",{type:"actor",player:0,form:"subject"}," ",{type:"caravan",player:0,lane: 2}]
     ]},
     {id:3, segments:[{type:"actor",player:1,form:"subject"}," wins the caravan."], text:"AI wins the caravan.", detail:[]}
   ],

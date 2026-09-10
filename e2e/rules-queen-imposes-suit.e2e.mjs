@@ -86,7 +86,7 @@ const targets = await page.evaluate(() => {
     const qi = s.players[0].hand.findIndex((c) => c.rank === "Q");
     return window.__caravanStore.legal
         .filter((m) => m.type === "playOperationCard" && m.handIndex === qi)
-        .map((m) => `${m.target.caravan}:${m.target.cardIndex}`);
+        .map((m) => `${m.target.lane}:${m.target.cardIndex}`);
 });
 console.log("queen targets:", targets.join(", "));
 if (targets.includes("0:0"))
@@ -101,7 +101,7 @@ await page.evaluate(() => {
     window.__act({
         type: "playOperationCard",
         player: 0,
-        target: { player: 0, caravan: 0, cardIndex: 1 },
+        target: { player: 0, lane: 0, cardIndex: 1 },
         handIndex: qi
     });
 });
@@ -134,7 +134,7 @@ const tenLegal = await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "10" && c.suit === "hearts");
     return window.__caravanStore.legal.some(
-        (m) => m.type === "playValueCard" && m.handIndex === idx && m.caravan === 0
+        (m) => m.type === "playValueCard" && m.handIndex === idx && m.lane === 0
     );
 });
 console.log("10♥ legal via imposed suit:", tenLegal);
@@ -144,7 +144,7 @@ if (!tenLegal) failures.push("10♥ should be legal via the queen-imposed hearts
 await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "10" && c.suit === "hearts");
-    window.__act({ type: "playValueCard", player: 0, caravan: 0, handIndex: idx });
+    window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
 await page.waitForTimeout(400);
 const afterValue = await page.evaluate(() => {

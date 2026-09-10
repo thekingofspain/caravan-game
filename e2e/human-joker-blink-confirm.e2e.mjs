@@ -66,7 +66,7 @@ await page.waitForTimeout(500);
 console.log("AI plays Joker Red on Human Boneyard 5H...");
 await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 1,
-  target: { player: 0, caravan: 0, cardIndex: 0 }, handIndex: 0,
+  target: { player: 0, lane: 0, cardIndex: 0 }, handIndex: 0,
 }));
 await page.waitForTimeout(800);
 
@@ -76,10 +76,10 @@ const state = await page.evaluate(() => {
   const t = window.__caravanStore.transition;
   return {
     current: s.current,
-    needsConfirmation: t?.needsConfirmation ?? false,
-    confirmer: t?.confirmer ?? null,
-    impactedLen: t?.impacted?.length ?? 0,
-    addedRank: t?.addedTemp?.card?.rank ?? null,
+    hasPendingAck: t?.pendingAck != null,
+    confirmer: t?.pendingAck?.confirmer ?? null,
+    removedLen: t?.pendingAck?.removed?.length ?? 0,
+    playedRank: t?.pendingAck?.played?.card?.rank ?? null,
     pendingDom: document.querySelectorAll(".caravan .card.pending").length,
     jokerDom: document.querySelectorAll(".caravan .card.joker").length,
     ackX: document.querySelectorAll(".confirm.portal").length,
@@ -88,10 +88,10 @@ const state = await page.evaluate(() => {
   };
 });
 console.log("post-joker:", JSON.stringify(state, null, 2));
-assert.equal(state.needsConfirmation, true, "joker removal must need confirmation");
+assert.equal(state.hasPendingAck, true, "joker removal must need confirmation");
 assert.equal(state.confirmer, Human, "human must be the confirmer of AI joker");
-assert.equal(state.impactedLen, 1, "exactly one row removed (AI 5C)");
-assert.equal(state.addedRank, "Joker", "transition must carry the played Joker for display");
+assert.equal(state.removedLen, 1, "exactly one row removed (AI 5C)");
+assert.equal(state.playedRank, "Joker", "transition must carry the played Joker for display");
 
 // 2) Remove card is blinking: pending row exists and its ::after overlay
 // runs the pending-blink animation (grey overlay blinking on/off).
@@ -153,7 +153,7 @@ const after = await page.evaluate(() => ({
 console.log("after-ack:", JSON.stringify(after, null, 2));
 assert.equal(after.ackX, 0, "ack X gone after human confirms");
 assert.equal(after.pending, 0, "blinking removal cleared after confirm");
-assert.equal(after.jokerDom, 0, "displayed joker cleared after confirm");
+assert.equal(after.jokerDom, 1, "played joker stays on its host row after confirm (like K/Q)");
 assert.equal(after.current, Human, "still human turn after ack");
 assert.ok(after.selectable > 0, "human unblocked after confirming");
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);

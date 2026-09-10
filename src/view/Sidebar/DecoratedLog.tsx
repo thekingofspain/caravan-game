@@ -24,7 +24,7 @@ function renderSegments(segments: LogSegment[], keyBase: string | number): React
                 nodes.push(<Who key={key} side={segment.player === Human ? "human" : "ai"} />);
                 if (segment.form === "possessive") nodes.push("'s ");
             } else {
-                nodes.push(caravanName(segment.player, segment.caravan));
+                nodes.push(caravanName(segment.player, segment.lane));
             }
 
             continue;

@@ -41,12 +41,12 @@ const programmedState = {
     {hand: humanHand, deck:[], caravans:[hBoneyard,hRedding,hShadyBefore]},
     {hand: aiHand, deck:[], caravans:[aDay,aNew,aHub]}
   ],
-  current:0, phase:"play", winner:null, log:[{id:100,text:"You played {9♣} to Shady Sands",segments:[{type:"actor",player:0,form:"subject"}," played ",{id:"log100",rank:"9",suit:"clubs"}," to ",{type:"caravan",player:0,caravan:2}]},{id:101,text:"You played {8♠} to Shady Sands",segments:[{type:"actor",player:0,form:"subject"}," played ",{id:"log101",rank:"8",suit:"spades"}," to ",{type:"caravan",player:0,caravan:2}]}], started:true
+  current:0, phase:"play", winner:null, log:[{id:100,text:"You played {9♣} to Shady Sands",segments:[{type:"actor",player:0,form:"subject"}," played ",{id:"log100",rank:"9",suit:"clubs"}," to ",{type:"caravan",player:0,lane: 2}]},{id:101,text:"You played {8♠} to Shady Sands",segments:[{type:"actor",player:0,form:"subject"}," played ",{id:"log101",rank:"8",suit:"spades"}," to ",{type:"caravan",player:0,lane: 2}]}], started:true
 };
 console.log("Programming Shady 9+J,8,7...");
 await page.evaluate(s=> window.__setCaravanState(s), programmedState);
 await page.waitForTimeout(600);
-await page.evaluate(()=> window.__act({type:"playValueCard", player:0, caravan:2, handIndex:0}));
+await page.evaluate(()=> window.__act({type:"playValueCard", player:0, lane: 2, handIndex:0}));
 await page.waitForTimeout(600);
 
 const info = await page.evaluate(()=>{

@@ -1,9 +1,9 @@
-import type { CaravanScoreMeta, GameScores } from "../../model/scoring";
+import type { CaravanPointsMeta, GameScores } from "../../model/scoring";
 import { SIDE_ICON } from "./Who";
 
 interface ScoreRowProps {
     player: "AI" | "You";
-    scores: CaravanScoreMeta[];
+    scores: CaravanPointsMeta[];
     wins: number;
     icon: string;
 }
@@ -31,7 +31,7 @@ function ScoreRow({ player, scores, wins, icon }: ScoreRowProps) {
                                 .filter(Boolean)
                                 .join(" ")}
                         >
-                            {s.total}
+                            {s.points}
                         </span>
                     );
 
@@ -55,12 +55,12 @@ function ScoreRow({ player, scores, wins, icon }: ScoreRowProps) {
 }
 
 export function GameOverScores({ scores }: { scores: GameScores }) {
-    const { humanScores, aiScores, humanWins, aiWins } = scores;
+    const { humanPoints, aiPoints, humanWins, aiWins } = scores;
 
     return (
         <div className="scores">
-            <ScoreRow player="AI" scores={aiScores} wins={aiWins} icon={SIDE_ICON.ai} />
-            <ScoreRow player="You" scores={humanScores} wins={humanWins} icon={SIDE_ICON.human} />
+            <ScoreRow player="AI" scores={aiPoints} wins={aiWins} icon={SIDE_ICON.ai} />
+            <ScoreRow player="You" scores={humanPoints} wins={humanWins} icon={SIDE_ICON.human} />
         </div>
     );
 }

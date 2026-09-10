@@ -79,7 +79,7 @@ let onboardingCheck = await page.evaluate(()=>{
     phase: s.phase,
     hasEmpty: s.players[s.current].caravans.some(c=>c.rows.length===0),
     legalCount: legal.length,
-    legalTypes: legal.map(m=>m.type + (m.type==="playOperationCard" ? `:${m.handIndex}->${m.target.player}-${m.target.caravan}` : m.type==="playValueCard" ? `:${m.handIndex}->${m.caravan}` : "")),
+    legalTypes: legal.map(m=>m.type + (m.type==="playOperationCard" ? `:${m.handIndex}->${m.target.player}-${m.target.lane}` : m.type==="playValueCard" ? `:${m.handIndex}->${m.lane}` : "")),
     legal: legal
   };
 });
@@ -96,7 +96,7 @@ console.log("AI legal moves:", onboardingCheck.legalTypes);
 // The bug: AI places a face card during onboarding (when hasEmpty true)
 // It should ONLY place value cards to empty caravans during onboarding
 let hasFaceCardMove = onboardingCheck.legal.some(m=> m.type==="playOperationCard");
-let hasValueToEmpty = onboardingCheck.legal.some(m=> m.type==="playValueCard" && m.caravan===0); // Dayglow is 0
+let hasValueToEmpty = onboardingCheck.legal.some(m=> m.type==="playValueCard" && m.lane===0); // Dayglow is 0
 
 console.log(`hasFaceCardMove: ${hasFaceCardMove}, hasValueToEmpty: ${hasValueToEmpty}`);
 

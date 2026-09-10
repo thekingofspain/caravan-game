@@ -69,7 +69,7 @@ await page.waitForTimeout(400);
 await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "10" && c.suit === "diamonds");
-    window.__act({ type: "playValueCard", player: 0, caravan: 0, handIndex: idx });
+    window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
 await page.waitForTimeout(300);
 
@@ -84,7 +84,7 @@ await page.waitForTimeout(200);
 await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "A" && c.suit === "diamonds");
-    window.__act({ type: "playValueCard", player: 0, caravan: 0, handIndex: idx });
+    window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
 await page.waitForTimeout(400);
 

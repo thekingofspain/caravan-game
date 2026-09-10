@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 
-import { Human, type Move } from "../model/types";
+import { Human, type Move, Nullable } from "../model/types";
 import { targetKey, type TransitionInfo } from "./transition";
 
 export function useBoardSelection(
-    sel: number | null,
+    sel: Nullable<number>,
     legal: Move[],
-    transition: TransitionInfo | null
+    transition: Nullable<TransitionInfo>
 ) {
     const { legalCaravans, targetSet, canDiscard } = useMemo(() => {
         if (sel === null) {
@@ -26,7 +26,7 @@ export function useBoardSelection(
 
             if (a.handIndex !== sel) continue;
 
-            if (a.type === "playValueCard") caravans.push(a.caravan);
+            if (a.type === "playValueCard") caravans.push(a.lane);
             else if (a.type === "playOperationCard") targets.add(targetKey(a.target));
             else discard = true;
         }
@@ -40,8 +40,8 @@ export function useBoardSelection(
 
     const pendingKeys = useMemo(
         () =>
-            transition?.needsConfirmation && transition.confirmer === Human
-                ? new Set(transition.impacted.map(targetKey))
+            transition?.pendingAck?.confirmer === Human
+                ? new Set(transition.pendingAck.removed.map(targetKey))
                 : new Set<string>(),
         [transition]
     );

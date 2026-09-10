@@ -2,24 +2,24 @@ import { describe, it, expect } from "vitest";
 import { Move, Human, Ai } from "../src/model/types";
 import { applyMove, legalMoves, setupGame } from "../src/model/engine";
 import { determineBestMove } from "../src/model/ai";
-import { calculateScore } from "../src/model/rules/caravanCardRules";
+import { calculatePoints } from "../src/model/scoring";
 
 function sameMove(a: Move, b: Move): boolean {
     if (a.type !== b.type) return false;
     if (a.type === "playValueCard" && b.type === "playValueCard")
-        return a.player === b.player && a.caravan === b.caravan && a.handIndex === b.handIndex;
+        return a.player === b.player && a.lane === b.lane && a.handIndex === b.handIndex;
     if (a.type === "playOperationCard" && b.type === "playOperationCard")
         return (
             a.player === b.player &&
             a.handIndex === b.handIndex &&
             a.target.player === b.target.player &&
-            a.target.caravan === b.target.caravan &&
+            a.target.lane === b.target.lane &&
             a.target.cardIndex === b.target.cardIndex
         );
     if (a.type === "discardCard" && b.type === "discardCard")
         return a.player === b.player && a.handIndex === b.handIndex;
     if (a.type === "disbandCaravan" && b.type === "disbandCaravan")
-        return a.player === b.player && a.caravan === b.caravan;
+        return a.player === b.player && a.lane === b.lane;
     return false;
 }
 
@@ -38,11 +38,11 @@ describe("AI", () => {
         let s = setupGame({ seed: 11, first: Ai });
         for (let i = 0; i < 80 && s.phase === "play"; i++) {
             s = applyMove(s, determineBestMove(s, s.current));
-            const totals = s.players[Ai].caravans.map((c) => calculateScore(c));
-            if (totals.some((t) => t >= 21 && t <= 26)) break;
+            const pointsList = s.players[Ai].caravans.map((c) => calculatePoints(c));
+            if (pointsList.some((t) => t >= 21 && t <= 26)) break;
         }
-        const totals = s.players[Ai].caravans.map((c) => calculateScore(c));
-        expect(totals.some((t) => t >= 21 && t <= 26)).toBe(true);
+        const pointsList = s.players[Ai].caravans.map((c) => calculatePoints(c));
+        expect(pointsList.some((t) => t >= 21 && t <= 26)).toBe(true);
     });
 
     it("AI vs AI reaches a legal game-over", () => {

@@ -61,7 +61,7 @@ console.log("  PASS: 0 placeholders on the board after the game starts");
 
 // ── Disbanded caravan shows its placeholder again ──
 console.log("TEST: disbanded caravan shows its placeholder");
-await page.evaluate(() => window.__act({ type: "disbandCaravan", player: 0, caravan: 0 }));
+await page.evaluate(() => window.__act({ type: "disbandCaravan", player: 0, lane: 0 }));
 await page.waitForTimeout(400);
 const disbanded = page.locator(".caravans.human .caravan").nth(0);
 assert.equal(await disbanded.locator(".empty").count(), 1, "disbanded caravan should show its placeholder");

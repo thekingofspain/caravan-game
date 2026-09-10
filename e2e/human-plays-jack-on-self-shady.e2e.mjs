@@ -98,7 +98,7 @@ console.log("Human plays J♦ on 2♥ on Shady Sands (index3) — marked 2♥ fo
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="J" && c.suit==="diamonds");
-  window.__act({ type:"playOperationCard", player:0, target:{player:0, caravan:2, cardIndex:3}, handIndex: idx });
+  window.__act({ type:"playOperationCard", player:0, target:{player:0, lane: 2, cardIndex:3}, handIndex: idx });
 });
 await page.waitForTimeout(600);
 
@@ -126,7 +126,7 @@ assert.equal(after.shadyCount, 4, "Shady should have 4 cards after removing 2♥
 assert.ok(!after.shady.includes("2h"), "2♥ should be gone");
 assert.equal(after.shady.join(","), "5c,6d,7h,7d", "Shady should be 5♣,6♦,7♥,7♦ after Jack");
 assert.equal(after.current, Ai, "game should jump to AI turn as soon as J is placed by human (current 1)");
-assert.equal(after.transition?.confirmer, Ai, "confirmation belongs to AI, not the human");
+assert.equal(after.transition?.pendingAck?.confirmer, Ai, "confirmation belongs to AI, not the human");
 assert.equal(after.shady.length, 4);
 
 // Human should not be blocked, but it's AI turn so human selectable is 0, AI will play

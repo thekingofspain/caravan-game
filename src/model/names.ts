@@ -7,6 +7,6 @@ const NAMES: Record<PlayerId, [string, string, string]> = {
 
 export const ALL_CARAVAN_NAMES = Object.values(NAMES).flat();
 
-export function caravanName(player: PlayerId, caravanColumnIndex: number): string {
-    return NAMES[player][caravanColumnIndex];
+export function caravanName(player: PlayerId, laneIndex: number): string {
+    return NAMES[player][laneIndex];
 }

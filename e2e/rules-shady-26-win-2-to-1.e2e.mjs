@@ -132,7 +132,7 @@ assert.equal(before.shadyScore, 20, "Shady 3+4+9+4=20 before");
 
 console.log("Human plays 6♥ on Shady Sands (caravan 2) — should win 21/26/26 vs 26/4/24");
 // Use direct act to avoid UI click flakiness, but also verify UI path works
-await page.evaluate(() => window.__act({ type: "playValueCard", player: 0, caravan: 2, handIndex: 0 }));
+await page.evaluate(() => window.__act({ type: "playValueCard", player: 0, lane: 2, handIndex: 0 }));
 await page.waitForTimeout(600);
 
 let after = await page.evaluate(() => {

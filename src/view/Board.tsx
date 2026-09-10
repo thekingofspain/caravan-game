@@ -4,7 +4,7 @@ import { cardLabel } from "../model/cards";
 import { segmentsText } from "../model/gameLog";
 import { caravanName } from "../model/names";
 import { type GameScores,getCaravanScores } from "../model/scoring";
-import type { Caravan as CaravanModel, PlayerState, SelectionState } from "../model/types";
+import type { Caravan as CaravanModel, Nullable, PlayerState, SelectionState } from "../model/types";
 import {
     Ai,
     Human,
@@ -16,7 +16,7 @@ import { SUIT_SYMBOL } from "../model/types";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
-import { Caravan, CaravanScore } from "./Caravan";
+import { Caravan, CaravanPoints } from "./Caravan";
 import { CardView } from "./CardView";
 import { PlayerHand } from "./PlayerHand";
 import { Sidebar } from "./Sidebar";
@@ -58,32 +58,32 @@ function CaravanColumn({
     scores: GameScores;
     isGameOver: boolean;
     onCardClick: (t: TargetRef) => void;
-    onPlaceholderClick: (caravanColumnIndex: number) => void;
+    onPlaceholderClick: (laneIndex: number) => void;
     onAcknowledge: () => void;
-    childrenFor?: (caravanColumnIndex: number) => React.ReactNode;
+    childrenFor?: (laneIndex: number) => React.ReactNode;
 }) {
     return (
         <>
-            {[0, 1, 2].map((caravanColumnIndex) => {
-                const seller = scores.sellers[caravanColumnIndex as 0 | 1 | 2];
-                const caravan = caravans[caravanColumnIndex];
-                const sellable = (playerId === Human ? scores.humanScores[caravanColumnIndex] : scores.aiScores[caravanColumnIndex])
-                    .isSellable;
+            {[0, 1, 2].map((laneIndex) => {
+                const seller = scores.sellers[laneIndex as 0 | 1 | 2];
+                const caravan = caravans[laneIndex];
+                const meta = (playerId === Human ? scores.humanPoints[laneIndex] : scores.aiPoints[laneIndex]);
+                const sellable = meta.isSellable;
                 const isEmpty = caravan.rows.length === 0;
-                const sold = isGameOver && sellable && seller === playerId;
+                const sold = isGameOver && meta.isSold;
 
                 return (
                     <div
                         className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""} ${sold ? "is-sold" : ""}`}
-                        key={caravanColumnIndex}
+                        key={laneIndex}
                     >
                         {sold ? (
                             <div
                                 className="sold-stamp"
                                 style={
                                     {
-                                        "--sold-top": SOLD_STAMP_TOPS[caravanColumnIndex as 0 | 1 | 2],
-                                        "--sold-rot": SOLD_STAMP_ROTS[caravanColumnIndex as 0 | 1 | 2]
+                                        "--sold-top": SOLD_STAMP_TOPS[laneIndex as 0 | 1 | 2],
+                                        "--sold-rot": SOLD_STAMP_ROTS[laneIndex as 0 | 1 | 2]
                                     } as React.CSSProperties
                                 }
                                 aria-hidden="true"
@@ -92,12 +92,10 @@ function CaravanColumn({
                             </div>
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
-                            <CaravanScore
-                                caravan={caravan}
-                                isSeller={seller === playerId}
-                                playerId={playerId}
+                            <CaravanPoints
+                                meta={meta}
                             />
-                            <span className="title">{caravanName(playerId, caravanColumnIndex)}</span>
+                            <span className="title">{caravanName(playerId, laneIndex)}</span>
                                 <span className="sort-icon" aria-hidden="true" />
                                 {caravan.suit !== null ? (
                                     <span className={`suit card-name ${caravan.suit}`}>
@@ -107,7 +105,7 @@ function CaravanColumn({
                         </header>
                         <Caravan
                             caravan={caravan}
-                            caravanIndex={caravanColumnIndex as 0 | 1 | 2}
+                            lane={laneIndex as 0 | 1 | 2}
                             playerId={playerId}
                             highestSold={seller === playerId}
                             selection={selection}
@@ -115,7 +113,7 @@ function CaravanColumn({
                             onPlaceholderClick={onPlaceholderClick}
                             onAcknowledge={onAcknowledge}
                         >
-                            {childrenFor?.(caravanColumnIndex)}
+                            {childrenFor?.(laneIndex)}
                         </Caravan>
                     </div>
                 );
@@ -151,24 +149,24 @@ function DiscardSlot({ player, label }: { player: PlayerState; label: string }) 
 
 export function Board({ store }: { store: GameStore }) {
     const { state, legal, act, transition, acknowledgeRemovals } = store;
-    const [sel, setSel] = useState<number | null>(null);
+    const [sel, setSel] = useState<Nullable<number>>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
-    const [pendingDisband, setPendingDisband] = useState<number | null>(null);
+    const [pendingDisband, setPendingDisband] = useState<Nullable<number>>(null);
 
     // Wide viewport (matches the docked-activity media query): panel stays open.
 
     const [activityOpen, setActivityOpen] = useState(() =>
         typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
     );
-    const [viewDeck, setViewDeck] = useState<PlayerId | null>(null);
-    const [toast, setToast] = useState<string | null>(null);
+    const [viewDeck, setViewDeck] = useState<Nullable<PlayerId>>(null);
+    const [toast, setToast] = useState<Nullable<string>>(null);
     const [showGameOver, setShowGameOver] = useState(true);
-    const [flashOffKey, setFlashOffKey] = useState<string | null>(null);
+    const [flashOffKey, setFlashOffKey] = useState<Nullable<string>>(null);
     const human = isHumanTurn(state);
 
     // A Jack/Joker removal the human must acknowledge before acting again.
 
-    const awaitingHumanAck = !!transition?.needsConfirmation && transition.confirmer === Human;
+    const awaitingHumanAck = transition?.pendingAck?.confirmer === Human;
     const humanCanAct = human && !awaitingHumanAck;
     const scores = useMemo(() => getCaravanScores(state), [state]);
 
@@ -189,13 +187,13 @@ export function Board({ store }: { store: GameStore }) {
             lines.push(
                 `${label} — hand:${String(p.hand.length)} deck:${String(p.deck.length)} | hand: ${p.hand.map(cardLabel).join(", ")}`
             );
-            const metas = pid === Human ? scores.humanScores : scores.aiScores;
+            const metas = pid === Human ? scores.humanPoints : scores.aiPoints;
 
-            p.caravans.forEach((c, caravanColumnIndex) => {
-                const meta = metas[caravanColumnIndex];
+            p.caravans.forEach((c, laneIndex) => {
+                const meta = metas[laneIndex];
 
                 lines.push(
-                    `  ${caravanName(pid, caravanColumnIndex)}: ${String(meta.total)} (${meta.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
+                    `  ${caravanName(pid, laneIndex)}: ${String(meta.points)} (${meta.status}) — rows:${String(c.rows.length)} dir:${c.direction ?? "-"} suit:${c.suit ?? "-"}`
                 );
             });
         }
@@ -204,17 +202,17 @@ export function Board({ store }: { store: GameStore }) {
         lines.push("Activity Log:");
         if (state.log.length === 0) lines.push("(empty)");
         else
-            state.log.forEach((e) => {
+            {state.log.forEach((e) => {
                 BRACE_RE.lastIndex = 0;
                 lines.push(`- ${e.text.replace(BRACE_RE, "$1")}`);
                 if (e.detail)
-                    e.detail.forEach((d) => {
+                    {e.detail.forEach((d) => {
                         BRACE_RE.lastIndex = 0;
                         const row = Array.isArray(d) ? segmentsText(d) : d;
 
                         lines.push(`  - ${row.replace(BRACE_RE, "$1")}`);
-                    });
-            });
+                    });}
+            });}
 
         const text = lines.join("\n");
 
@@ -304,10 +302,10 @@ export function Board({ store }: { store: GameStore }) {
         }
     }, [state]);
 
-    // Displayed state is previous + addedTemp when pending AI removal (human must ack)
+    // Displayed state is previous + staged played card while a removal awaits human ack.
 
     const displayedState = useMemo(() => {
-        if (!transition?.needsConfirmation || transition.confirmer !== Human) return state;
+        if (transition?.pendingAck?.confirmer !== Human) return state;
 
         return getDisplayedState(store.previous, state, transition);
     }, [state, transition, store.previous]);
@@ -338,18 +336,18 @@ export function Board({ store }: { store: GameStore }) {
         if (m?.player !== Ai) return null;
 
         if (m.type === "playValueCard") {
-            const rows = displayedState.players[Ai].caravans[m.caravan].rows;
+            const rows = displayedState.players[Ai].caravans[m.lane].rows;
 
             if (rows.length === 0) return null;
 
-            return targetKey({ player: Ai, caravan: m.caravan, cardIndex: rows.length - 1 });
+            return targetKey({ player: Ai, lane: m.lane, cardIndex: rows.length - 1 });
         }
 
         if (m.type === "playOperationCard") {
             const played = store.previous?.players[Ai].hand.at(m.handIndex);
 
             if (played?.rank === "Q" || played?.rank === "K")
-                return `${targetKey(m.target)}#${played.id}`;
+                {return `${targetKey(m.target)}#${played.id}`;}
 
             return null;
         }
@@ -416,16 +414,16 @@ export function Board({ store }: { store: GameStore }) {
 
             if (!isValueCard(card)) return;
 
-            const caravanColumnIndex = humanPlayer.caravans.findIndex((c) => c.rows.length === 0);
+            const laneIndex = humanPlayer.caravans.findIndex((c) => c.rows.length === 0);
 
-            if (caravanColumnIndex === -1) return;
+            if (laneIndex === -1) return;
 
             const move = legal.find(
                 (a) =>
                     a.type === "playValueCard" &&
                     a.player === Human &&
                     a.handIndex === i &&
-                    a.caravan === caravanColumnIndex
+                    a.lane === laneIndex
             );
 
             if (move) {
@@ -437,9 +435,9 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     const onAcknowledge = useCallback(() => {
-        if (!transition?.needsConfirmation) return;
+        if (!transition?.pendingAck) return;
 
-        setPendingRemove(new Set(transition.impacted.map(targetKey)));
+        setPendingRemove(new Set(transition.pendingAck.removed.map(targetKey)));
         window.setTimeout(() => {
             setPendingRemove(new Set());
             acknowledgeRemovals();
@@ -463,14 +461,14 @@ export function Board({ store }: { store: GameStore }) {
             }
 
             if (isValueCard(card)) {
-                const caravanLen = humanPlayer.caravans[target.caravan].rows.length;
+                const caravanLen = humanPlayer.caravans[target.lane].rows.length;
                 const isTop = target.cardIndex === caravanLen - 1;
 
-                if (legalCaravans.includes(target.caravan) && isTop) {
+                if (legalCaravans.includes(target.lane) && isTop) {
                     tryAct({
                         type: "playValueCard",
                         player: Human,
-                        caravan: target.caravan,
+                        lane: target.lane,
                         handIndex: sel
                     });
                     setSel(null);
@@ -488,13 +486,13 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     const onPlaceholderClick = useCallback(
-        (caravanColumnIndex: number) => {
+        (laneIndex: number) => {
             if (sel === null) return;
 
             const card = humanPlayer.hand[sel];
 
-            if (isValueCard(card) && legalCaravans.includes(caravanColumnIndex)) {
-                tryAct({ type: "playValueCard", player: Human, caravan: caravanColumnIndex as 0 | 1 | 2, handIndex: sel });
+            if (isValueCard(card) && legalCaravans.includes(laneIndex)) {
+                tryAct({ type: "playValueCard", player: Human, lane: laneIndex as 0 | 1 | 2, handIndex: sel });
                 setSel(null);
             }
         },
@@ -535,11 +533,11 @@ export function Board({ store }: { store: GameStore }) {
     // untrappable in tests, and dropped from cross-origin iframes.
 
     const onDisbandCaravan = useCallback(
-        (caravanColumnIndex: number) => {
-            if (!canDisbandAny || humanPlayer.caravans[caravanColumnIndex].rows.length === 0)
-                return;
+        (laneIndex: number) => {
+            if (!canDisbandAny || humanPlayer.caravans[laneIndex].rows.length === 0)
+                {return;}
 
-            setPendingDisband(caravanColumnIndex);
+            setPendingDisband(laneIndex);
         },
         [canDisbandAny, humanPlayer]
     );
@@ -547,7 +545,7 @@ export function Board({ store }: { store: GameStore }) {
     const onConfirmDisband = useCallback(() => {
         if (pendingDisband === null) return;
 
-        tryAct({ type: "disbandCaravan", player: Human, caravan: pendingDisband as 0 | 1 | 2 });
+        tryAct({ type: "disbandCaravan", player: Human, lane: pendingDisband as 0 | 1 | 2 });
         setPendingDisband(null);
         setSel(null);
     }, [pendingDisband, tryAct]);
@@ -649,15 +647,15 @@ export function Board({ store }: { store: GameStore }) {
                                 onCardClick={onCardClick}
                                 onPlaceholderClick={onPlaceholderClick}
                                 onAcknowledge={onAcknowledge}
-                                childrenFor={(caravanColumnIndex) =>
-                                    canDisbandAny && humanPlayer.caravans[caravanColumnIndex].rows.length > 0 ? (
+                                childrenFor={(laneIndex) =>
+                                    canDisbandAny && humanPlayer.caravans[laneIndex].rows.length > 0 ? (
                                         <button
                                             type="button"
                                             className="disband"
                                             onClick={() => {
-                                                onDisbandCaravan(caravanColumnIndex);
+                                                onDisbandCaravan(laneIndex);
                                             }}
-                                            aria-label={`Disband your ${caravanName(Human, caravanColumnIndex)}`}
+                                            aria-label={`Disband your ${caravanName(Human, laneIndex)}`}
                                         >
                                             Disband
                                         </button>
@@ -834,7 +832,7 @@ export function Board({ store }: { store: GameStore }) {
                         <p id="disband-confirm-detail">
                             This removes all{" "}
                             {String(humanPlayer.caravans[pendingDisband].rows.flat().length)} cards
-                            (total {String(scores.humanScores[pendingDisband].total)}) and cannot be
+                            (points {String(scores.humanPoints[pendingDisband].points)}) and cannot be
                             undone.
                         </p>
                         <div className="actions">

@@ -21,23 +21,23 @@ describe("cloneAndApply", () => {
   it("leaves the original untouched", () => {
     const { g } = openValueSituation();
     const before = JSON.stringify(g);
-    cloneAndApply(g, { type: "playValueCard", player: Human, caravan: 0, handIndex: 0 });
+    cloneAndApply(g, { type: "playValueCard", player: Human, lane: 0, handIndex: 0 });
     expect(JSON.stringify(g)).toBe(before);
   });
   it("plays the card on the copy", () => {
     const { g } = openValueSituation();
-    const { next } = cloneAndApply(g, { type: "playValueCard", player: Human, caravan: 0, handIndex: 0 });
+    const { next } = cloneAndApply(g, { type: "playValueCard", player: Human, lane: 0, handIndex: 0 });
     expect(next.players[Human].caravans[0].rows).toHaveLength(1);
   });
   it("leaves direction null on a single-row caravan", () => {
     const { g } = openValueSituation();
-    const { next } = cloneAndApply(g, { type: "playValueCard", player: Human, caravan: 0, handIndex: 0 });
+    const { next } = cloneAndApply(g, { type: "playValueCard", player: Human, lane: 0, handIndex: 0 });
     expect(next.players[Human].caravans[0].rows).toHaveLength(1);
     expect(next.players[Human].caravans[0].direction).toBeNull();
   });
   it("throws when not current player", () => {
     const g = mkGame(mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], [makeCard(1, "5", "hearts")]), mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], []), Ai);
-    expect(() => cloneAndApply(g, { type: "playValueCard", player: Human, caravan: 0, handIndex: 0 })).toThrow(/not current player/);
+    expect(() => cloneAndApply(g, { type: "playValueCard", player: Human, lane: 0, handIndex: 0 })).toThrow(/not current player/);
   });
   it("throws when game over", () => {
     const g = mkGame(mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], []), mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], []), Human);
@@ -50,9 +50,9 @@ describe("appendActionLog", () => {
   function loggedSituation() {
     const hand = [makeCard(1, "5", "hearts")];
     const g = mkGame(mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], hand), mkPlayer([caravanEmpty(), caravanEmpty(), caravanEmpty()], []), Human);
-    const { next, jokerDetail } = cloneAndApply(g, { type: "playValueCard", player: Human, caravan: 1, handIndex: 0 });
+    const { next, jokerDetail } = cloneAndApply(g, { type: "playValueCard", player: Human, lane: 1, handIndex: 0 });
     const lenBefore = next.log.length;
-    appendActionLog(next, { type: "playValueCard", player: Human, caravan: 1, handIndex: 0 }, g, jokerDetail);
+    appendActionLog(next, { type: "playValueCard", player: Human, lane: 1, handIndex: 0 }, g, jokerDetail);
     return { next, lenBefore };
   }
 

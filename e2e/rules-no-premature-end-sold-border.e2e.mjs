@@ -65,7 +65,7 @@ console.log("Human plays 9♣ to Shady (should be 23, still 1-1 tie, NOT game ov
 await page.evaluate(()=>{
   const s=window.__caravanStore.state;
   const idx=s.players[0].hand.findIndex(c=>c.rank==="9" && c.suit==="clubs");
-  window.__act({ type:"playValueCard", player:0, caravan:2, handIndex: idx });
+  window.__act({ type:"playValueCard", player:0, lane: 2, handIndex: idx });
 });
 await page.waitForTimeout(800);
 

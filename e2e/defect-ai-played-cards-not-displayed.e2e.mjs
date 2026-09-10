@@ -61,7 +61,7 @@ console.log("AI visibility OK — cards visible, placeholder gone");
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="5");
-  if(idx!==-1) window.__act({ type:"playValueCard", player:0, caravan:0, handIndex: idx });
+  if(idx!==-1) window.__act({ type:"playValueCard", player:0, lane: 0, handIndex: idx });
 });
 await page.waitForTimeout(600);
 let totalAi = await page.locator(".caravans.ai .caravan .card").count();

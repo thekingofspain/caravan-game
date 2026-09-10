@@ -7,8 +7,6 @@ import {
     Ai,
     baseValue,
     Caravan,
-    CARAVAN_INDICES,
-    CaravanIndex,
     FaceCard,
     GameState,
     Human,
@@ -16,9 +14,13 @@ import {
     isOperationCard,
     isValueCard,
     JokerCard,
+    LANE_INDICES,
+    LaneIndex,
     LogSegment,
     Move,
     Nullable,
+    otherPlayer,
+    playedCard,
     PlayerId,
     PLAYERS,
     PlayerState,
@@ -46,12 +48,12 @@ function makePlayer(rng: () => number, deckId: number): PlayerState {
     }
 
     if (deck.length !== 30)
-        throw new Error(`makePlayer: deck slice expected 30 got ${String(deck.length)}`);
+        {throw new Error(`makePlayer: deck slice expected 30 got ${String(deck.length)}`);}
 
     if (hand.length !== 8 || rest.length !== 22)
-        throw new Error(
+        {throw new Error(
             `makePlayer: hand/deck expected 8/22 got ${String(hand.length)}/${String(rest.length)}`
-        );
+        );}
 
     return {
         deck: rest,
@@ -60,6 +62,7 @@ function makePlayer(rng: () => number, deckId: number): PlayerState {
         caravans: [emptyCaravan(), emptyCaravan(), emptyCaravan()]
     };
 }
+
 export function setupGame(opts: SetupOptions): GameState {
     resetLogIds();
     const rng = mulberry32(opts.seed ?? 1);
@@ -73,6 +76,7 @@ export function setupGame(opts: SetupOptions): GameState {
         started: true
     };
 }
+
 function draw(player: PlayerState): void {
     if (player.deck.length > 0) {
         const c = player.deck.shift();
@@ -80,10 +84,12 @@ function draw(player: PlayerState): void {
         if (c !== undefined) player.hand.push(c);
     }
 }
+
 function inOpeningRound(player: PlayerState): boolean {
     return player.caravans.some((c) => !(c.started ?? c.rows.length > 0));
 }
-function lastRowSuit(car: Caravan): Suit | null {
+
+function lastRowSuit(car: Caravan): Nullable<Suit> {
     const last = car.rows.at(-1);
 
     if (last === undefined) return null;
@@ -96,6 +102,7 @@ function lastRowSuit(car: Caravan): Suit | null {
 
     return queens[queens.length - 1].suit;
 }
+
 function normalizeCaravan(car: Caravan): void {
     if (car.rows.length === 0) {
         car.direction = null;
@@ -120,7 +127,7 @@ function normalizeCaravan(car: Caravan): void {
 }
 
 function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
-    const targetRow = state.players[target.player].caravans[target.caravan].rows.at(
+    const targetRow = state.players[target.player].caravans[target.lane].rows.at(
         target.cardIndex
     );
 
@@ -133,22 +140,22 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
     const refs: TargetRef[] = [];
 
     for (const player of PLAYERS) {
-        for (const caravanColumnIndex of CARAVAN_INDICES) {
-            const car = state.players[player].caravans[caravanColumnIndex];
+        for (const laneIndex of LANE_INDICES) {
+            const car = state.players[player].caravans[laneIndex];
 
             for (let cidx = 0; cidx < car.rows.length; cidx++) {
                 const card = car.rows.at(cidx)?.at(0);
 
                 if (card === undefined) continue;
 
-                if (player === target.player && caravanColumnIndex === target.caravan && cidx === target.cardIndex)
-                    continue;
+                if (player === target.player && laneIndex === target.lane && cidx === target.cardIndex)
+                    {continue;}
 
                 if (isAce) {
-                    if (card.suit === suit) refs.push({ player, caravan: caravanColumnIndex, cardIndex: cidx });
+                    if (card.suit === suit) refs.push({ player, lane: laneIndex, cardIndex: cidx });
                 } else {
                     if (baseValue(card) === rankVal)
-                        refs.push({ player, caravan: caravanColumnIndex, cardIndex: cidx });
+                        {refs.push({ player, lane: laneIndex, cardIndex: cidx });}
                 }
             }
         }
@@ -156,18 +163,20 @@ function jokerRemovals(state: GameState, target: TargetRef): TargetRef[] {
 
     return refs;
 }
+
 function removeTargets(state: GameState, refs: TargetRef[]): void {
     const rows = cardsToRemove(state, refs).sort(
-        (a, b) => b.ref.player - a.ref.player || b.ref.caravan - a.ref.caravan || b.ref.cardIndex - a.ref.cardIndex
+        (a, b) => b.ref.player - a.ref.player || b.ref.lane - a.ref.lane || b.ref.cardIndex - a.ref.cardIndex
     );
     const touched = new Set<Caravan>();
 
     for (const { ref } of rows) {
-        const car = state.players[ref.player].caravans[ref.caravan];
+        const car = state.players[ref.player].caravans[ref.lane];
 
         car.rows.splice(ref.cardIndex, 1);
         touched.add(car);
     }
+
     for (const car of touched) normalizeCaravan(car);
 }
 
@@ -177,11 +186,11 @@ function handlePlayValueCard(
 ): void {
     const player = next.players[action.player];
     const wasOpening = inOpeningRound(player);
-    const car = player.caravans[action.caravan];
+    const car = player.caravans[action.lane];
     const card = player.hand.at(action.handIndex);
 
     if (card === undefined || !isValueCard(card))
-        throw new IllegalMoveError("playValueCard: not a value card");
+        {throw new IllegalMoveError("playValueCard: not a value card");}
 
     if (!canPlaceCard(card, car)) throw new IllegalMoveError("playValueCard: cannot place card");
 
@@ -201,7 +210,7 @@ function attachJack(next: GameState, target: TargetRef): LogSegment[][] {
 }
 
 function attachQueen(next: GameState, card: FaceCard, target: TargetRef): void {
-    const car = next.players[target.player].caravans[target.caravan];
+    const car = next.players[target.player].caravans[target.lane];
     const tgt = car.rows.at(target.cardIndex);
 
     if (tgt === undefined) return;
@@ -215,18 +224,25 @@ function attachQueen(next: GameState, card: FaceCard, target: TargetRef): void {
 }
 
 function attachKing(next: GameState, card: FaceCard, target: TargetRef): void {
-    const car = next.players[target.player].caravans[target.caravan];
+    const car = next.players[target.player].caravans[target.lane];
     const tgt = car.rows.at(target.cardIndex);
 
     if (tgt === undefined) return;
 
     tgt.push(card);
 }
+
 function attachJoker(next: GameState, card: JokerCard, target: TargetRef): LogSegment[][] {
     const refs = jokerRemovals(next, target);
     const detail = removalDetail(next, refs);
 
     removeTargets(next, refs);
+
+    // The Joker rides its host row like K/Q (removals always spare the target).
+
+    const tgt = next.players[target.player].caravans[target.lane].rows.at(target.cardIndex);
+
+    if (tgt !== undefined) tgt.push(card);
 
     return detail;
 }
@@ -240,17 +256,17 @@ function handleOperationCard(
     const card = player.hand.at(action.handIndex);
 
     if (card === undefined || !isOperationCard(card))
-        throw new IllegalMoveError("playOperationCard: not an operation card");
+        {throw new IllegalMoveError("playOperationCard: not an operation card");}
 
     if (
         !isValidCardIndex(
-            next.players[action.target.player].caravans[action.target.caravan],
+            next.players[action.target.player].caravans[action.target.lane],
             action.target.cardIndex
         )
     )
-        throw new IllegalMoveError("playOperationCard: invalid target");
+        {throw new IllegalMoveError("playOperationCard: invalid target");}
 
-    const tgtPre = next.players[action.target.player].caravans[action.target.caravan].rows.at(
+    const tgtPre = next.players[action.target.player].caravans[action.target.lane].rows.at(
         action.target.cardIndex
     );
 
@@ -260,14 +276,14 @@ function handleOperationCard(
     // via Joker elsewhere or disbanding.
 
     if (tgtPre.length - 1 >= 3)
-        throw new IllegalMoveError("playOperationCard: row already has three pictures");
+        {throw new IllegalMoveError("playOperationCard: row already has three pictures");}
 
     if (
         card.rank === "Q" &&
         action.target.cardIndex !==
-            next.players[action.target.player].caravans[action.target.caravan].rows.length - 1
+            next.players[action.target.player].caravans[action.target.lane].rows.length - 1
     )
-        throw new IllegalMoveError("playOperationCard: Queen must target the last row");
+        {throw new IllegalMoveError("playOperationCard: Queen must target the last row");}
 
     player.hand.splice(action.handIndex, 1);
     let jokerDetail: Nullable<LogSegment[][]> = null;
@@ -304,7 +320,7 @@ function handleDiscardCard(next: GameState, action: Extract<Move, { type: "disca
     if (inOpeningRound(player)) throw new IllegalMoveError("discardCard: must fill empty caravans first");
 
     if (action.handIndex < 0 || action.handIndex >= player.hand.length)
-        throw new IllegalMoveError("discardCard: invalid hand index");
+        {throw new IllegalMoveError("discardCard: invalid hand index");}
 
     const [card] = player.hand.splice(action.handIndex, 1);
 
@@ -319,13 +335,14 @@ function handleDisbandCaravan(
     const player = next.players[action.player];
 
     if (inOpeningRound(player))
-        throw new IllegalMoveError("disbandCaravan: cannot disband before all caravans started");
+        {throw new IllegalMoveError("disbandCaravan: cannot disband before all caravans started");}
 
-    if (player.caravans[action.caravan].rows.length === 0)
-        throw new IllegalMoveError("disbandCaravan: caravan already empty");
+    if (player.caravans[action.lane].rows.length === 0)
+        {throw new IllegalMoveError("disbandCaravan: caravan already empty");}
 
-    player.caravans[action.caravan] = { ...emptyCaravan(), started: true };
+    player.caravans[action.lane] = { ...emptyCaravan(), started: true };
 }
+
 export function cloneAndApply(
     state: GameState,
     action: Move
@@ -344,6 +361,7 @@ export function cloneAndApply(
 
     return { next, jokerDetail };
 }
+
 export function appendActionLog(
     next: GameState,
     action: Move,
@@ -361,7 +379,7 @@ export function appendActionLog(
 
 function applyNoMovesLoss(next: GameState, loser: PlayerId): void {
     next.phase = "over";
-    next.winner = loser === Human ? Ai : Human;
+    next.winner = otherPlayer(loser);
     next.log = [
         ...next.log,
         log({
@@ -383,6 +401,7 @@ export function forfeitNoMoves(state: GameState): GameState {
 
     return forfeited;
 }
+
 export function resolveTerminal(next: GameState): void {
     const winner = gameWinner(next);
 
@@ -426,9 +445,10 @@ export function resolveTerminal(next: GameState): void {
         return;
     }
 
-    next.current = next.current === Human ? Ai : Human;
+    next.current = otherPlayer(next.current);
     if (legalMoves(next).length === 0) applyNoMovesLoss(next, next.current);
 }
+
 export function applyMove(state: GameState, action: Move): GameState {
     const { next, jokerDetail } = cloneAndApply(state, action);
 
@@ -437,16 +457,17 @@ export function applyMove(state: GameState, action: Move): GameState {
 
     return next;
 }
-function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number): Move[] {
-    const card = state.players[pid].hand.at(handIndex);
 
-    if (card === undefined || !isOperationCard(card)) return [];
+function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number): Move[] {
+    const card = playedCard(state, pid, handIndex);
+
+    if (!isOperationCard(card)) return [];
 
     const out: Move[] = [];
 
     for (const p of PLAYERS)
-        for (const caravanColumnIndex of CARAVAN_INDICES) {
-            const targetCar = state.players[p].caravans[caravanColumnIndex];
+        {for (const laneIndex of LANE_INDICES) {
+            const targetCar = state.players[p].caravans[laneIndex];
 
             for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
                 const row = targetCar.rows[cidx];
@@ -462,19 +483,20 @@ function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number
                 out.push({
                     type: "playOperationCard",
                     player: pid,
-                    target: { player: p, caravan: caravanColumnIndex, cardIndex: cidx },
+                    target: { player: p, lane: laneIndex, cardIndex: cidx },
                     handIndex
                 });
             }
-        }
+        }}
 
     return out;
 }
+
 function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boolean): Move[] {
     const out: Move[] = [];
 
-    for (let caravanColumnIndex = 0; caravanColumnIndex < player.caravans.length; caravanColumnIndex++) {
-        const car = player.caravans[caravanColumnIndex];
+    for (let laneIndex = 0; laneIndex < player.caravans.length; laneIndex++) {
+        const car = player.caravans[laneIndex];
 
         if (filterEmptyOnly && car.rows.length !== 0) continue;
 
@@ -488,7 +510,7 @@ function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boo
             out.push({
                 type: "playValueCard",
                 player: pid,
-                caravan: caravanColumnIndex as CaravanIndex,
+                lane: laneIndex as LaneIndex,
                 handIndex: hi
             });
         }
@@ -496,6 +518,7 @@ function valueCardMoves(player: PlayerState, pid: PlayerId, filterEmptyOnly: boo
 
     return out;
 }
+
 export function legalMoves(state: GameState): Move[] {
     if (state.phase === "over") return [];
 
@@ -522,10 +545,10 @@ export function legalMoves(state: GameState): Move[] {
             player: pid,
             handIndex: hi
         })),
-        ...CARAVAN_INDICES.filter((caravanColumnIndex) => player.caravans[caravanColumnIndex].rows.length > 0).map((caravanColumnIndex) => ({
+        ...LANE_INDICES.filter((laneIndex) => player.caravans[laneIndex].rows.length > 0).map((laneIndex) => ({
             type: "disbandCaravan" as const,
             player: pid,
-            caravan: caravanColumnIndex
+            lane: laneIndex
         }))
     ];
 }

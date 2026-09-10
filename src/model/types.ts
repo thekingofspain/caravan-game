@@ -44,9 +44,11 @@ export type Rank = (typeof STANDARD_RANKS)[number];
 export function isValueRank(rank: string): rank is ValueRank {
     return (VALUE_RANKS as readonly string[]).includes(rank);
 }
+
 export function isFaceRank(rank: string): rank is FaceRank {
     return (FACE_RANKS as readonly string[]).includes(rank);
 }
+
 export function isOperationRank(rank: string): rank is OperationRank {
     return (OPERATION_RANKS as readonly string[]).includes(rank);
 }
@@ -86,15 +88,19 @@ export type OperationCard = FaceCard | JokerCard;
 export function isJokerCard(card: Card): card is JokerCard {
     return card.rank === JOKER_RANK;
 }
+
 export function isValueCard(card: Card): card is ValueCard {
     return isValueRank(card.rank);
 }
+
 export function isFaceCard(card: Card): card is FaceCard {
     return isFaceRank(card.rank);
 }
+
 export function isOperationCard(card: Card): card is OperationCard {
     return isOperationRank(card.rank);
 }
+
 export function baseValue(card: Card): number {
     if (card.rank === "A") return 1;
 
@@ -108,7 +114,7 @@ export function baseValue(card: Card): number {
 
 // #region Caravans
 export type Direction = "asc" | "desc";
-export type ScoredStatus = "sellable" | "busted" | "unsellable";
+export type PointsStatus = "sellable" | "busted" | "unsellable";
 export type CaravanRow = Card[];
 
 // Invariant: row[0] is a value card (A,2-10), row[1..4] are operation cards (J/Q/K/Joker), length 1..5.
@@ -124,8 +130,8 @@ export interface Caravan {
     started?: boolean;
 }
 export interface CaravanState {
-    status: ScoredStatus;
-    total: number;
+    status: PointsStatus;
+    points: number;
 }
 // #endregion
 
@@ -133,9 +139,18 @@ export interface CaravanState {
 export const Human = 0 as const;
 export const Ai = 1 as const;
 export const PLAYERS = [Human, Ai] as const satisfies readonly PlayerId[];
-export const CARAVAN_INDICES = [0, 1, 2] as const satisfies readonly CaravanIndex[];
+export const LANE_INDICES = [0, 1, 2] as const satisfies readonly LaneIndex[];
 export type PlayerId = typeof Human | typeof Ai;
-export type CaravanIndex = 0 | 1 | 2;
+export type LaneIndex = 0 | 1 | 2;
+
+export function otherPlayer(player: PlayerId): PlayerId {
+    return player === Human ? Ai : Human;
+}
+
+export function playedCard(state: GameState, player: PlayerId, handIndex: number): Card {
+    return state.players[player].hand[handIndex];
+}
+
 export interface ActorRef {
     type: "actor";
     player: PlayerId;
@@ -147,7 +162,7 @@ export interface ActorRef {
 export interface CaravanRef {
     type: "caravan";
     player: PlayerId;
-    caravan: CaravanIndex;
+    lane: LaneIndex;
 }
 export type LogSegment = string | Card | ActorRef | CaravanRef;
 export type GamePhase = "play" | "over";
@@ -174,13 +189,13 @@ export interface GameState {
 }
 export interface TargetRef {
     player: PlayerId;
-    caravan: CaravanIndex;
+    lane: LaneIndex;
     cardIndex: number;
 }
 interface PlayValueCardMove {
     type: "playValueCard";
     player: PlayerId;
-    caravan: CaravanIndex;
+    lane: LaneIndex;
     handIndex: number;
 }
 interface PlayOperationCardMove {
@@ -197,7 +212,7 @@ interface DiscardCardMove {
 interface DisbandCaravanMove {
     type: "disbandCaravan";
     player: PlayerId;
-    caravan: CaravanIndex;
+    lane: LaneIndex;
 }
 export type Move = PlayValueCardMove | PlayOperationCardMove | DiscardCardMove | DisbandCaravanMove;
 export interface LogEntry {
@@ -205,7 +220,7 @@ export interface LogEntry {
     player?: PlayerId;
     action?: Move["type"];
     card?: Card;
-    caravan?: CaravanIndex;
+    lane?: LaneIndex;
     target?: TargetRef;
     text: string;
     segments: LogSegment[];

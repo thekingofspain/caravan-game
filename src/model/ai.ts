@@ -1,50 +1,49 @@
 import { applyMove, legalMoves } from "./engine";
-import { calculateScore, isSellable, MAX_SELLABLE } from "./rules/caravanCardRules";
-import { Ai, Caravan,CARAVAN_INDICES, GameState, Human, Move, PlayerId } from "./types";
+import { calcLaneScoreboard, gameWinner, isSellablePoints, MAX_SELLABLE } from "./scoring";
+import { Ai, Caravan, GameState, Human, LANE_INDICES, Move, otherPlayer, PlayerId } from "./types";
 
-const OTHER: Record<PlayerId, PlayerId> = { [Human]: Ai, [Ai]: Human };
+// #region AI evaluation
 const EVAL_SOLD_WEIGHT = 100;
 const EVAL_BUST_WEIGHT = 80;
 const EVAL_TIE_WEIGHT = 20;
 
+// ---- Types ----
+
+export type Rng = () => number;
+
+// ---- Functions ----
+
 function calculateCaravanAdvantage(current: Caravan, opposing: Caravan): number {
-    const currentTotal = calculateScore(current);
-    const opposingTotal = calculateScore(opposing);
-    const currentSellable = isSellable(current);
-    const opposingSellable = isSellable(opposing);
+    // humanPoints/aiPoints are positional: points of the first/second arg (current/opposing here).
 
-    if (currentSellable && opposingSellable) {
-        if (currentTotal > opposingTotal) return EVAL_SOLD_WEIGHT + (currentTotal - 21);
+    const { aiPoints: opposingPoints, humanPoints: currentPoints, seller } = calcLaneScoreboard(current, opposing);
 
-        if (currentTotal < opposingTotal) return -EVAL_SOLD_WEIGHT - (26 - opposingTotal);
+    if (seller === Human) return EVAL_SOLD_WEIGHT + (currentPoints - 21);
 
-        return -EVAL_TIE_WEIGHT;
-    }
+    if (seller === Ai) return -EVAL_SOLD_WEIGHT - (26 - opposingPoints);
 
-    if (currentSellable) return EVAL_SOLD_WEIGHT + (currentTotal - 21);
+    if (isSellablePoints(currentPoints)) return -EVAL_TIE_WEIGHT;
 
-    if (opposingSellable) return -EVAL_SOLD_WEIGHT - (26 - opposingTotal);
+    if (currentPoints > MAX_SELLABLE) return -EVAL_BUST_WEIGHT;
 
-    if (currentTotal > MAX_SELLABLE) return -EVAL_BUST_WEIGHT;
+    if (opposingPoints > MAX_SELLABLE) return 8;
 
-    if (opposingTotal > MAX_SELLABLE) return 8;
-
-    return (currentTotal / 21) * 5;
+    return (currentPoints / 21) * 5;
 }
 
 export function evaluateBoard(state: GameState, actingPlayerId: PlayerId): number {
     let score = 0;
 
-    for (const i of CARAVAN_INDICES) {
-        const current = state.players[actingPlayerId].caravans[i];
-        const opposing = state.players[OTHER[actingPlayerId]].caravans[i];
+    for (const i of LANE_INDICES) {
+        const current: Caravan = state.players[actingPlayerId].caravans[i];
+        const opposing = state.players[otherPlayer(actingPlayerId)].caravans[i];
 
         score += calculateCaravanAdvantage(current, opposing);
     }
 
     return score;
 }
-export type Rng = () => number;
+
 export function determineBestMove(
     state: GameState,
     actingPlayerId: PlayerId,
@@ -59,6 +58,9 @@ export function determineBestMove(
 
     for (const a of acts) {
         const next = applyMove(state, a);
+
+        if (gameWinner(next) === actingPlayerId) return a;
+
         let sc = evaluateBoard(next, actingPlayerId);
 
         if (a.type === "discardCard") sc -= 0.5;
@@ -71,3 +73,4 @@ export function determineBestMove(
 
     return best[Math.floor(rng() * best.length)];
 }
+// #endregion

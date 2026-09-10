@@ -1,15 +1,19 @@
 import { allCaravanRows } from "../model/gameLog";
-import type { Card, GameState, Move, PlayerId, TargetRef } from "../model/types";
+import type { Card, GameState, Move, Nullable, PlayerId, TargetRef } from "../model/types";
+import { otherPlayer, playedCard } from "../model/types";
+
+export interface PendingAck {
+    confirmer: PlayerId;
+    removed: TargetRef[];
+    played: Nullable<{ card: Card; at: TargetRef }>;
+}
 
 export interface TransitionInfo {
-    needsConfirmation: boolean;
-    confirmer: PlayerId | null;
-    impacted: TargetRef[];
-    addedTemp: { card: Card; at: TargetRef } | null;
+    pendingAck: Nullable<PendingAck>;
 }
 
 export function targetKey(t: TargetRef): string {
-    return `${String(t.player)}-${String(t.caravan)}-${String(t.cardIndex)}`;
+    return `${String(t.player)}-${String(t.lane)}-${String(t.cardIndex)}`;
 }
 
 export function getTransitionInfo(
@@ -17,10 +21,7 @@ export function getTransitionInfo(
     move: Move,
     current: GameState
 ): TransitionInfo {
-    const impacted: TargetRef[] = [];
-    let addedTemp: { card: Card; at: TargetRef } | null = null;
-    let needsConfirmation = false;
-    let confirmer: PlayerId | null = null;
+    const removed: TargetRef[] = [];
 
     if (move.type === "playOperationCard") {
         // Diff the whole board: Jack removes its target row, Joker removes
@@ -29,44 +30,41 @@ export function getTransitionInfo(
         // caravans looked like a Queen/King attach and never asked for ack.
 
         for (const { ref, cards } of allCaravanRows(previous)) {
-            const carCurr = current.players[ref.player].caravans[ref.caravan];
+            const carCurr = current.players[ref.player].caravans[ref.lane];
             const rowId = cards[0]?.id;
             const stillExists = carCurr.rows.some((r) => r[0]?.id === rowId);
 
-            if (!stillExists) impacted.push(ref);
+            if (!stillExists) removed.push(ref);
         }
 
-        if (impacted.length > 0) {
-            const card = previous.players[move.player].hand.at(move.handIndex);
+        if (removed.length > 0) {
+            const card = playedCard(previous, move.player, move.handIndex);
 
-            if (card !== undefined) addedTemp = { card, at: move.target };
-
-            needsConfirmation = true;
-            confirmer = move.player === 0 ? 1 : 0;
-        } else {
-            const card =
-                current.players[move.player].hand.at(move.handIndex) ??
-                previous.players[move.player].hand.at(move.handIndex);
-
-            if (card !== undefined) addedTemp = { card: card, at: move.target };
+            return {
+                pendingAck: {
+                    confirmer: otherPlayer(move.player),
+                    removed,
+                    played: { card, at: move.target }
+                }
+            };
         }
     }
 
-    return { needsConfirmation, confirmer, impacted, addedTemp };
+    return { pendingAck: null };
 }
 
 export function getDisplayedState(
-    previous: GameState | null,
+    previous: Nullable<GameState>,
     current: GameState,
-    transition: TransitionInfo | null
+    transition: Nullable<TransitionInfo>
 ): GameState {
-    if (!transition?.needsConfirmation || !previous) return current;
+    if (!transition?.pendingAck || !previous) return current;
 
-    if (!transition.addedTemp) return previous;
+    if (!transition.pendingAck.played) return previous;
 
     const cloned: GameState = structuredClone(previous);
-    const { card, at: target } = transition.addedTemp;
-    const caravan = cloned.players[target.player].caravans[target.caravan];
+    const { card, at: target } = transition.pendingAck.played;
+    const caravan = cloned.players[target.player].caravans[target.lane];
     const row = caravan.rows.at(target.cardIndex);
 
     if (row !== undefined) row.push(card);
