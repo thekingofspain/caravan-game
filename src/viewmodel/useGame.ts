@@ -116,10 +116,17 @@ export function useGame(initial: GameConfig): GameStore {
     }, []);
     const acknowledgeRemovals = useCallback(() => {
         // The move was already committed when played; acknowledging only clears
-        // the confirmation visuals.
+        // the confirmation visuals. At game over the winning card keeps
+        // flashing, so the move is retained for the highlight.
+
+        if (state.phase === "over") {
+            setUi((prev) => ({ ...prev, transition: null }));
+
+            return;
+        }
 
         setUi((prev) => ({ ...prev, transition: null, previous: null, lastMove: null }));
-    }, []);
+    }, [state]);
 
     const legal = useMemo(() => legalMoves(state), [state]);
 

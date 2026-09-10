@@ -256,6 +256,7 @@ export function Board({ store }: { store: GameStore }) {
 
     const isGameOver = state.phase === "over";
     const humanWon = state.winner === Human;
+    const aiWon = isGameOver && state.winner === Ai;
 
     // Re-show the banner for each new finished game.
 
@@ -323,19 +324,20 @@ export function Board({ store }: { store: GameStore }) {
         humanPlayer.caravans.every((c) => c.started ?? c.rows.length > 0);
 
     // Blink the AI's last board move in yellow while the human turn starts.
-    // Value plays flash their fresh row; Q/K flash the played face card
-    // itself, not the value card underneath. Jack/Joker removals keep the
-    // grey pending blink on the removed cards, so they never flash yellow.
-    // Cleared on select.
+    // Value plays flash their fresh row; operation plays flash the played
+    // face card itself, not the value card underneath. Jack/Joker removals
+    // keep the grey pending blink on the removed cards; only the played
+    // Jack/Joker itself flashes yellow. Cleared on select. When the AI wins,
+    // the winning card keeps flashing after game over.
 
     const aiFlashKey = useMemo(() => {
-        if (!humanCanAct) return null;
-
         const m = store.lastMove;
 
         if (m?.player !== Ai) return null;
 
         if (m.type === "playValueCard") {
+            if (!humanCanAct && !aiWon) return null;
+
             const rows = displayedState.players[Ai].caravans[m.lane].rows;
 
             if (rows.length === 0) return null;
@@ -344,22 +346,28 @@ export function Board({ store }: { store: GameStore }) {
         }
 
         if (m.type === "playOperationCard") {
+            // Face-card flash must survive the ack gate: Jack/Joker stage the
+            // played card while the human must still acknowledge, and the
+            // played Jack is gone after ack, so gating on humanCanAct would
+            // never show it. Removed rows keep the grey pending blink.
+
+            if (!human && !aiWon) return null;
+
             const played = store.previous?.players[Ai].hand.at(m.handIndex);
 
-            if (played?.rank === "Q" || played?.rank === "K")
-                {return `${targetKey(m.target)}#${played.id}`;}
+            if (played === undefined) return null;
 
-            return null;
+            return `${targetKey(m.target)}#${played.id}`;
         }
 
         return null;
-    }, [humanCanAct, store.lastMove, store.previous, displayedState]);
+    }, [human, humanCanAct, aiWon, store.lastMove, store.previous, displayedState]);
     const flashKeys = useMemo(
         () =>
-            aiFlashKey !== null && aiFlashKey !== flashOffKey
+            aiFlashKey !== null && (aiWon || aiFlashKey !== flashOffKey)
                 ? new Set([aiFlashKey])
                 : EMPTY_STRINGS,
-        [aiFlashKey, flashOffKey]
+        [aiFlashKey, aiWon, flashOffKey]
     );
 
     const selectableIndices = useMemo(() => {

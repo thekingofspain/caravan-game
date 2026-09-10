@@ -935,7 +935,7 @@ body {
 }
 
 /* AI-last-move highlight blinks yellow: value plays wash the fresh row,
-   Q/K wash the played face card itself (not the value card underneath). */
+   operation plays wash the played face card itself (not the value card underneath). */
 .caravan .card.lastmove::after {
     content: "";
     position: absolute;
