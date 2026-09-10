@@ -51,6 +51,11 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
         [anchorRef]
     );
 
+    // AI tracks stack in reverse (column-reverse) with ascending z-index, so
+    // each row paints OVER the row visually above it: a row's own face only
+    // shows at its BOTTOM strip. Human tracks are the mirror image (own face
+    // at the TOP strip). Pin the X to the visible strip per side, outer edge.
+
     useLayoutEffect(() => {
         const update = () => {
             const el = anchorRef.current;
@@ -58,9 +63,8 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
             if (!el) return;
 
             const r = el.getBoundingClientRect();
-            const size = 22; // 1.375rem
             const left = isHuman ? r.right - 11 : r.left - 11;
-            const top = r.top + r.height / 2 - size / 2;
+            const top = isHuman ? r.top - 11 : r.bottom - 11;
 
             setPos({ left, top });
         };
@@ -226,9 +230,8 @@ function CaravanRowButton({
     onAcknowledge: () => void;
 }) {
     const head = caravanRow[0];
-    const removable = selection.pendingRemovalSet.has(
-        targetKey({ player: playerId, caravan: caravanColumnIndex, cardIndex: k })
-    );
+    const rowKey = targetKey({ player: playerId, caravan: caravanColumnIndex, cardIndex: k });
+    const removable = selection.pendingRemovalSet.has(rowKey);
     const attachments = caravanRow.slice(1);
     let lastKingIndex = -1;
     let jackIdx = -1;
@@ -266,12 +269,13 @@ function CaravanRowButton({
                 const isJackConfirm = a.rank === "J" && j === jackIdx && !!confirmationSymbol;
                 const isJokerConfirm = isJokerCard(a) && !!confirmationSymbol;
                 const showConfirmation = isJackConfirm || isJokerConfirm;
+                const isFlashed = selection.flashKeys?.has(`${rowKey}#${a.id}`) ?? false;
 
                 return (
                     <div
                         key={a.id}
                         ref={showConfirmation ? anchorRef : undefined}
-                        className={cardClassName("card", a)}
+                        className={`${cardClassName("card", a)}${isFlashed ? " lastmove" : ""}`}
                         style={{ "--c": j + 1 } as CSSProperties}
                     >
                         {j === lastKingIndex && kingBadge && (

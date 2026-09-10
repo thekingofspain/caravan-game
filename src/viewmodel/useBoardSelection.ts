@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import type { Move } from "../model/types";
+import { Human, type Move } from "../model/types";
 import { targetKey, type TransitionInfo } from "./transition";
 
 export function useBoardSelection(
@@ -34,8 +34,15 @@ export function useBoardSelection(
         return { legalCaravans: caravans, targetSet: targets, canDiscard: discard };
     }, [sel, legal]);
 
+    // Human moves never show the red X: only AI removals awaiting human ack
+    // display pending + confirm visuals. Otherwise the human's own Jack/Joker
+    // flashes an X until the AI auto-move clears the transition.
+
     const pendingKeys = useMemo(
-        () => new Set(transition?.impacted.map(targetKey) ?? []),
+        () =>
+            transition?.needsConfirmation && transition.confirmer === Human
+                ? new Set(transition.impacted.map(targetKey))
+                : new Set<string>(),
         [transition]
     );
 

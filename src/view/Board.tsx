@@ -324,8 +324,11 @@ export function Board({ store }: { store: GameStore }) {
         sel === null &&
         humanPlayer.caravans.every((c) => c.started ?? c.rows.length > 0);
 
-    // Blink the AI's last board move while the human turn starts; value plays
-    // flash their fresh row, operation cards flash their target. Cleared on select.
+    // Blink the AI's last board move in yellow while the human turn starts.
+    // Value plays flash their fresh row; Q/K flash the played face card
+    // itself, not the value card underneath. Jack/Joker removals keep the
+    // grey pending blink on the removed cards, so they never flash yellow.
+    // Cleared on select.
 
     const aiFlashKey = useMemo(() => {
         if (!humanCanAct) return null;
@@ -342,10 +345,17 @@ export function Board({ store }: { store: GameStore }) {
             return targetKey({ player: Ai, caravan: m.caravan, cardIndex: rows.length - 1 });
         }
 
-        if (m.type === "playOperationCard") return targetKey(m.target);
+        if (m.type === "playOperationCard") {
+            const played = store.previous?.players[Ai].hand.at(m.handIndex);
+
+            if (played?.rank === "Q" || played?.rank === "K")
+                return `${targetKey(m.target)}#${played.id}`;
+
+            return null;
+        }
 
         return null;
-    }, [humanCanAct, store.lastMove, displayedState]);
+    }, [humanCanAct, store.lastMove, store.previous, displayedState]);
     const flashKeys = useMemo(
         () =>
             aiFlashKey !== null && aiFlashKey !== flashOffKey

@@ -24,38 +24,23 @@ function SidebarImpl({ log, state, scores }: SidebarProps) {
 
     const winSegments = winEntry !== null ? truncateSegments(winEntry.segments, "!") : [];
 
-    // Pin to the newest entry when the panel opens; afterwards only follow
-    // new entries while the user is already near the bottom, so manual
-    // scroll-up stays put. The rAF second pass defeats content-visibility
-    // height estimates that settle after first paint.
-
-    const firstRun = useRef(true);
+    // Always pin to the newest entry: when the panel opens and on every new
+    // entry, in both dialog and docked modes. The rAF second pass defeats
+    // content-visibility height estimates that settle after first paint.
 
     useLayoutEffect(() => {
-        const el = logRef.current;
-
-        if (!el) return;
-
         const pin = () => {
             const node = logRef.current;
 
             if (node) node.scrollTop = node.scrollHeight;
         };
 
-        if (firstRun.current) {
-            firstRun.current = false;
-            pin();
-            const raf = requestAnimationFrame(pin);
+        pin();
+        const raf = requestAnimationFrame(pin);
 
-            return () => {
-                cancelAnimationFrame(raf);
-            };
-        }
-
-        const threshold = 48;
-        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-
-        if (nearBottom) pin();
+        return () => {
+            cancelAnimationFrame(raf);
+        };
     }, [log.length]);
 
     return (
