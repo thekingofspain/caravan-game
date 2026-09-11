@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
+import { logInfo } from "./log.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -151,7 +152,7 @@ const info = await page.evaluate(() => {
   };
 });
 
-console.log(JSON.stringify(info, null, 2));
+logInfo("INFO", info);
 
 let failures = [];
 if (info.hasInlineStyles) failures.push(`winner DOM has inline styles (scoreInline=${info.scoreInline}, caravansInline=${info.caravansInline}, lineInlineBg="${info.lineInlineBg}") — should be CSS classes, not inline`);

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
+import { logInfo } from "./log.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -138,7 +139,7 @@ const info = await page.evaluate(()=>{
   };
 });
 
-console.log(JSON.stringify(info,null,2));
+logInfo("INFO", info);
 
 // Test removalDetail order via actual logic (Node-side, no browser act needed)
 const mockByCar = new Map();

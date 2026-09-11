@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
+import { logInfo } from "./log.mjs";
 import assert from "node:assert";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
@@ -82,7 +83,7 @@ const info = await page.evaluate(() => {
   return { bg, bgImage, humanPlayerText, aiPlayerText, humanPlayerHTML, aiPlayerHTML, humanRects, aiRects, alignments };
 });
 
-console.log(JSON.stringify(info, null, 2));
+logInfo("INFO", info);
 
 let failures = [];
 

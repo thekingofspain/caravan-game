@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { logInfo } from "./log.mjs";
 
 function makeCard(deckId, rank, suitOrJoker){
   if(rank==="Joker"){
@@ -59,7 +60,7 @@ const info = await page.evaluate(()=>{
   });
   return {rects, count:cards.length};
 });
-console.log(JSON.stringify(info,null,2));
+logInfo("INFO", info);
 let failures=[];
 if(info.count!==4) failures.push(`Shady should have 4 cards after 2♥, got ${info.count}`);
 const zVals = info.rects.map(r=> parseInt(r.z));
