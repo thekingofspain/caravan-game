@@ -1,18 +1,20 @@
 /* ── 01 — Design tokens ── */
 :root {
-    --c-felt: #0d5c2e;
-    --c-panel: #0e6b34;
+    --c-felt: #17456b;
+    --c-panel: #1d4e7a;
     --c-fg: #f5f5dc;
     --c-accent: #d4af37;
     --c-dim: #c8d8c0;
-    --c-line: #1a4a2a;
+    --c-line: #2a567e;
     --c-bad: #c0392b;
-    --c-good: #2ecc71;
-    --c-human: #8ab4f8;
-    --c-ai: #ff8a8a;
-    --c-human-rgb: 138, 180, 248;
-    --c-ai-rgb: 255, 138, 138;
+    --c-sold: #ff7a66;
+    --c-human: #4cc9f0;
+    --c-good: #32cd32;
+    --c-human-rgb: 76, 201, 240;
+    --c-ai-rgb: 244, 162, 97;
     --c-brown: #8b4513;
+    --c-ink: #1a160c;
+    --c-deep-rgb: 10, 30, 51;
     --sp-1: 0.25rem;
     --sp-2: 0.5rem;
     --sp-3: 0.75rem;
@@ -117,7 +119,7 @@ body {
     top: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    background: #c0392b;
+    background: var(--c-bad);
     color: #fff;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
@@ -136,7 +138,7 @@ body {
     padding-right: 2.5rem;
     border-radius: 1rem;
     border: 0.125rem solid var(--c-accent);
-    background: rgba(10, 40, 20, 0.92);
+    background: rgba(var(--c-deep-rgb), 0.92);
     box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
     font-size: var(--fs-md);
     font-weight: 700;
@@ -541,10 +543,10 @@ body {
     transform: translate(-50%, -50%) rotate(var(--sold-rot, -12deg));
     z-index: 30;
     padding: 0.375rem 1.25rem;
-    border: 0.25rem solid #fb6f52;
+    border: 0.25rem solid var(--c-sold);
     border-radius: var(--radius);
     background: transparent;
-    color: #fb6f52;
+    color: var(--c-sold);
     font: 700 calc(var(--fs-xl) * 1.3) / 1 var(--font-base);
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -766,7 +768,7 @@ body {
 }
 
 .caravan .disband:hover {
-    background: #a93226;
+    background: var(--c-bad-dark);
 }
 
 .caravan .disband:focus-visible {
@@ -793,7 +795,7 @@ body {
     padding: var(--sp-4);
     border-radius: 1rem;
     border: 0.125rem solid var(--c-bad);
-    background: rgba(10, 40, 20, 0.96);
+    background: rgba(var(--c-deep-rgb), 0.96);
     box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.5);
     color: var(--c-fg);
 }
@@ -821,8 +823,8 @@ body {
 }
 
 .btn-danger:hover {
-    background: #a93226;
-    border-color: #a93226;
+    background: var(--c-bad-dark);
+    border-color: var(--c-bad-dark);
 }
 
 .board:has(.slot.selected) .caravan .empty.selectable:hover {
@@ -839,12 +841,12 @@ body {
     padding: 0 0.25rem;
     border-radius: 0.5625rem;
     background: var(--c-accent);
-    color: #1a160c;
+    color: var(--c-ink);
     font: 700 var(--fs-xs)/1 var(--font-base);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 0.0625rem solid #1a160c;
+    border: 0.0625rem solid var(--c-ink);
     z-index: 3;
     left: var(--badge-left, -0.5rem);
     right: var(--badge-right, auto);
@@ -855,13 +857,13 @@ body {
 
 .card .badge.king {
     background: #ffd60a;
-    color: #1a160c;
+    color: var(--c-ink);
     border-color: #b38f00;
 }
 
 .caravan .card.pending .badge.king {
     background: #c8c8c8;
-    color: #1a160c;
+    color: var(--c-ink);
     border-color: #8f8f8f;
 }
 
@@ -874,7 +876,7 @@ body {
     width: 1.375rem;
     height: 1.375rem;
     border-radius: 50%;
-    border: 0.0625rem solid #1a160c;
+    border: 0.0625rem solid var(--c-ink);
     background: var(--c-bad);
     color: transparent;
     cursor: pointer;
@@ -910,7 +912,7 @@ body {
 }
 
 .confirm:hover {
-    background: #a93226;
+    background: var(--c-bad-dark);
 }
 
 .confirm:focus-visible {
@@ -996,7 +998,7 @@ body {
 .btn {
     font: 700 var(--fs-xs) var(--font-base);
     background: var(--c-accent);
-    color: #1a160c;
+    color: var(--c-ink);
     border: 0.0625rem solid var(--c-accent);
     border-radius: var(--radius);
     padding: var(--sp-2) var(--sp-4);
@@ -1126,7 +1128,7 @@ body {
     gap: var(--sp-2);
     font-weight: 700;
     font-size: var(--fs-xs);
-    color: #1a160c;
+    color: var(--c-ink);
 }
 
 /* Wide viewport: activity docks as a persistent left column of the board. */
