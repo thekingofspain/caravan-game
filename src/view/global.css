@@ -563,7 +563,8 @@ body {
 }
 .caravan .score {
     grid-column: 1;
-    justify-self: end;
+    justify-self: start;
+    padding-left: var(--sp-2);
 }
 .caravan .title {
     grid-column: 2;
@@ -571,7 +572,7 @@ body {
     font-size: var(--fs-md);
     /* Single line at fs-xl: row height matches suit/score rows exactly. */
     line-height: var(--fs-xl);
-    width: 100px;
+    width: auto;
     max-width: 100%;
     text-align: center;
     white-space: nowrap;
