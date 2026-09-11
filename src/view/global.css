@@ -1069,7 +1069,9 @@ body {
     font-size: var(--fs-xs);
 }
 .log .score {
-    width: 2ch;
+    /* em, not ch: ch resolves per font-weight, so bold sold scores sized
+       wider than regular ones and row right edges drifted by font. */
+    width: 1.5em;
     text-align: right;
     display: inline-block;
     font-variant-numeric: tabular-nums;
