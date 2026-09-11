@@ -166,6 +166,7 @@ export interface CaravanRef {
 }
 export type LogSegment = string | Card | ActorRef | CaravanRef;
 export type GamePhase = "play" | "over";
+export type AiLevel = "normal" | "hard" | "expert";
 export interface GameConfig {
     seed?: number;
 }

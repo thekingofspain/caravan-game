@@ -3,15 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cardLabel } from "../model/cards";
 import { segmentsText } from "../model/gameLog";
 import { caravanName } from "../model/names";
-import { type GameScores,getCaravanScores } from "../model/scoring";
-import type { Caravan as CaravanModel, Nullable, PlayerState, SelectionState } from "../model/types";
-import {
-    Ai,
-    Human,
-    isValueCard,
-    type Move,
-    PlayerId,
-    TargetRef} from "../model/types";
+import { type GameScores, getCaravanScores } from "../model/scoring";
+import type {
+    Caravan as CaravanModel,
+    Nullable,
+    PlayerState,
+    SelectionState
+} from "../model/types";
+import { Ai, AiLevel, Human, isValueCard, type Move, PlayerId, TargetRef } from "../model/types";
 import { SUIT_SYMBOL } from "../model/types";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
@@ -67,7 +66,8 @@ function CaravanColumn({
             {[0, 1, 2].map((laneIndex) => {
                 const seller = scores.sellers[laneIndex as 0 | 1 | 2];
                 const caravan = caravans[laneIndex];
-                const meta = (playerId === Human ? scores.humanPoints[laneIndex] : scores.aiPoints[laneIndex]);
+                const meta =
+                    playerId === Human ? scores.humanPoints[laneIndex] : scores.aiPoints[laneIndex];
                 const sellable = meta.isSellable;
                 const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && meta.isSold;
@@ -92,16 +92,14 @@ function CaravanColumn({
                             </div>
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
-                            <CaravanPoints
-                                meta={meta}
-                            />
+                            <CaravanPoints meta={meta} />
                             <span className="title">{caravanName(playerId, laneIndex)}</span>
-                                <span className="sort-icon" aria-hidden="true" />
-                                {caravan.suit !== null ? (
-                                    <span className={`suit card-name ${caravan.suit}`}>
-                                        {SUIT_SYMBOL[caravan.suit]}
-                                    </span>
-                                ) : null}
+                            <span className="sort-icon" aria-hidden="true" />
+                            {caravan.suit !== null ? (
+                                <span className={`suit card-name ${caravan.suit}`}>
+                                    {SUIT_SYMBOL[caravan.suit]}
+                                </span>
+                            ) : null}
                         </header>
                         <Caravan
                             caravan={caravan}
@@ -201,18 +199,20 @@ export function Board({ store }: { store: GameStore }) {
         lines.push("");
         lines.push("Activity Log:");
         if (state.log.length === 0) lines.push("(empty)");
-        else
-            {state.log.forEach((e) => {
+        else {
+            state.log.forEach((e) => {
                 BRACE_RE.lastIndex = 0;
                 lines.push(`- ${e.text.replace(BRACE_RE, "$1")}`);
-                if (e.detail)
-                    {e.detail.forEach((d) => {
+                if (e.detail) {
+                    e.detail.forEach((d) => {
                         BRACE_RE.lastIndex = 0;
                         const row = Array.isArray(d) ? segmentsText(d) : d;
 
                         lines.push(`  - ${row.replace(BRACE_RE, "$1")}`);
-                    });}
-            });}
+                    });
+                }
+            });
+        }
 
         const text = lines.join("\n");
 
@@ -310,11 +310,8 @@ export function Board({ store }: { store: GameStore }) {
 
         return getDisplayedState(store.previous, state, transition);
     }, [state, transition, store.previous]);
-    const { legalCaravans, targetSet, canDiscard, pendingKeys, pendingJokerKey } = useBoardSelection(
-        sel,
-        legal,
-        transition
-    );
+    const { legalCaravans, targetSet, canDiscard, pendingKeys, pendingJokerKey } =
+        useBoardSelection(sel, legal, transition);
 
     const humanPlayer = displayedState.players[Human];
     const aiPlayer = displayedState.players[Ai];
@@ -500,7 +497,12 @@ export function Board({ store }: { store: GameStore }) {
             const card = humanPlayer.hand[sel];
 
             if (isValueCard(card) && legalCaravans.includes(laneIndex)) {
-                tryAct({ type: "playValueCard", player: Human, lane: laneIndex as 0 | 1 | 2, handIndex: sel });
+                tryAct({
+                    type: "playValueCard",
+                    player: Human,
+                    lane: laneIndex as 0 | 1 | 2,
+                    handIndex: sel
+                });
                 setSel(null);
             }
         },
@@ -542,8 +544,9 @@ export function Board({ store }: { store: GameStore }) {
 
     const onDisbandCaravan = useCallback(
         (laneIndex: number) => {
-            if (!canDisbandAny || humanPlayer.caravans[laneIndex].rows.length === 0)
-                {return;}
+            if (!canDisbandAny || humanPlayer.caravans[laneIndex].rows.length === 0) {
+                return;
+            }
 
             setPendingDisband(laneIndex);
         },
@@ -659,7 +662,8 @@ export function Board({ store }: { store: GameStore }) {
                                 onPlaceholderClick={onPlaceholderClick}
                                 onAcknowledge={onAcknowledge}
                                 childrenFor={(laneIndex) =>
-                                    canDisbandAny && humanPlayer.caravans[laneIndex].rows.length > 0 ? (
+                                    canDisbandAny &&
+                                    humanPlayer.caravans[laneIndex].rows.length > 0 ? (
                                         <button
                                             type="button"
                                             className="disband"
@@ -723,6 +727,21 @@ export function Board({ store }: { store: GameStore }) {
                             >
                                 Activity
                             </button>
+                            <label className="ai-level">
+                                AI
+                                <select
+                                    className="btn"
+                                    aria-label="AI difficulty"
+                                    value={store.aiLevel}
+                                    onChange={(e) => {
+                                        store.setAiLevel(e.target.value as AiLevel);
+                                    }}
+                                >
+                                    <option value="normal">Normal</option>
+                                    <option value="hard">Hard</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                            </label>
                         </div>
 
                         <div className="hand-half human">
@@ -843,8 +862,8 @@ export function Board({ store }: { store: GameStore }) {
                         <p id="disband-confirm-detail">
                             This removes all{" "}
                             {String(humanPlayer.caravans[pendingDisband].rows.flat().length)} cards
-                            (points {String(scores.humanPoints[pendingDisband].points)}) and cannot be
-                            undone.
+                            (points {String(scores.humanPoints[pendingDisband].points)}) and cannot
+                            be undone.
                         </p>
                         <div className="actions">
                             <button

@@ -983,6 +983,14 @@ body {
     gap: var(--sp-2);
     flex-wrap: wrap;
 }
+.ai-level {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font: 700 var(--fs-xs) var(--font-base);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
 
 .btn {
     font: 700 var(--fs-xs) var(--font-base);

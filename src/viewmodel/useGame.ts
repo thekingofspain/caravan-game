@@ -3,10 +3,26 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { publishTestHooks } from "../app/testHooks";
 import { determineBestMove } from "../model/ai";
 import { applyMove, forfeitNoMoves, legalMoves, setupGame } from "../model/engine";
-import { Ai, GameConfig, GameState, Human,Move, Nullable } from "../model/types";
+import { Ai, AiLevel, GameConfig, GameState, Human, Move, Nullable } from "../model/types";
 import { getTransitionInfo, type TransitionInfo } from "./transition";
 
 export type { GameConfig };
+export type { AiLevel };
+
+const AI_LEVEL_KEY = "caravan:aiLevel";
+
+function loadAiLevel(): AiLevel {
+    try {
+        const raw =
+            typeof window === "undefined" ? null : window.localStorage.getItem(AI_LEVEL_KEY);
+
+        if (raw === "hard" || raw === "expert" || raw === "normal") return raw;
+    } catch {
+        // private mode / SSR: fall through to default.
+    }
+
+    return "normal";
+}
 
 export interface GameStore {
     state: GameState;
@@ -14,6 +30,8 @@ export interface GameStore {
     act: (a: Move) => void;
     reset: (cfg: GameConfig) => void;
     thinking: boolean;
+    aiLevel: AiLevel;
+    setAiLevel: (level: AiLevel) => void;
 
     /** UX transition derived from f(previous, move, current) */
 
@@ -38,6 +56,7 @@ export function useGame(initial: GameConfig): GameStore {
     const [cfg, setCfg] = useState<GameConfig>(initial);
     const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: Human }));
     const [thinking, setThinking] = useState(false);
+    const [aiLevel, setAiLevelState] = useState<AiLevel>(loadAiLevel);
     const [ui, setUi] = useState<{
         previous: Nullable<GameState>;
         lastMove: Nullable<Move>;
@@ -88,7 +107,7 @@ export function useGame(initial: GameConfig): GameStore {
 
         const t = window.setTimeout(() => {
             setThinking(true);
-            const a = determineBestMove(state, Ai);
+            const a = determineBestMove(state, Ai, { level: aiLevel });
             const next = applyMove(state, a);
 
             commitOrStage(state, a, next);
@@ -98,7 +117,7 @@ export function useGame(initial: GameConfig): GameStore {
         return () => {
             window.clearTimeout(t);
         };
-    }, [state, transition, commitOrStage]);
+    }, [state, transition, commitOrStage, aiLevel]);
 
     const act = useCallback(
         (a: Move) => {
@@ -113,6 +132,15 @@ export function useGame(initial: GameConfig): GameStore {
         setThinking(false);
         setUi({ previous: null, lastMove: null, transition: null });
         dispatch({ type: "reset", config: c });
+    }, []);
+    const setAiLevel = useCallback((level: AiLevel) => {
+        setAiLevelState(level);
+
+        try {
+            window.localStorage.setItem(AI_LEVEL_KEY, level);
+        } catch {
+            // storage unavailable: level still applies for this session.
+        }
     }, []);
     const acknowledgeRemovals = useCallback(() => {
         // The move was already committed when played; acknowledging only clears
@@ -136,6 +164,8 @@ export function useGame(initial: GameConfig): GameStore {
         act,
         reset,
         thinking,
+        aiLevel,
+        setAiLevel,
         transition,
         previous,
         lastMove,
@@ -150,7 +180,9 @@ export function isHumanTurn(state: GameState): boolean {
 export function handSelectable(state: GameState, legal: Move[], handIndex: number): boolean {
     return legal.some(
         (a) =>
-            (a.type === "playValueCard" || a.type === "playOperationCard" || a.type === "discardCard") &&
+            (a.type === "playValueCard" ||
+                a.type === "playOperationCard" ||
+                a.type === "discardCard") &&
             a.player === state.current &&
             a.handIndex === handIndex
     );
