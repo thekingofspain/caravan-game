@@ -87,5 +87,6 @@ assert.equal(after.current, 0);
 assert.equal(after.handLen, 3);
 
 assert.equal(errors.length, 0, `console errors: ${errors.join(" | ")}`);
+await browser.close();
 console.log("\n=== EMPTY FACE NO-MOVES BIND TEST PASSED ===");
 console.log("Face-only hand + unstarted caravan: no moves offered, discard/disband throw");
