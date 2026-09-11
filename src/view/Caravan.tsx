@@ -305,7 +305,7 @@ function CaravanRowButton({
 export function CaravanPoints({ meta }: { meta: CaravanPointsMeta }) {
     return (
         <span
-            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold bold" : ""} ${meta.isSold ? "highest" : ""}`}
+            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold bold" : ""} ${meta.isSold ? "highest" : ""} ${meta.status === "busted" ? "busted bold" : ""}`}
             data-total={meta.points}
             data-sellable={meta.isSellable ? "1" : "0"}
         >

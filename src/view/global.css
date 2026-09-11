@@ -9,6 +9,7 @@
     --c-bad: #c0392b;
     --c-bad-dark: #96281b;
     --c-sold: #ff7a66;
+    --c-bust: #ff7a66;
     --c-human: #4cc9f0;
     --c-ai: #f4a261;
     --c-good: #32cd32;
@@ -666,6 +667,9 @@ body {
 .caravan .score.sold,
 .caravan .score.bold {
     font-weight: 700;
+}
+.caravan .score.busted {
+    color: var(--c-bust);
 }
 
 .caravan .total {
