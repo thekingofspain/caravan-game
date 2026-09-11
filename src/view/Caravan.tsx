@@ -28,6 +28,24 @@ interface CaravanProps {
     children?: ReactNode;
 }
 
+// Fixed pseudo-random tilt per caravan row: lane is the caravan column, row
+// index k is the vertical axis. Looks shuffled but stays stable across
+// renders (pure Math.random would flicker on every state change).
+// Attached operation cards fan out sideways per column slot; their extra
+// stagger lives in CSS (nth-of-type), relative to their row's tilt.
+// Bound ±4deg absolute on rows (±6.5deg with stagger): edge sweep stays well
+// inside the minimum exposed strip (--card-offset-y ≥ 0.16·h), so a tilted
+// card never covers the primary (top-left) corner marking of its neighbour.
+
+const CARAVAN_TILTS = [-4, 2.5, -1.5, 3.5, -3, 1.5, -2.5, 4] as const;
+
+export function caravanTilt(playerId: PlayerId, lane: LaneIndex, rowIndex: number): number {
+    const salt = playerId === Human ? 0 : 11;
+    const h = lane * 31 + rowIndex * 17 + salt;
+
+    return CARAVAN_TILTS[((h % CARAVAN_TILTS.length) + CARAVAN_TILTS.length) % CARAVAN_TILTS.length];
+}
+
 interface PortalRemoveProps {
     anchorRef: React.RefObject<Nullable<HTMLDivElement>>;
     isHuman: boolean;
@@ -171,7 +189,7 @@ function CaravanImpl({
     }
 
     function getCardStyle(index: number): CSSProperties {
-        return { zIndex: index + 1 };
+        return { zIndex: index + 1, "--caravan-tilt": `${String(caravanTilt(playerId, lane, index))}deg` } as CSSProperties;
     }
 
     return (

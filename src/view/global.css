@@ -712,6 +712,11 @@ body {
 
 .caravan .track > .card {
     position: relative;
+    /* Per-row pseudo-random tilt (see caravanTilt): pivot sits on the primary
+       top-left corner marking so the corner itself never translates and the
+       ±4deg sweep stays inside the exposed strip of the row beneath. */
+    transform: rotate(var(--caravan-tilt, 0deg));
+    transform-origin: 12% 10%;
 }
 
 .caravan .card > .card {
@@ -719,7 +724,51 @@ body {
     top: 0;
     z-index: 5;
     pointer-events: none;
+    /* Column stagger per attachment slot, relative to the row tilt above:
+       every (row, column) card lands on a distinct absolute angle, pivot on
+       its own primary corner marking so the marking never translates.
+       Each column also steps slightly away from the board center
+       (human cards drop, AI cards rise): at most 0.12·card-h, still inside
+       the minimum exposed strip (--card-offset-y ≥ 0.16·h). */
+    transform: translateY(var(--col-y, 0rem)) rotate(var(--col-tilt, 0deg));
+    transform-origin: 12% 10%;
 }
+
+.caravan .card > .card:nth-of-type(1) {
+    --col-tilt: 2deg;
+}
+
+.caravan .card > .card:nth-of-type(2) {
+    --col-tilt: -2.5deg;
+}
+
+.caravan .card > .card:nth-of-type(3) {
+    --col-tilt: 1deg;
+}
+
+.caravans.human .card > .card:nth-of-type(1) {
+    --col-y: calc(var(--card-h) * 0.04);
+}
+
+.caravans.human .card > .card:nth-of-type(2) {
+    --col-y: calc(var(--card-h) * 0.08);
+}
+
+.caravans.human .card > .card:nth-of-type(3) {
+    --col-y: calc(var(--card-h) * 0.12);
+}
+
+.caravans.ai .card > .card:nth-of-type(1) {
+    --col-y: calc(var(--card-h) * -0.04);
+}
+
+.caravans.ai .card > .card:nth-of-type(2) {
+    --col-y: calc(var(--card-h) * -0.08);
+}
+
+.caravans.ai .card > .card:nth-of-type(3) {
+    --col-y: calc(var(--card-h) * -0.12);
+ }
 
 .caravans.human .card > .card {
     left: calc(var(--c, 0) * var(--card-offset-x));
