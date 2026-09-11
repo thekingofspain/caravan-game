@@ -37,8 +37,10 @@ const DECK_PEEK_ENABLED =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekDeck");
 const BRACE_RE = /\{([^{}]+)\}/g;
 
-// Direction glyphs live in public/icons (Bootstrap Icons, MIT) and are picked
-// by CSS class below: asc → sort-asc.svg, desc → sort-desc.svg.
+ // Direction glyphs live in public/icons (Bootstrap Icons, MIT) and are picked
+ // by CSS class below: human asc → sort-human-asc.svg, human desc →
+ // sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
+ // Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
 
 function CaravanColumn({
     playerId,
@@ -407,14 +409,22 @@ export function Board({ store }: { store: GameStore }) {
         [selectableIndices, sel, aiFlashKey]
     );
 
-    // Double-click a hand card: value cards jump straight to the first empty
-    // human caravan (left to right). The two clicks toggle select on then off,
-    // so no delayed-click disambiguation is needed.
+    // Double-click a hand card: opening-only shortcut that drops a value card
+    // into the first empty human caravan (left to right). Disabled once all
+    // three caravans are started — an emptied placeholder mid-game needs an
+    // explicit select + placeholder click. The two clicks toggle select on
+    // then off, so no delayed-click disambiguation is needed.
 
     const onHandDoubleClick = useCallback(
         (i: number) => {
             if (!humanCanAct) return;
 
+            // `started` is never cleared, so this stays false for the rest of
+            // the game even with an emptied caravan (mirrors inOpeningRound).
+
+            const inOpening = humanPlayer.caravans.some((c) => !(c.started ?? c.rows.length > 0));
+
+            if (!inOpening) return;
             const card = humanPlayer.hand[i];
 
             if (!isValueCard(card)) return;

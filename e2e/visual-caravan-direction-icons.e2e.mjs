@@ -54,12 +54,12 @@ const icons = await page.evaluate(() => {
 assert.equal(icons.length, 3, `expected 3 human caravan headers, got ${icons.length}`);
 
 assert.equal(icons[0].dir, "asc", `caravan 0 should carry data-dir asc, got ${icons[0].dir}`);
-assert.ok((icons[0].mask || "").includes("sort-asc.svg"), `asc caravan should use sort-asc.svg, got ${icons[0].mask}`);
-console.log("  PASS: asc caravan uses sort-asc.svg (arrow down)");
+ assert.ok((icons[0].mask || "").includes("sort-human-asc.svg"), `asc caravan should use sort-human-asc.svg, got ${icons[0].mask}`);
+ console.log("  PASS: asc caravan uses sort-human-asc.svg (arrow down)");
 
 assert.equal(icons[1].dir, "desc", `caravan 1 should carry data-dir desc, got ${icons[1].dir}`);
-assert.ok((icons[1].mask || "").includes("sort-desc.svg"), `desc caravan should use sort-desc.svg, got ${icons[1].mask}`);
-console.log("  PASS: desc caravan uses sort-desc.svg (arrow up)");
+ assert.ok((icons[1].mask || "").includes("sort-human-desc.svg"), `desc caravan should use sort-human-desc.svg, got ${icons[1].mask}`);
+ console.log("  PASS: desc caravan uses sort-human-desc.svg (arrow down)");
 
 assert.equal(icons[2].dir, null, `single-row caravan should have no data-dir, got ${icons[2].dir}`);
 assert.equal(icons[2].mask, "none", `single-row caravan should paint no icon, got ${icons[2].mask}`);
