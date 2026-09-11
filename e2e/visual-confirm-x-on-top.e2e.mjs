@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { boardReady } from "./wait.mjs";
 
 function makeCard(deckId, rank, suitOrJoker) {
   if (suitOrJoker === "Red" || suitOrJoker === "Black") return { id:`D${deckId}-${rank}${suitOrJoker}`, rank, suit:null, jokerType:suitOrJoker };
@@ -17,11 +18,13 @@ const errors=[];
 page.on("console", m=> m.type()==="error" && errors.push(m.text()));
 page.on("pageerror", e=> errors.push("PAGEERROR: "+e.message));
 await page.goto(BASE, { waitUntil:"networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if (await startBtn.count()>0) await startBtn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+// The next step overwrites the store; just wait for the test hook to exist
+// rather than a fixed sleep.
+await page.waitForFunction(() => typeof window.__setCaravanState === "function", null, { timeout: 10000 });
 
 const hBoneyard = caravanOf([[makeCard(1,"7","clubs")]], null, "clubs");
 const hRedding = caravanOf([[makeCard(1,"10","diamonds")],[makeCard(1,"9","spades")]], "desc","diamonds");
@@ -45,10 +48,24 @@ const programmedState = {
 };
 console.log("Programming dense Shady 6-row...");
 await page.evaluate(s=> window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(600);
+// Wait for the programmed 6-row Shady caravan to land in the store and render
+// rather than a fixed sleep.
+await page.waitForFunction(
+  () => window.__caravanStore.state.players[0].caravans[2].rows.length === 6 &&
+    document.querySelectorAll(".caravans.human .caravan").length === 3,
+  null,
+  { timeout: 10000 }
+);
 console.log("AI plays J♣ on Shady Sands {5♥} k=4");
 await page.evaluate(()=> window.__act({ type:"playOperationCard", player:1, target:{ player:0, lane: 2, cardIndex:4 }, handIndex:0 }));
-await page.waitForTimeout(800);
+// The AI Jack creates a pendingAck with a portal confirm X; wait for both the
+// portal and the pending highlight rather than a fixed sleep.
+await page.waitForSelector(".confirm.portal", { timeout: 10000 });
+await page.waitForFunction(
+  () => document.querySelector('.caravans.human .caravan .card[data-index="4"]')?.classList.contains("pending"),
+  null,
+  { timeout: 10000 }
+);
 
 // --- PLAYWRIGHT SKILL: capture images ---
 const fullPath = "/tmp/jack-visual-full.png";

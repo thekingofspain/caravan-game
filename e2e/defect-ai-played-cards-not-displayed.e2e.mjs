@@ -4,6 +4,7 @@
 // Programs AI caravans with cards, asserts each card is visible, then
 // plays a Human value card and asserts AI cards stay visible.
 import { chromium } from "playwright";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck } from "./wait.mjs";
 import assert from "node:assert/strict";
 let id=5000;
 function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
@@ -25,7 +26,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+await boardReady(page);
 // Program deterministic state: AI caravans have cards, placeholder should be gone (user bug was placeholder gone but card not visible)
 const humanCaravans = [caravanOf(["9"],"hearts"), caravanOf(["3"],"clubs"), caravanOf(["7"],"spades")];
 const aiCaravans = [caravanOf(["10"],"diamonds"), caravanOf(["8"],"hearts"), caravanOf(["7"],"clubs")];
@@ -35,7 +36,7 @@ const programmedState = {
 };
 console.log("Programming deterministic AI caravans with cards (placeholder should be gone, cards visible)...");
 await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(500);
+await page.waitForFunction(() => document.querySelectorAll(".caravans.ai .caravan .card").length >= 3, null, { timeout: 10000 });
 console.log("Checking AI caravans — placeholder should be gone, cards visible (per user report)...");
 const aiCaravansLoc = page.locator(".caravans.ai .caravan");
 assert.equal(await aiCaravansLoc.count(), 3, "3 AI caravans");
@@ -58,12 +59,14 @@ for(let ci=0; ci<3; ci++){
 }
 console.log("AI visibility OK — cards visible, placeholder gone");
 // Also verify after a human move that AI cards don't disappear
+const prevLogLen = await logLength(page);
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[0].hand.findIndex(c=> c.rank==="5");
   if(idx!==-1) window.__act({ type:"playValueCard", player:0, lane: 0, handIndex: idx });
 });
-await page.waitForTimeout(600);
+await waitLogGrowth(page, prevLogLen);
+await waitNoPendingAck(page);
 let totalAi = await page.locator(".caravans.ai .caravan .card").count();
 console.log(` total AI cards after human move: ${totalAi} (should still be >=3; AI may add one on its turn)`);
 assert.ok(totalAi >= 3, "AI cards should remain visible after human move");

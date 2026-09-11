@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, waitTurn } from "./wait.mjs";
 let id=3000;
 function makeCard(suit, rank){ id+=1; return { id:`${suit}-${rank}-${id}`, suit, rank }; }
 const Human=0, Ai=1;
@@ -27,7 +28,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+await boardReady(page);
 
 // Program the exact board before turn 15 (human Jack on 2♥)
 // Based on log: Human 2♣ Boneyard, AI 10♥ Dayglow, Human 3♣ Redding, AI 7♦ The Hub, Human 5♣ Shady, AI 6♥ New Reno, Human 6♦ Shady, AI K♦ on 10♥ Dayglow, Human 7♥ Shady, AI 6♠ Dayglow, Human 2♥ Shady, AI 9♥ The Hub, Human 7♦ Shady, AI 9♣ New Reno — next is Human J♦ on 2♥ Shady
@@ -76,7 +77,10 @@ console.log(" Human hand:", programmedState.players[Human].hand.map(c=> c.rank+c
 console.log(" AI Dayglow:", programmedState.players[Ai].caravans[0].rows.map(r=> `${r[0].rank}${r[0].suit[0]}${r.slice(1).some(c=>c.rank==="K")?`×${Math.pow(2,r.slice(1).filter(c=>c.rank==="K").length)}`:""}`).join(","));
 
 await page.evaluate((s)=> window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(500);
+await page.waitForFunction(
+  () => window.__caravanStore.state.players[0]?.caravans[2]?.rows.length === 5,
+  null, { timeout: 10000 }
+);
 
 let before = await page.evaluate(()=>{
   const s = window.__caravanStore.state;
@@ -100,7 +104,7 @@ await page.evaluate(()=>{
   const idx = s.players[0].hand.findIndex(c=> c.rank==="J" && c.suit==="diamonds");
   window.__act({ type:"playOperationCard", player:0, target:{player:0, lane: 2, cardIndex:3}, handIndex: idx });
 });
-await page.waitForTimeout(600);
+await waitTurn(page, Ai);
 
 let after = await page.evaluate(()=>{
   const s = window.__caravanStore.state;
@@ -135,7 +139,11 @@ console.log(` human selectable after Jack (now AI turn): ${humanSelAfter} (expec
 assert.equal(after.current, Ai, "still AI turn");
 
 // Let AI play one move to ensure human unblocked after
-await page.waitForTimeout(1500); // AI auto 650ms + visuals settle
+await waitTurn(page, Human); // AI auto-moves 650ms after the human act
+await page.waitForFunction(
+  () => document.querySelectorAll(".slot.selectable").length > 0,
+  null, { timeout: 10000 }
+);
 let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackX: document.querySelectorAll(".confirm.portal").length }));
 console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel} pending=${afterAI.pending} ackX=${afterAI.ackX}`);
 assert.equal(afterAI.current, Human, "after AI auto move, back to Human turn");

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { boardReady } from "./wait.mjs";
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 async function getCounts(page) {
   return await page.evaluate(() => {
@@ -30,8 +31,16 @@ let failures=[];
 for(let i=0;i<20;i++){
   const seed=Math.floor(Math.random()*1e9);
   await page.goto(`${BASE}?seed=${seed}`, {waitUntil:"networkidle"});
-  await page.waitForSelector(".board");
-  await page.waitForTimeout(300);
+  await boardReady(page);
+  // Initial deal: wait until the dealt state (8-card hands) and its DOM render land.
+  await page.waitForFunction(() => {
+    const s = window.__caravanStore?.state;
+    return (
+      s?.players?.[0]?.hand?.length === 8 &&
+      s?.players?.[1]?.hand?.length === 8 &&
+      document.querySelectorAll(".hand.human .slot .card").length === 8
+    );
+  }, null, { timeout: 10000 });
   const c=await getCounts(page);
   const d=await getDomCounts(page);
   console.log(`seed ${seed}: state`,c,`dom`,d);

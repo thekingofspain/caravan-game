@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch();
@@ -8,19 +9,18 @@ await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 const page = await context.newPage();
 
 await page.goto(`${BASE}?seed=42`, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
-await page.waitForTimeout(300);
+await boardReady(page);
 
 // Open activity
 if ((await page.locator(".activity").count()) === 0) await page.locator(".btn", { hasText: "Activity" }).click();
 await page.waitForSelector(".activity");
-await page.waitForTimeout(200);
 
 // Click Copy
 const copyBtn = page.locator(".activity .copy");
 await copyBtn.waitFor({ state: "visible" });
 await copyBtn.click();
-await page.waitForTimeout(300);
+await page.waitForFunction(() => document.querySelector(".toast")?.textContent?.includes("Copied"), null, { timeout: 5000 });
+await page.waitForFunction(async () => (await navigator.clipboard.readText()).startsWith("Seed:"), null, { timeout: 5000 });
 
 // Check toast
 const toast = await page.locator(".toast").textContent().catch(()=>null);

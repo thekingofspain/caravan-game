@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -10,7 +11,7 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
@@ -28,6 +29,7 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
+  const before = await logLength(page);
   const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
@@ -36,7 +38,11 @@ async function placeOnCaravan(ci) {
     const wraps = stack.locator(".card");
     await wraps.last().click({ force: true });
   }
-  await page.waitForTimeout(200);
+  // The click commits the human move (logged in the store); wait for the log
+  // entry rather than a fixed sleep, then for the placed card to render.
+  await waitLogGrowth(page, before);
+  await waitNoPendingAck(page);
+  await stack.locator(".card").first().waitFor({ timeout: 8000 });
 }
 
 // ── Empty caravans show a placeholder ──
@@ -51,7 +57,7 @@ await waitHumanTurn();
 const slots = await valueSlots();
 assert.ok(slots.length > 0, "no value card to fill a placeholder");
 await slots[0].dispatchEvent("click");
-await page.waitForTimeout(120);
+await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
 await placeOnCaravan(0);
 
 const afterOne = await page.locator(".caravans.human .empty").count();
@@ -70,7 +76,7 @@ for (let ci = 1; ci < 3; ci++) {
   const s = await valueSlots();
   assert.ok(s.length > 0, "no value card to fill a placeholder");
   await s[0].dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
   await placeOnCaravan(ci);
 }
 // Wait for the AI to finish placing its starters so the game is fully started.

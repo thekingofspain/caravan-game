@@ -17,20 +17,22 @@ export default function App() {
 
 function Game({ config }: { config: GameConfig }) {
     const store = useGame(config);
-    const { reset, act } = store;
+
+    // Dep is the whole store snapshot: ui-only updates (ack clears transition
+    // without touching act/reset identity) must still refresh the hook.
 
     useEffect(
         () =>
             publishTestHooks({
                 __caravanStore: store,
                 __resetWithSeed: (s: number) => {
-                    reset({ seed: s });
+                    store.reset({ seed: s });
                 },
                 __act: (a) => {
-                    act(a);
+                    store.act(a);
                 }
             }),
-        [reset, act]
+        [store]
     );
 
     return (

@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { logLength, waitLogGrowth } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -39,22 +40,25 @@ async function stackSelectable(ci) {
 // Place one value card (if legal) onto human caravan `ci`. Returns true if placed.
 async function addValueCardTo(ci) {
   await waitHumanTurn();
+  const prevLen = await logLength(page);
   const slots = await valueSlots();
   for (const slot of slots) {
     // dispatchEvent: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
     await slot.dispatchEvent("click");
-    await page.waitForTimeout(100);
+    await page.waitForSelector(".slot.selected", { timeout: 5000 });
     if (await stackSelectable(ci)) {
       const stack = page.locator(".caravans.human .caravan").nth(ci);
       const ph = stack.locator(".empty");
       if (await ph.count() > 0) await ph.first().click({ force: true });
       else await stack.locator("button.card[data-index]").last().click({ force: true });
-      await page.waitForTimeout(200);
+      await waitLogGrowth(page, prevLen);
       return true;
     }
     // not legal here; deselect and try the next value card
     await page.locator(".slot.selected").first().dispatchEvent("click");
-    await page.waitForTimeout(60);
+    await page.waitForFunction(() => !document.querySelector(".slot.selected"), null, {
+      timeout: 5000
+    });
   }
   return false;
 }

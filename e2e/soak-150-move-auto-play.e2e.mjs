@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth } from "./wait.mjs";
+import { logInfo } from "./log.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch();
@@ -9,14 +11,14 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 const vh = 900;
 const vw = 1280;
 const expectedH = Math.max(vh / 7, vw / 9);
 const cardH = await page.locator(".hand.human .card").first().evaluate((el) => parseFloat(getComputedStyle(el).height));
 assert.ok(Math.abs(cardH - expectedH) < expectedH * 0.2, `card height ${cardH} not ~max(vh/7, vw/9)=${expectedH}`);
-console.log("card height OK:", Math.round(cardH));
+logInfo("card height OK:", Math.round(cardH));
 
 async function waitHumanTurn() {
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 6000 });
@@ -36,7 +38,11 @@ async function doHumanAction() {
   let selected = false;
   for (const i of order) {
     await slots.nth(i).dispatchEvent("click");
-    await page.waitForTimeout(100);
+    // Conditional: resolve as soon as the click selects a slot; a slot that
+    // never selects (overlap picks a neighbor) falls through to the next.
+    await page.waitForSelector(".hand.human .slot.selected", { timeout: 1000 }).catch(() => {
+      // No selection from this slot — try the next one.
+    });
     if ((await page.locator(".hand.human .slot.selected").count()) > 0) { selected = true; break; }
   }
   if (!selected) return;
@@ -74,8 +80,14 @@ let backs = [];
 let placedMax = 0;
 for (let move = 0; move < 150; move++) {
   try { await waitHumanTurn(); } catch { break; }
+  const prevLen = await logLength(page);
   await doHumanAction();
-  await page.waitForTimeout(100);
+  // Pace on the game's own signal (human move appended to the log) instead of
+  // a fixed sleep, so the loop runs as fast as the game allows.
+  await waitLogGrowth(page, prevLen, 3000).catch(() => {
+    // No-op action logged nothing — proceed as the old sleep did; the next
+    // waitHumanTurn retries or exits.
+  });
   const placed = await page.evaluate(() => document.querySelectorAll(".caravans.human .caravan .card").length);
   if (placed > placedMax) placedMax = placed;
   const b = await backCards();
@@ -83,7 +95,7 @@ for (let move = 0; move < 150; move++) {
 }
 assert.equal(backs.length, 0, `a card rendered as a back/blank during play: ${JSON.stringify(backs)}`);
 assert.ok(placedMax > 0, `no cards were ever placed on the board during play`);
-console.log("game ran 150 moves,", placedMax, "cards placed; full-play validation only.");
+logInfo("game ran 150 moves, full-play validation only:", { placedMax });
 
 assert.equal(consoleErrors.length, 0, `console errors: ${consoleErrors.join(" | ")}`);
 console.log(`PASS: ${placedMax} cards placed across a long auto-played game with no back/blank cards and no console errors.`);

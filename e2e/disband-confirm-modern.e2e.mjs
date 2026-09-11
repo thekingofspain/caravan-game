@@ -3,6 +3,7 @@
 // modern in-app confirmation. Clicking Disband must stage an in-app
 // alertdialog naming the consequence — and must NOT call window.confirm.
 import { chromium } from "playwright";
+import { logLength, waitLogGrowth } from "./wait.mjs";
 import assert from "node:assert/strict";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
@@ -38,13 +39,14 @@ async function valueSlots() {
 async function addValueCardTo(ci) {
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card to place");
+  const prevLen = await logLength(page);
   await page.locator(".hand.human .slot.selectable").nth(slots[0]).dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
   const track = page.locator(".caravans.human .caravan").nth(ci).locator(".track.selectable");
   const ph = track.locator(".empty");
   if ((await ph.count()) > 0) await ph.first().click({ force: true });
   else await track.locator(".card").last().click({ force: true });
-  await page.waitForTimeout(250);
+  await waitLogGrowth(page, prevLen);
 }
 
 // Start the game: fill the 3 human starting caravans so Disband appears.
@@ -74,7 +76,7 @@ await page.evaluate(() => {
 });
 
 await disbandBtn.click({ force: true });
-await page.waitForTimeout(400);
+await page.waitForSelector('.disband-confirm[role="alertdialog"]', { timeout: 8000 });
 
 const legacyCalled =
   nativeDialogFired || (await page.evaluate(() => window.__legacyConfirmCalled === true));
@@ -94,7 +96,7 @@ assert.match(
   "dialog must name the consequence"
 );
 await dialog.getByRole("button", { name: "Keep caravan" }).click();
-await page.waitForTimeout(300);
+await page.waitForSelector('.disband-confirm[role="alertdialog"]', { state: "detached", timeout: 8000 });
 assert.equal(
   await page.locator('.disband-confirm[role="alertdialog"]').count(),
   0,
@@ -108,12 +110,12 @@ assert.equal(
 
 // Confirm path: Disband empties the caravan and closes the dialog.
 await page.locator(".caravans.human .caravan .disband").first().click({ force: true });
-await page.waitForTimeout(300);
+await page.waitForSelector('.disband-confirm[role="alertdialog"]', { timeout: 8000 });
 await page
   .locator('.disband-confirm[role="alertdialog"]')
   .getByRole("button", { name: /^Disband/ })
   .click();
-await page.waitForTimeout(400);
+await page.waitForSelector('.disband-confirm[role="alertdialog"]', { state: "detached", timeout: 8000 });
 assert.equal(
   await page.locator('.disband-confirm[role="alertdialog"]').count(),
   0,

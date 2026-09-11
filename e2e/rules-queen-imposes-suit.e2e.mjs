@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady } from "./wait.mjs";
 
 // Queen behavior vs the decided rules:
 //   (a) A queen rides on the latest (last-row) card only — earlier rows reject.
@@ -44,8 +45,7 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
-await page.waitForTimeout(300);
+await boardReady(page);
 
 // Boneyard [[3♠],[9♠]] dir asc — exactly what the engine itself produces.
 const programmedState = {
@@ -76,7 +76,11 @@ const programmedState = {
     started: true
 };
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(400);
+await page.waitForFunction(
+    () => window.__caravanStore?.state?.players?.[0]?.hand?.some((c) => c.rank === "Q" && c.suit === "hearts"),
+    null,
+    { timeout: 10000 }
+);
 
 const failures = [];
 
@@ -105,7 +109,11 @@ await page.evaluate(() => {
         handIndex: qi
     });
 });
-await page.waitForTimeout(300);
+await page.waitForFunction(
+    () => window.__caravanStore.state.players[0].caravans[0].rows[1]?.length === 2,
+    null,
+    { timeout: 10000 }
+);
 const afterQueen = await page.evaluate(() => {
     const c = window.__caravanStore.state.players[0].caravans[0];
     return {
@@ -127,7 +135,9 @@ if (afterQueen.suit !== "hearts")
 await page.evaluate(() => {
     window.__setCaravanState({ ...window.__caravanStore.state, current: 0 });
 });
-await page.waitForTimeout(200);
+await page.waitForFunction(() => window.__caravanStore.state.current === 0, null, {
+    timeout: 10000
+});
 
 // (c) 10♥ breaks desc from 9♠ but matches the imposed hearts: must be legal.
 const tenLegal = await page.evaluate(() => {
@@ -146,7 +156,11 @@ await page.evaluate(() => {
     const idx = s.players[0].hand.findIndex((c) => c.rank === "10" && c.suit === "hearts");
     window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
-await page.waitForTimeout(400);
+await page.waitForFunction(
+    () => window.__caravanStore.state.players[0].caravans[0].rows.length === 3,
+    null,
+    { timeout: 10000 }
+);
 const afterValue = await page.evaluate(() => {
     const c = window.__caravanStore.state.players[0].caravans[0];
     return {

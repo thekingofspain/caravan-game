@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck, waitTurn } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -10,9 +11,10 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
+  await waitTurn(page, 0);
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
 }
 
@@ -28,6 +30,7 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
+  const before = await logLength(page);
   const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
@@ -36,7 +39,10 @@ async function placeOnCaravan(ci) {
     const wraps = stack.locator(".card");
     await wraps.last().click({ force: true });
   }
-  await page.waitForTimeout(200);
+  // The click commits the human move (logged in the store); wait for the log
+  // entry rather than a fixed sleep, then for any ack to clear.
+  await waitLogGrowth(page, before);
+  await waitNoPendingAck(page);
 }
 
 // Fill the 3 starting placeholders so caravans have cards to hover.
@@ -46,7 +52,7 @@ for (let ci = 0; ci < 3; ci++) {
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card to fill a placeholder");
   await slots[0].dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
   await placeOnCaravan(ci);
 }
 await waitHumanTurn();
@@ -60,13 +66,19 @@ console.log("TEST: hovering a caravan card with a legal value card shows a green
 const vSlots = await valueSlots();
 assert.ok(vSlots.length > 0, "no value card selectable");
 await vSlots[0].dispatchEvent("click");
-await page.waitForTimeout(120);
+await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
 
 const selectableTrack = page.locator(".caravans.human .caravan .track.selectable").first();
 assert.ok((await selectableTrack.count()) > 0, "expected a selectable human caravan for the chosen value card");
 const legalWrap = selectableTrack.locator("button.card[data-index]").last();
 await legalWrap.hover();
-await page.waitForTimeout(150);
+// Hover styles apply on the next frame; poll the computed outline until the
+// legal (green) color lands instead of sleeping a fixed delay.
+await page.waitForFunction(
+  (el) => /46, 204, 113/.test(getComputedStyle(el).outlineColor),
+  await legalWrap.elementHandle(),
+  { timeout: 5000 }
+);
 const legalColor = await legalWrap.evaluate((el) => getComputedStyle(el).outlineColor);
 assert.ok(/46, 204, 113/.test(legalColor), `legal hover outline should be green, got: ${legalColor}`);
 console.log("  PASS: legal hover is green");
@@ -78,7 +90,12 @@ console.log("TEST: hovering an opponent caravan card with a value card shows a r
 const aiWrap = page.locator(".caravans.ai .caravan button.card[data-index]").last();
 assert.ok((await aiWrap.count()) > 0, "expected an AI caravan card to hover (opponent must have played)");
 await aiWrap.hover();
-await page.waitForTimeout(150);
+// Same as above for the illegal (red) hover color.
+await page.waitForFunction(
+  (el) => /192, 57, 43/.test(getComputedStyle(el).outlineColor),
+  await aiWrap.elementHandle(),
+  { timeout: 5000 }
+);
 const illegalColor = await aiWrap.evaluate((el) => getComputedStyle(el).outlineColor);
 assert.ok(/192, 57, 43/.test(illegalColor), `illegal hover outline should be red, got: ${illegalColor}`);
 console.log("  PASS: illegal hover is red");

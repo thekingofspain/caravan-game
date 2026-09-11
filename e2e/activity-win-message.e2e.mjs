@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
 import { logInfo } from "./log.mjs";
+import { boardReady } from "./wait.mjs";
 import assert from "node:assert";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
@@ -19,8 +20,7 @@ function mkPlayer(caravans, hand = [], deck = []) {
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await page.goto(BASE);
-await page.waitForSelector(".board", { timeout: 8000 });
-await page.waitForTimeout(500);
+await boardReady(page);
 
 // Program a winning state: Human wins with 2 caravans
 const hBoneyard = caravanOf([[makeCard(1, "10", "clubs"), makeCard(2, "K", "clubs")], [makeCard(3, "A", "clubs")]], "asc", "clubs"); // 21? 10*2+1=21
@@ -41,12 +41,11 @@ const programmedState = {
   log: [{ id: 1, text: "You win the caravan!", segments: [{type:"actor",player:0,form:"subject"}," win the caravan!"], detail: [] }],
   started: true,
 };
-
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(800);
+await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
 if ((await page.locator(".activity").count()) === 0) await page.locator("button", { hasText: "Activity" }).click();
 await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
-await page.waitForTimeout(500);
+await page.waitForFunction(() => document.querySelector(".log .win-details") && document.querySelector(".log .row.human .player") && document.querySelector(".log .row.ai .player"), null, { timeout: 5000 });
 
 const info = await page.evaluate(() => {
   const lineWin = document.querySelector(".log .line.win");

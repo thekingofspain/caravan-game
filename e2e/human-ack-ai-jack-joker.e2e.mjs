@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { boardReady } from "./wait.mjs";
 import assert from "node:assert/strict";
 let idCounter=1000;
 function makeCard(suit, rank){
@@ -24,7 +25,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+await boardReady(page);
 const humanHand = [makeCard("hearts","5"), makeCard("clubs","2")];
 const aiHandJoker = [makeCard("Red","Joker"), makeCard("hearts","7")];
 const humanCaravans = [caravanOf(["9"],"hearts"), caravanOf(["3"],"clubs"), caravanOf(["7"],"spades")];
@@ -38,7 +39,7 @@ await page.evaluate((state) => {
   const w = window;
   w.__setCaravanState(state);
 }, programmedState);
-await page.waitForTimeout(400);
+await page.waitForFunction(() => document.querySelectorAll(".caravans.ai .caravan .card").length === 2, null, { timeout: 10000 });
 let aiCardsBefore = await page.locator(".caravans.ai .caravan .card").count();
 console.log(` AI cards before Joker: ${aiCardsBefore} (expect 2: 9d,3h)`);
 assert.equal(aiCardsBefore, 2);
@@ -53,7 +54,7 @@ await page.evaluate(() => {
   const move = { type:"playOperationCard", player:1, target:{player:0, lane: 0, cardIndex:0}, handIndex: idx };
   w.__act(move);
 });
-await page.waitForTimeout(500);
+await page.waitForSelector(".confirm.portal", { timeout: 10000 });
 let pending = await page.locator(".card.pending, .card.pending-remove").count();
 let xCount = await page.locator(".confirm.portal").count();
 let transition = await page.evaluate(()=> window.__caravanStore.transition);
@@ -73,7 +74,8 @@ assert.equal(humanCardsGrey, 0);
 assert.equal(aiCardsGrey, 1);
 console.log("User acknowledges (click X on pending Joker)...");
 await page.locator(".confirm.portal").first().click({ force:true });
-await page.waitForTimeout(700);
+await page.waitForSelector(".confirm.portal", { state: "detached", timeout: 10000 });
+await page.waitForFunction(() => document.querySelectorAll(".card.pending").length === 0, null, { timeout: 10000 });
 let pendingAfter = await page.locator(".card.pending").count();
 let humanAfter = await page.locator(".caravans.human .caravan").first().locator(".card").count();
 let aiAfter = await page.locator(".caravans.ai .caravan").first().locator(".card").count();
@@ -91,14 +93,14 @@ let jackState = {
   current: Ai, phase:"play", winner:null, log:[], started:true,
 };
 await page.evaluate((s)=> window.__setCaravanState(s), jackState);
-await page.waitForTimeout(400);
+await page.waitForFunction(() => window.__caravanStore.state.players[1].hand.some((c) => c.rank === "J"), null, { timeout: 10000 });
 console.log("Programmed Jack state: AI Jack on Human 3c");
 await page.evaluate(()=>{
   const s = window.__caravanStore.state;
   const idx = s.players[1].hand.findIndex(c=> c.rank==="J");
   window.__act({ type:"playOperationCard", player:1, target:{player:0, lane:1, cardIndex:0}, handIndex: idx });
 });
-await page.waitForTimeout(500);
+await page.waitForSelector(".confirm.portal", { timeout: 10000 });
 let pendingJack = await page.locator(".card.pending").count();
 let transJack = await page.evaluate(()=> window.__caravanStore.transition);
 console.log(` after AI Jack: pending=${pendingJack} transition=${JSON.stringify(transJack)} x=${await page.locator(".confirm.portal").count()}`);
@@ -107,7 +109,8 @@ assert.equal(transJack.pendingAck !== null, true);
 assert.equal(transJack.pendingAck.removed.length, 1);
 assert.equal(await page.locator(".slot.selectable").count(), 0, "human blocked for Jack ack");
 await page.locator(".confirm.portal").first().click({ force:true });
-await page.waitForTimeout(600);
+await page.waitForSelector(".confirm.portal", { state: "detached", timeout: 10000 });
+await page.waitForFunction(() => document.querySelectorAll(".card.pending").length === 0, null, { timeout: 10000 });
 assert.equal(await page.locator(".card.pending").count(), 0, "Jack pending cleared");
 assert.equal(await page.locator(".caravans.human .caravan").nth(1).locator(".card").count(), 0, "3c removed after Jack ack");
 console.log(" Jack ack verified — human saw X and acknowledged before removal (original git UX)");

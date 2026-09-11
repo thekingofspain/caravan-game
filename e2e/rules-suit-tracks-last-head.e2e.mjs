@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitTurn } from "./wait.mjs";
+import { logInfo } from "./log.mjs";
 
 // Caravan suit/direction tracking: A♦ played on 9♠,10♦ via suit match breaks
 // the asc run, so direction re-establishes to desc and the stored suit follows
@@ -39,8 +41,7 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
-await page.waitForTimeout(300);
+await boardReady(page);
 
 // Boneyard starts [[9♠]] — exactly what the engine itself produces for one row.
 const programmedState = {
@@ -63,30 +64,36 @@ const programmedState = {
     started: true
 };
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(400);
+await page.waitForFunction(
+    () => window.__caravanStore?.state?.players?.[0]?.caravans?.[0]?.rows?.length === 1,
+    null,
+    { timeout: 10000 }
+);
 
 // Move 1 (real engine transition): 10♦ onto 9♠.
+const logBeforeMove1 = await logLength(page);
 await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "10" && c.suit === "diamonds");
     window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
-await page.waitForTimeout(300);
+await waitLogGrowth(page, logBeforeMove1);
 
 // Take the turn back before the AI auto-move timer (650ms) fires. This only flips
 // `current`; every caravan mutation stays on the real engine path.
 await page.evaluate(() => {
     window.__setCaravanState({ ...window.__caravanStore.state, current: 0 });
 });
-await page.waitForTimeout(200);
+await waitTurn(page, 0);
 
 // Move 2 (real engine transition): A♦ onto 10♦ (legal via suit match, like the log).
+const logBeforeMove2 = await logLength(page);
 await page.evaluate(() => {
     const s = window.__caravanStore.state;
     const idx = s.players[0].hand.findIndex((c) => c.rank === "A" && c.suit === "diamonds");
     window.__act({ type: "playValueCard", player: 0, lane: 0, handIndex: idx });
 });
-await page.waitForTimeout(400);
+await waitLogGrowth(page, logBeforeMove2);
 
 const after = await page.evaluate(() => {
     const c = window.__caravanStore.state.players[0].caravans[0];
@@ -101,7 +108,7 @@ const after = await page.evaluate(() => {
         lastHeadSuit: c.rows[c.rows.length - 1][0].suit
     };
 });
-console.log("caravan after 9♠,10♦,A♦:", JSON.stringify(after));
+logInfo("caravan after 9♠,10♦,A♦:", after);
 
 const failures = [];
 if (after.rows.length !== 3) failures.push(`expected 3 rows, got ${after.rows.length}`);

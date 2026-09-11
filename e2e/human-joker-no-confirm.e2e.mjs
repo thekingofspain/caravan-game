@@ -13,6 +13,7 @@
 // (AI Black Joker on Redding) may carry the X.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady } from "./wait.mjs";
 
 let id = 50000;
 function makeCard(deckId, rank, suitOrJoker) {
@@ -45,7 +46,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
 await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
-await page.waitForTimeout(600);
+await boardReady(page);
 
 // Setup mirrors the report:
 // - Human Boneyard holds a 2S (removed by the human Red Joker).
@@ -73,7 +74,11 @@ await page.evaluate(
     current: Human, phase: "play", winner: null, log: [], started: true,
   }
 );
-await page.waitForTimeout(500);
+await page.waitForFunction(
+  () => window.__caravanStore.state.current === 0
+    && window.__caravanStore.state.players[0].hand.some((c) => c.rank === "Joker"),
+  null, { timeout: 10000 }
+);
 
 // Move 21 (bug report): human Red Joker on AI Hub 2S.
 console.log("Move 21: human Red Joker on AI The Hub 2S...");
@@ -81,7 +86,11 @@ await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 0,
   target: { player: 1, lane: 2, cardIndex: 1 }, handIndex: 0,
 }));
-await page.waitForTimeout(250);
+await page.waitForFunction(
+  () => window.__caravanStore.state.current === 1
+    && window.__caravanStore.transition?.pendingAck?.confirmer === 1,
+  null, { timeout: 10000 }
+);
 
 const afterHuman = await page.evaluate(() => ({
   confirmer: window.__caravanStore.transition?.pendingAck?.confirmer ?? null,
@@ -102,7 +111,11 @@ await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 1,
   target: { player: 0, lane: 1, cardIndex: 0 }, handIndex: 0,
 }));
-await page.waitForTimeout(500);
+await page.waitForFunction(
+  () => window.__caravanStore.transition?.pendingAck?.confirmer === 0,
+  null, { timeout: 10000 }
+);
+await page.waitForSelector(".confirm.portal", { timeout: 5000 });
 
 const afterAi = await page.evaluate(() => {
   const t = window.__caravanStore.transition;

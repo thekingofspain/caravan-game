@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
 import { logInfo } from "./log.mjs";
+import { boardReady, waitGameOver } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -14,8 +15,7 @@ function mkPlayer(caravans, hand=[], deck=[]){ return {deck,hand,caravans}; }
 const browser = await chromium.launch({ args: ["--no-sandbox","--disable-setuid-sandbox"] });
 const page = await browser.newPage({ viewport:{width:1280,height:900} });
 await page.goto(BASE);
-await page.waitForSelector(".board",{timeout:8000});
-await page.waitForTimeout(500);
+await boardReady(page);
 
 // Setup winner AI state with removal details having multiple cards
 // Human: Boneyard has 5s, Shady has 5s, AI: New Reno and Hub have 5s - then Red Joker removes all 5s
@@ -45,10 +45,13 @@ const state = {
 };
 
 await page.evaluate(s=> window.__setCaravanState(s), state);
-await page.waitForTimeout(800);
+// The programmed state is already phase "over"; confirm the hook applied it,
+// then wait for the winner rows (including removal bullets) to render.
+await waitGameOver(page);
+await page.waitForSelector(".log .row.human .score", { timeout: 8000 });
 if ((await page.locator(".activity").count()) === 0) await page.getByRole("button", { name: "Activity" }).click();
 await page.waitForSelector(".activity", {timeout:3000});
-await page.waitForTimeout(500);
+await page.waitForSelector(".log .row.human .wins", { timeout: 8000 });
 
 const info = await page.evaluate(()=>{
   const getStyle = (el, prop)=> el ? getComputedStyle(el).getPropertyValue(prop) : null;

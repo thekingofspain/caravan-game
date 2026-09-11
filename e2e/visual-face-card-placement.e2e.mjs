@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck, waitTurn } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -10,9 +11,10 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
+  await waitTurn(page, 0);
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
 }
 
@@ -36,6 +38,7 @@ async function valueSlots() {
 }
 
 async function placeOnCaravan(ci) {
+  const before = await logLength(page);
   const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
@@ -44,7 +47,11 @@ async function placeOnCaravan(ci) {
     const wraps = stack.locator(".card");
     await wraps.last().click({ force: true });
   }
-  await page.waitForTimeout(200);
+  // The click commits the human move (logged in the store); wait for the log
+  // entry rather than a fixed sleep, then for the placed card to render.
+  await waitLogGrowth(page, before);
+  await waitNoPendingAck(page);
+  await stack.locator(".card").first().waitFor({ timeout: 8000 });
 }
 
 // Fill the 3 starting placeholders so caravans have cards to target with face cards.
@@ -54,7 +61,7 @@ for (let ci = 0; ci < 3; ci++) {
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card to fill a placeholder");
   await slots[0].dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
   await placeOnCaravan(ci);
 }
 await waitHumanTurn();
@@ -68,7 +75,13 @@ await page.evaluate(() => {
     window.__setCaravanState({ ...s });
   }
 });
-await page.waitForTimeout(400);
+// Wait for the injected face card to render in the human hand rather than a
+// fixed sleep.
+await page.waitForFunction(
+  () => [...document.querySelectorAll(".hand.human .slot.selectable .card")].some((el) => /jack|queen|king|joker/.test(el.className)),
+  null,
+  { timeout: 10000 }
+);
 
 // ── Find a face card with at least one valid target ──
 console.log("TEST: face card placement and rendering");
@@ -81,7 +94,7 @@ for (let i = 0; i < handCount; i++) {
   const t = faceType(cls);
   if (!t) continue;
   await handSlots.nth(i).dispatchEvent("click");
-  await page.waitForTimeout(100);
+  await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
   const targets = await page.locator(".card.target").count();
   if (targets > 0) {
     chosen = i;
@@ -90,7 +103,7 @@ for (let i = 0; i < handCount; i++) {
   }
   // not this one; deselect
   await page.locator(".slot.selected").first().dispatchEvent("click");
-  await page.waitForTimeout(60);
+  await page.waitForFunction(() => !document.querySelector(".hand.human .slot.selected"), null, { timeout: 8000 });
 }
 assert.ok(chosen >= 0, "no face card in hand has a valid target to play");
 console.log(`  selected a ${chosenType} with valid targets`);
@@ -102,8 +115,21 @@ const rowsBefore = await rowsLoc.count();
 const attBefore = await attLoc.count();
 
 const target = page.locator(".card.target").first();
+const moveLogged = await logLength(page);
 await target.click({ force: true });
-await page.waitForTimeout(250);
+// The face-card play changes either the row count (jack/joker removal) or the
+// attachment count (queen/king); wait for that DOM change plus the log entry
+// rather than a fixed sleep.
+await waitLogGrowth(page, moveLogged);
+await page.waitForFunction(
+  ([r, a]) => {
+    const rows = document.querySelectorAll(".caravan button.card[data-index]").length;
+    const att = document.querySelectorAll(".caravan button.card[data-index] .card").length;
+    return rows !== r || att !== a;
+  },
+  [rowsBefore, attBefore],
+  { timeout: 10000 }
+);
 
 const rowsAfter = await rowsLoc.count();
 const attAfter = await attLoc.count();

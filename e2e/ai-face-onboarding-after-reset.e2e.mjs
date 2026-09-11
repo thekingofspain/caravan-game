@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
 import assert from "node:assert";
+import { boardReady } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -14,8 +15,7 @@ function mkPlayer(caravans, hand=[], deck=[]){ return {deck,hand,caravans}; }
 const browser = await chromium.launch({ args: ["--no-sandbox","--disable-setuid-sandbox"] });
 const page = await browser.newPage({ viewport:{width:1280,height:900} });
 await page.goto(BASE);
-await page.waitForSelector(".board",{timeout:8000});
-await page.waitForTimeout(500);
+await boardReady(page);
 
 console.log("=== Step 1: Complete a game (phase over) ===");
 const completedState = {
@@ -26,14 +26,14 @@ const completedState = {
   current: 0, phase:"over", winner:0, log:[{id:1,text:"You win the caravan!",segments:[{type:"actor",player:0,form:"subject"}," win the caravan!"],detail:[]}], started:true
 };
 await page.evaluate(s=> window.__setCaravanState(s), completedState);
-await page.waitForTimeout(500);
+await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
 let phaseOver = await page.evaluate(()=> window.__caravanStore.state.phase);
 console.log("phase after complete:", phaseOver);
 assert.equal(phaseOver, "over");
 
 console.log("=== Step 2: Start new game (reset) ===");
 await page.evaluate(()=> window.__resetWithSeed(12345));
-await page.waitForTimeout(800);
+await page.waitForFunction(() => { const s = window.__caravanStore?.state; return s?.phase === "play" && s?.log?.length === 0; }, null, { timeout: 5000 });
 let afterReset = await page.evaluate(()=> {
   const s = window.__caravanStore.state;
   return { phase: s.phase, current: s.current, winner: s.winner, logLen: s.log.length, humanCaravans: s.players[0].caravans.map(c=>c.rows.length), aiCaravans: s.players[1].caravans.map(c=>c.rows.length), humanHand: s.players[0].hand.length, aiHand: s.players[1].hand.length };
@@ -68,7 +68,7 @@ const onboardingState = {
   phase:"play", winner:null, log:[], started:true
 };
 await page.evaluate(s=> window.__setCaravanState(s), onboardingState);
-await page.waitForTimeout(600);
+await page.waitForFunction(() => window.__caravanStore?.state?.current === 1 && window.__caravanStore?.legal?.length > 0, null, { timeout: 5000 });
 
 let onboardingCheck = await page.evaluate(()=>{
   const s = window.__caravanStore.state;

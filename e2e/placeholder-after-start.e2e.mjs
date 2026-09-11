@@ -3,6 +3,7 @@
 // shows its placeholder again — and the placeholder accepts cards.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -13,7 +14,7 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
@@ -37,13 +38,14 @@ async function valueSlots() {
 async function addValueCardTo(ci) {
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card to place");
+  const prevLog = await logLength(page);
   await page.locator(".hand.human .slot.selectable").nth(slots[0]).dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".slot.selected", { timeout: 5000 });
   const track = page.locator(".caravans.human .caravan").nth(ci).locator(".track.selectable");
   const ph = track.locator(".empty");
   if ((await ph.count()) > 0) await ph.first().click({ force: true });
   else await track.locator(".card").last().click({ force: true });
-  await page.waitForTimeout(250);
+  await waitLogGrowth(page, prevLog);
 }
 
 // Start the game: fill the 3 human starting caravans.
@@ -61,9 +63,11 @@ console.log("  PASS: 0 placeholders on the board after the game starts");
 
 // ── Disbanded caravan shows its placeholder again ──
 console.log("TEST: disbanded caravan shows its placeholder");
+const prevDisbandLog = await logLength(page);
 await page.evaluate(() => window.__act({ type: "disbandCaravan", player: 0, lane: 0 }));
-await page.waitForTimeout(400);
+await waitLogGrowth(page, prevDisbandLog);
 const disbanded = page.locator(".caravans.human .caravan").nth(0);
+await disbanded.locator(".empty").first().waitFor({ timeout: 10000 });
 assert.equal(await disbanded.locator(".empty").count(), 1, "disbanded caravan should show its placeholder");
 const box = await disbanded.locator(".empty").first().boundingBox();
 assert.ok(box && box.width > 10 && box.height > 10, "disbanded placeholder should be visible");
@@ -77,9 +81,20 @@ if (slots.length === 0) {
   console.log("  SKIP: no value card in hand to replay into the placeholder");
 } else {
   await page.locator(".hand.human .slot.selectable").nth(slots[0]).dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".slot.selected", { timeout: 5000 });
   await disbanded.locator(".empty").first().click({ force: true });
-  await page.waitForTimeout(400);
+  await page.waitForFunction(
+    () => {
+      const c = document.querySelectorAll(".caravans.human .caravan")[0];
+      return (
+        c &&
+        c.querySelectorAll(".empty").length === 0 &&
+        c.querySelectorAll("button.card[data-index]").length > 0
+      );
+    },
+    null,
+    { timeout: 10000 }
+  );
   assert.equal(await disbanded.locator(".empty").count(), 0, "placeholder gone after card placed");
   assert.ok((await disbanded.locator("button.card[data-index]").count()) > 0, "card placed via placeholder");
   console.log("  PASS: card placed through the placeholder");

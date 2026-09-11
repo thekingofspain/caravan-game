@@ -3,6 +3,7 @@
 // moves). Face-only hand + unstarted caravan = no legal moves at all;
 // the stuck player loses once the turn comes back to them.
 import { chromium } from "playwright";
+import { boardReady } from "./wait.mjs";
 import assert from "node:assert/strict";
 let id = 5000;
 function makeCard(deckId, rank, suitOrJoker) {
@@ -29,7 +30,7 @@ await page.waitForSelector(".board");
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if (await btn.count() > 0) await btn.first().click({ force: true });
 await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
-await page.waitForTimeout(600);
+await boardReady(page);
 
 // Opening bind: Boneyard not yet started, face-only hand, shoe stocked.
 // Nothing is legal — no value plays, no face plays, no discards, no disbands.
@@ -49,7 +50,7 @@ let state = {
 
 console.log("Programming state: Human has empty Boneyard, face-only hand, shoe stocked");
 await page.evaluate((s) => window.__setCaravanState(s), state);
-await page.waitForTimeout(600);
+await page.waitForFunction(() => Array.isArray(window.__caravanStore?.legal), null, { timeout: 10000 });
 
 let legal = await page.evaluate(() => window.__caravanStore.legal);
 console.log("legalMoves", legal.map((m) => m.type));

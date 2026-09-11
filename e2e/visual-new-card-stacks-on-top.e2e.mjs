@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { logInfo } from "./log.mjs";
+import { boardReady } from "./wait.mjs";
 
 function makeCard(deckId, rank, suitOrJoker){
   if(rank==="Joker"){
@@ -23,7 +24,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if(await startBtn.count()>0) await startBtn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+await boardReady(page);
 
 const hBoneyard = caravanOf([[makeCard(1,"2","diamonds")]], null, "diamonds");
 const hRedding = caravanOf([[makeCard(1,"9","hearts")],[makeCard(1,"7","diamonds")]], "desc","hearts");
@@ -46,9 +47,19 @@ const programmedState = {
 };
 console.log("Programming Shady 9+J,8,7...");
 await page.evaluate(s=> window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(600);
+await page.waitForFunction(
+  () => window.__caravanStore?.state?.players?.[0]?.hand?.length === 2,
+  null,
+  { timeout: 10000 }
+);
 await page.evaluate(()=> window.__act({type:"playValueCard", player:0, lane: 2, handIndex:0}));
-await page.waitForTimeout(600);
+await page.waitForFunction(
+  () =>
+    document.querySelectorAll(".caravans.human .caravan .track")[2]?.querySelectorAll(":scope > .card")
+      .length === 4,
+  null,
+  { timeout: 10000 }
+);
 
 const info = await page.evaluate(()=>{
   const tracks = document.querySelectorAll(".caravans.human .caravan .track");

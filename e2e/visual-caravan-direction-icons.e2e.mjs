@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -10,7 +11,7 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 let cid = 7000;
 function card(rank, suit) {
@@ -32,7 +33,12 @@ await page.evaluate((s) => window.__setCaravanState(s), {
   ],
   current: 0, phase: "play", winner: null, log: [], started: true,
 });
-await page.waitForTimeout(600);
+// Bespoke condition: the programmed caravans have rendered, identified by the
+// first human caravan header carrying data-dir="asc" (exactly what the test asserts).
+await page.waitForFunction(() => {
+  const headers = [...document.querySelectorAll(".caravans.human .caravan header")];
+  return headers.length >= 3 && headers[0].getAttribute("data-dir") === "asc";
+}, null, { timeout: 10000 });
 
 // ── Direction icons map to their masks; null reserves space ──
 console.log("TEST: direction icons match caravan direction");

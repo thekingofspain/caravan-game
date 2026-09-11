@@ -4,6 +4,7 @@
 // AI moves, the turn flips to Human with zero moves, game ends, AI wins.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, waitGameOver } from "./wait.mjs";
 
 let id = 6000;
 function makeCard(deckId, rank, suitOrJoker) {
@@ -30,7 +31,7 @@ await page.waitForSelector(".board");
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if (await btn.count() > 0) await btn.first().click({ force: true });
 await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
-await page.waitForTimeout(600);
+await boardReady(page);
 
 const hBon = caravanOf([]);
 const hRed = caravanOf([[makeCard(1, "10", "clubs")]], true);
@@ -45,7 +46,7 @@ console.log("Programming state: stuck Human (bind, empty shoe), AI to move");
 await page.evaluate((s) => window.__setCaravanState(s), {
   players: [stuckHuman, movingAi], current: 1, phase: "play", winner: null, log: [], started: true
 });
-await page.waitForTimeout(2500);
+await waitGameOver(page);
 const end = await page.evaluate(() => {
   const s = window.__caravanStore.state;
   return { phase: s.phase, winner: s.winner, lastLog: s.log[s.log.length - 1]?.text ?? null };

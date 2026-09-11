@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -12,7 +13,7 @@ page.on("console", (m) => {
 page.on("pageerror", (e) => domNestingErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 8000 });
@@ -23,7 +24,7 @@ async function clearSelection() {
   if (await sel.count() > 0) {
     // dispatchEvent: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
     await sel.first().dispatchEvent("click");
-    await page.waitForTimeout(60);
+    await page.waitForFunction(() => document.querySelectorAll(".slot.selected").length === 0, null, { timeout: 5000 });
   }
 }
 
@@ -44,6 +45,7 @@ async function valueSlots() {
 
 // Place a value card on the human caravan column `ci` (real user click).
 async function placeOnCaravan(ci) {
+  const prevLog = await logLength(page);
   const stack = page.locator(".caravans.human .caravan").nth(ci);
   const ph = stack.locator(".empty");
   if (await ph.count() > 0) {
@@ -52,7 +54,8 @@ async function placeOnCaravan(ci) {
     const wraps = stack.locator(".card");
     await wraps.last().click({ force: true });
   }
-  await page.waitForTimeout(200);
+  await waitLogGrowth(page, prevLog);
+  await waitNoPendingAck(page);
 }
 
 // ── Fill the 3 starting placeholders (one value card per caravan) ──
@@ -62,7 +65,7 @@ for (let ci = 0; ci < 3; ci++) {
   const slots = await valueSlots();
   assert.ok(slots.length > 0, "no value card available to fill a placeholder");
   await slots[0].dispatchEvent("click");
-  await page.waitForTimeout(120);
+  await page.waitForSelector(".slot.selected", { timeout: 5000 });
   await placeOnCaravan(ci);
 }
 
@@ -85,7 +88,7 @@ let tried = 0;
 for (const slot of candidates) {
   await clearSelection();
   await slot.dispatchEvent("click");
-  await page.waitForTimeout(100);
+  await page.waitForSelector(".slot.selected", { timeout: 1500 }).catch(() => {});
   if ((await page.locator(".slot.selected").count()) === 0) continue; // corner of the fanned slot missed; try the next candidate
 
   const stacks = page.locator(".caravans.human .caravan");
@@ -102,8 +105,9 @@ for (const slot of candidates) {
   tried += 1;
   const before = await stacks.nth(targetCi).locator(".card").count();
   const wraps = stacks.nth(targetCi).locator(".card");
+  const prevLog = await logLength(page);
   await wraps.last().click({ force: true });
-  await page.waitForTimeout(200);
+  await waitLogGrowth(page, prevLog).catch(() => {});
   const after = await stacks.nth(targetCi).locator(".card").count();
   if (after === before + 1) {
     placed = true;

@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitNoPendingAck, waitTurn } from "./wait.mjs";
 
 let id=6000;
 function makeCard(deckId, rank, suitOrJoker){
@@ -22,11 +23,11 @@ page.on("console", m=> m.type()==="error" && errors.push(m.text()));
 page.on("pageerror", e=> errors.push("PAGEERROR: "+e.message));
 
 await page.goto(process.env.BASE_URL || "http://localhost:5173/", { waitUntil:"networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 const btn = page.locator(".start .btn, button:has-text('Start')");
 if(await btn.count()>0) await btn.first().click({force:true});
 await page.waitForSelector(".caravans.human .caravan", {timeout:5000});
-await page.waitForTimeout(600);
+await boardReady(page);
 
 // State BEFORE final 9♣ (after AI A♣ to The Hub, step 32)
 // Human Boneyard: 10♣+K♦ (20) unsellable
@@ -50,9 +51,10 @@ let beforeState = {
   current: 0, phase:"play", winner:null, log:[], started:true
 };
 
-console.log("Programming state before final 9♣ (Human Shady 14 -> 23)...");
 await page.evaluate((s)=> window.__setCaravanState(s), beforeState);
-await page.waitForTimeout(600);
+// Programmed state applies synchronously; flush two frames so React renders it before reading.
+await page.waitForFunction(() => window.__caravanStore.state.players[0].caravans[2].rows.length === 3, null, { timeout: 10000 });
+await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
 let before = await page.evaluate(()=>{
   const s=window.__caravanStore.state;
@@ -62,12 +64,15 @@ assert.equal(before.phase, "play");
 assert.equal(before.hShaLen, 3);
 
 console.log("Human plays 9♣ to Shady (should be 23, still 1-1 tie, NOT game over)");
+const prevLog = await logLength(page);
 await page.evaluate(()=>{
   const s=window.__caravanStore.state;
   const idx=s.players[0].hand.findIndex(c=>c.rank==="9" && c.suit==="clubs");
   window.__act({ type:"playValueCard", player:0, lane: 2, handIndex: idx });
 });
-await page.waitForTimeout(800);
+await waitLogGrowth(page, prevLog);
+await waitTurn(page, 0);
+await waitNoPendingAck(page);
 
 let after = await page.evaluate(()=>{
   const s=window.__caravanStore.state;
@@ -91,7 +96,8 @@ assert.equal(after.hasSoldText, 0, "SOLD word should be removed from board");
 assert.ok(after.soldCols >= 3, "sellable caravans should have sellable border (at least 3 sellable: Redding 23, Shady 23, Hub 25)");
 
 // Let AI play one more move to ensure not stuck
-await page.waitForTimeout(1200); // AI auto
+await waitTurn(page, 0);
+await waitNoPendingAck(page);
 let afterAI = await page.evaluate(()=> ({ phase: window.__caravanStore.state.phase, current: window.__caravanStore.state.current }));
 console.log("after AI auto", afterAI);
 assert.equal(afterAI.phase, "play", "after AI auto, still play (no premature win)");

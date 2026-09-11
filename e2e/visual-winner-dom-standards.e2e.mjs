@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { chromium } from "playwright";
 import { logInfo } from "./log.mjs";
+import { boardReady, waitGameOver } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -18,8 +19,7 @@ function mkPlayer(caravans, hand = [], deck = []) {
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await page.goto(BASE);
-await page.waitForSelector(".board", { timeout: 8000 });
-await page.waitForTimeout(500);
+await boardReady(page);
 
 const hBoneyard = caravanOf([[makeCard(1, "10", "clubs"), makeCard(2, "K", "clubs")], [makeCard(3, "A", "clubs")]], "asc", "clubs");
 const hRedding = caravanOf([[makeCard(4, "7", "spades")], [makeCard(5, "6", "spades")], [makeCard(6, "5", "spades")], [makeCard(7, "4", "clubs"), makeCard(8, "K", "clubs")]], "desc", "spades");
@@ -38,10 +38,13 @@ const programmedState = {
 };
 
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(800);
+// The programmed state is already phase "over"; confirm the hook applied it,
+// then wait for the winner rows to render instead of sleeping.
+await waitGameOver(page);
+await page.waitForSelector(".log .row.human .score", { timeout: 8000 });
 if ((await page.locator(".activity").count()) === 0) await page.locator("button", { hasText: "Activity" }).click();
 await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
-await page.waitForTimeout(500);
+await page.waitForSelector(".log .row.human .wins", { timeout: 8000 });
 
 const info = await page.evaluate(() => {
   const gameover = document.querySelector(".gameover");

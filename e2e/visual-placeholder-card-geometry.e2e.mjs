@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { logLength, waitLogGrowth } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 
@@ -31,10 +32,12 @@ console.log("\nTEST 2: Placed card centering symmetry");
 
 const selectableCard = page.locator(".hand.human .slot.selectable").first();
 await selectableCard.dispatchEvent("click");
+await page.waitForSelector(".slot.selected", { timeout: 5000 });
+const prevLen = await logLength(page);
 const target = page.locator(".caravans.human .empty").first();
 await target.waitFor({ state: "attached", timeout: 3000 });
 await target.click({ force: true });
-await page.waitForTimeout(500);
+await waitLogGrowth(page, prevLen);
 
 const wrap = page.locator(".caravans.human .caravan button.card[data-index]").first();
 await wrap.waitFor({ state: "visible", timeout: 5000 });

@@ -6,6 +6,7 @@
 // onto the target row), so post-ack the host row lost it.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady } from "./wait.mjs";
 
 let id = 7000;
 function makeCard(deckId, rank, suitOrJoker) {
@@ -29,11 +30,10 @@ page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 page.on("pageerror", (e) => errors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
 await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
-await page.waitForTimeout(600);
 
 // Shady Sands holds [6D, 9D]; Dayglow holds [7C, 9C] (Joker target, index 1).
 const humanCaravans = [
@@ -53,14 +53,14 @@ await page.evaluate((s) => window.__setCaravanState(s), {
   players: [mkPlayer(humanCaravans, humanHand), mkPlayer(aiCaravans, aiHand)],
   current: Ai, phase: "play", winner: null, log: [], started: true,
 });
-await page.waitForTimeout(500);
+await page.waitForFunction(() => window.__caravanStore?.state?.current === 1, null, { timeout: 5000 });
 
 console.log("AI plays Black Joker on its OWN Dayglow 9C...");
 await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 1,
   target: { player: 1, lane: 0, cardIndex: 1 }, handIndex: 0,
 }));
-await page.waitForTimeout(800);
+await page.waitForFunction(() => window.__caravanStore?.transition?.pendingAck && document.querySelector(".confirm.portal"), null, { timeout: 5000 });
 
 const pre = await page.evaluate(() => {
   const s = window.__caravanStore.state;
@@ -109,7 +109,10 @@ assert.equal(pre.selectable, 0, "human blocked until ack");
 console.log("Human clicks confirm X...");
 await page.waitForSelector(".confirm.portal", { timeout: 5000 });
 await page.evaluate(() => document.querySelector(".confirm.portal")?.click());
-await page.waitForTimeout(1200);
+// NOTE: window.__caravanStore.transition goes stale on the ack path (the app
+// clears it via setUi without re-publishing hooks), so wait on the user-visible
+// signal — the confirm X unmounting — rather than waitNoPendingAck.
+await page.waitForFunction(() => document.querySelectorAll(".confirm.portal").length === 0, null, { timeout: 5000 });
 
 const post = await page.evaluate(() => {
   const s = window.__caravanStore.state;

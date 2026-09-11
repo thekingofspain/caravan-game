@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, logLength, waitLogGrowth, waitTurn } from "./wait.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch();
@@ -9,20 +10,24 @@ page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
 page.on("pageerror", (e) => consoleErrors.push("PAGEERROR: " + e.message));
 
 await page.goto(BASE, { waitUntil: "networkidle" });
-await page.waitForSelector(".board");
+await boardReady(page);
 
 async function waitHumanTurn() {
+  await waitTurn(page, 0);
   await page.waitForSelector(".hand.human .slot.selectable", { timeout: 4000 });
 }
 
 async function doHumanAction() {
+  const before = await logLength(page);
   // dispatchEvent for selection: the fanned hand overlaps, so coordinate clicks can land on a neighbor.
   const slots = page.locator(".hand.human .slot.selectable");
   const n = await slots.count();
   let selected = false;
   for (let i = 0; i < n; i++) {
     await slots.nth(i).dispatchEvent("click");
-    await page.waitForTimeout(100);
+    try {
+      await page.waitForSelector(".hand.human .slot.selected", { timeout: 2000 });
+    } catch {}
     if ((await page.locator(".hand.human .slot.selected").count()) > 0) { selected = true; break; }
   }
   if (!selected) return;
@@ -40,6 +45,10 @@ async function doHumanAction() {
       await page.locator(".deck:not(.ai)").click({ force: true });
     }
   }
+  // Every branch above commits a move (logged in the store); wait for the log
+  // entry and for the AI reply to return the turn rather than a fixed sleep.
+  await waitLogGrowth(page, before);
+  await waitTurn(page, 0);
 }
 
 async function backCards() {
@@ -69,7 +78,7 @@ await waitHumanTurn();
 const humanBefore = await page.locator(".caravans.human .caravan .card").count();
 const slot = page.locator(".hand.human .slot.selectable").first();
 await slot.dispatchEvent("click");
-await page.waitForTimeout(100);
+await page.waitForSelector(".hand.human .slot.selected", { timeout: 8000 });
 const ownTrack = page.locator(".caravans.human .caravan .track.selectable").first();
 const ownCount = await ownTrack.count();
 const targetCount = await page.locator(".card.target").count();
@@ -80,7 +89,13 @@ if (targetCount > 0) {
   if (await ph.count() > 0) await ph.first().click({ force: true });
   else await ownTrack.locator(".card").last().click({ force: true });
 }
-await page.waitForTimeout(150);
+// The play renders a new card on the human side; wait for that DOM change
+// rather than a fixed sleep.
+await page.waitForFunction(
+  (n) => document.querySelectorAll(".caravans.human .caravan .card").length > n,
+  humanBefore,
+  { timeout: 10000 }
+);
 const totalHumanWraps = await page.locator(".caravans.human .caravan .card").count();
 assert.ok(totalHumanWraps > humanBefore, "playing on own caravan should add a card");
 console.log("own caravan play OK");
@@ -102,7 +117,6 @@ let backs = [];
 for (let move = 0; move < 14; move++) {
   try { await waitHumanTurn(); } catch { break; }
   await doHumanAction();
-  await page.waitForTimeout(100);
   const b = await backCards();
   if (b.length) { backs = b; break; }
 }

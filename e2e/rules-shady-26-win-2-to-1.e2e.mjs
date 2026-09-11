@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { boardReady, waitGameOver } from "./wait.mjs";
 
 let id = 5000;
 function makeCard(deckId, rank, suitOrJoker) {
@@ -33,7 +34,7 @@ await page.waitForSelector(".board");
 const startBtn = page.locator(".start .btn, button:has-text('Start')");
 if ((await startBtn.count()) > 0) await startBtn.first().click({ force: true });
 await page.waitForSelector(".caravans.human .caravan", { timeout: 5000 });
-await page.waitForTimeout(600);
+await boardReady(page);
 
 // Pre-final state: Human to play 6♥ on Shady to make 26 and win 2-1
 // Human Boneyard: 10♣+K , A♣  => 20+1=21
@@ -108,7 +109,11 @@ const programmedState = {
 
 console.log("Programming pre-final state (Human to win with 6♥ on Shady)...");
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForTimeout(600);
+await page.waitForFunction(
+  () => window.__caravanStore.state.players[0].caravans[2].rows.length === 4,
+  null,
+  { timeout: 10000 }
+);
 
 let before = await page.evaluate(() => {
   const s = window.__caravanStore.state;
@@ -133,7 +138,7 @@ assert.equal(before.shadyScore, 20, "Shady 3+4+9+4=20 before");
 console.log("Human plays 6♥ on Shady Sands (caravan 2) — should win 21/26/26 vs 26/4/24");
 // Use direct act to avoid UI click flakiness, but also verify UI path works
 await page.evaluate(() => window.__act({ type: "playValueCard", player: 0, lane: 2, handIndex: 0 }));
-await page.waitForTimeout(600);
+await waitGameOver(page);
 
 let after = await page.evaluate(() => {
   const s = window.__caravanStore.state;
