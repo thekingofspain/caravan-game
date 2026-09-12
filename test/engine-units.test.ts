@@ -6,7 +6,7 @@ import { Caravan, GameState, PlayerState, Human, Ai, Card } from "../src/model/t
 
 function caravanEmpty(): Caravan { return { rows: [], direction: null, suit: null }; }
 function mkPlayer(caravans: Caravan[], hand: Card[]): PlayerState {
-  return { deck: [], hand, caravans: caravans as [Caravan, Caravan, Caravan] } as unknown as PlayerState;
+  return { shoe: [], hand, caravans: caravans as [Caravan, Caravan, Caravan] } as unknown as PlayerState;
 }
 function mkGame(p0: PlayerState, p1: PlayerState, current: typeof Human | typeof Ai = Human): GameState {
   return { players: [p0, p1], current, phase: "play", winner: null, log: [], started: false };
@@ -60,8 +60,13 @@ describe("appendActionLog", () => {
     const { next, lenBefore } = loggedSituation();
     expect(next.log.length).toBe(lenBefore + 1);
   });
-  it("logs a played message", () => {
-    expect(loggedSituation().next.log[0].text).toMatch(/played/);
+  it("logs actor, card, and target caravan", () => {
+    const parts = loggedSituation().next.log[0].segments.filter((s) => typeof s !== "string");
+    expect(parts).toMatchObject([
+      { type: "actor", player: Human },
+      { rank: "5", suit: "hearts" },
+      { type: "caravan", player: Human, lane: 1 }
+    ]);
   });
 });
 

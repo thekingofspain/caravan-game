@@ -19,8 +19,8 @@ function caravanOf(rows) {
   const last = rows.at(-1)?.[0];
   return { rows, direction: null, suit: last ? last.suit : null, started: true };
 }
-function mkPlayer(caravans, hand, deck = []) {
-  return { deck, hand, discard: null, caravans };
+function mkPlayer(caravans, hand, shoe = []) {
+  return { shoe, hand, discard: null, caravans };
 }
 function isValueCardClass(cls) {
   return !/jack|queen|king|joker/.test(cls || "");

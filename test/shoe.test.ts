@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
-import { setupGame, legalMoves } from "../src/model/engine";
+import { setupGame, applyMove, legalMoves } from "../src/model/engine";
 import {
     Card,
     Caravan,
@@ -28,14 +28,14 @@ function caravanOf(ranks: ValueRank[], suit: Suit): Caravan {
 }
 const EMPTY: Caravan[] = [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf([], "spades")];
 function mkPlayer(caravans: Caravan[], hand: Card[]): PlayerState {
-    return { deck: [], hand, discard: null, caravans };
+    return { shoe: [], hand, discard: null, caravans };
 }
 function mkGame(p0: PlayerState, p1: PlayerState, current: PlayerId = 0): GameState {
     return { players: [p0, p1], current, phase: "play", winner: null, log: [], started: false };
 }
-function unfillableShoeSituation(deck: Card[], hand: Card[]) {
+function unfillableShoeSituation(shoe: Card[], hand: Card[]) {
     const p0: PlayerState = {
-        deck,
+        shoe,
         hand,
         discard: null,
         caravans: [caravanOf([], "spades"), caravanOf(["10"], "clubs"), caravanOf(["9"], "hearts")]
@@ -50,7 +50,7 @@ describe("shoe / setup deal", () => {
         expect(setupGame({ seed: 7 }).players[Human].hand.length).toBe(8);
     });
     it("leaves Human a 22-card shoe", () => {
-        expect(setupGame({ seed: 7 }).players[Human].deck.length).toBe(22);
+        expect(setupGame({ seed: 7 }).players[Human].shoe.length).toBe(22);
     });
     it("deals Ai an 8-card hand", () => {
         expect(setupGame({ seed: 7 }).players[Ai].hand.length).toBe(8);
@@ -71,5 +71,29 @@ describe("shoe exhaustion (unfillable empties)", () => {
     it("has no moves when empties are unfillable and the shoe is empty", () => {
         const { s } = unfillableShoeSituation([], [makeCard(1, "K", "clubs")]);
         expect(legalMoves(s)).toEqual([]);
+    });
+});
+
+describe("draw exhaustion", () => {
+    function emptyShoeSituation(): GameState {
+        const p0: PlayerState = {
+            shoe: [],
+            hand: [makeCard(1, "5", "hearts"), makeCard(1, "4", "diamonds")],
+            discard: null,
+            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+        };
+        return mkGame(p0, mkPlayer(EMPTY, [makeCard(2, "2", "clubs")]), 0);
+    }
+    it("draws nothing from an empty shoe after a value play", () => {
+        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        expect(next.players[Human].shoe.length).toBe(0);
+    });
+    it("leaves the played card unreplaced when the shoe is empty", () => {
+        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        expect(next.players[Human].hand.length).toBe(1);
+    });
+    it("keeps the unplayed card in hand when the shoe is empty", () => {
+        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        expect(next.players[Human].hand[0].rank).toBe("4");
     });
 });

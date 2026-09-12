@@ -32,7 +32,7 @@ function caravanOf(rows) {
   if (rows.length >= 1) suit = rows[0][0].suit;
   return { rows, direction, suit };
 }
-function mkPlayer(caravans, hand, deck = []) { return { deck, hand, caravans }; }
+function mkPlayer(caravans, hand, shoe = []) { return { shoe, hand, caravans }; }
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });

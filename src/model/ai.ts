@@ -3,16 +3,17 @@ import { canPlaceCard } from "./rules/caravanCardRules";
 import {
     calcLaneScoreboard,
     calculatePoints,
+    calculateRowPoints,
     gameWinner,
     isSellablePoints,
-    MAX_SELLABLE
+    MAX_SELLABLE,
+    MIN_SELLABLE
 } from "./scoring";
 import {
-    Ai,
     AiLevel,
+    baseValue,
     Caravan,
     GameState,
-    Human,
     isValueCard,
     LANE_INDICES,
     Move,
@@ -29,6 +30,14 @@ const EVAL_TIE_WEIGHT = 20;
 
 const EXPERT_BREADTH = 12;
 
+/** Net Joker value below which building wins (no sale-break). */
+
+const JOKER_MIN_VALUE = 8;
+
+/** Probability the easiest level plays a random legal move instead of the best one. */
+
+export const EASY_RANDOM_P = 0.25;
+
 // ---- Types ----
 
 export type Rng = () => number;
@@ -38,20 +47,24 @@ export interface AiOptions {
     rng?: Rng;
 }
 
+/** Uniform pick clamped against rng() === 1 (Rng documents no range contract). */
+
+function pick<T>(items: readonly T[], rng: Rng): T {
+    return items[Math.min(items.length - 1, Math.floor(rng() * items.length))];
+}
+
 // ---- Functions ----
 
 function calculateCaravanAdvantage(current: Caravan, opposing: Caravan): number {
-    // humanPoints/aiPoints are positional: points of the first/second arg (current/opposing here).
+    // Points are positional (first/second arg); the seller is resolved
+    // player-relatively so this stays correct whichever side is acting.
 
-    const {
-        aiPoints: opposingPoints,
-        humanPoints: currentPoints,
-        seller
-    } = calcLaneScoreboard(current, opposing);
+    const { aiPoints: opposingPoints, humanPoints: currentPoints } = calcLaneScoreboard(current, opposing);
+    const seller = laneSeller(currentPoints, opposingPoints);
 
-    if (seller === Human) return EVAL_SOLD_WEIGHT + (currentPoints - 21);
+    if (seller === 1) return EVAL_SOLD_WEIGHT + (currentPoints - 21);
 
-    if (seller === Ai) return -EVAL_SOLD_WEIGHT - (26 - opposingPoints);
+    if (seller === -1) return -EVAL_SOLD_WEIGHT - (26 - opposingPoints);
 
     if (isSellablePoints(currentPoints)) return -EVAL_TIE_WEIGHT;
 
@@ -207,13 +220,25 @@ function sellersOf(state: GameState, acting: PlayerId): (1 | -1 | 0)[] {
     );
 }
 
-/** Move-aware bonus on top of the board eval: face-card intent + smart discards. */
+/**
+ * Worth of a non-sale removal on a lane at these points: full value within one
+ * play of selling (any value card closes up to 10), decaying further away.
+ */
+
+function removalWeight(oppPoints: number): number {
+    if (oppPoints > MAX_SELLABLE) return 0;
+
+    const gap = MIN_SELLABLE - oppPoints;
+
+    return gap <= 10 ? 1 : 10 / gap;
+}
 
 export function tacticalMoveBonus(
     prev: GameState,
     move: Move,
     next: GameState,
-    acting: PlayerId
+    acting: PlayerId,
+    level: AiLevel = "hard"
 ): number {
     const opp = otherPlayer(acting);
 
@@ -228,7 +253,19 @@ export function tacticalMoveBonus(
         if (card.rank === "J" && move.target.player === opp) {
             // Removing the opponent's seller swings ~200 (their sale gone, lane open).
 
-            return before[move.target.lane] === -1 ? 60 : 10;
+            if (before[move.target.lane] === -1) return 60;
+
+            // Otherwise the value is the net change: the removed row's points,
+            // weighted by how close the lane was to selling. Second hits on an
+            // already-degraded lane score themselves out of contention.
+
+            const row = prev.players[opp].caravans[move.target.lane].rows.at(move.target.cardIndex);
+
+            if (row === undefined) return 0;
+
+            const lanePoints = calculatePoints(prev.players[opp].caravans[move.target.lane]);
+
+            return Math.min(calculateRowPoints(row) * removalWeight(lanePoints), 20);
         }
 
         if (card.rank === "K") {
@@ -272,29 +309,60 @@ export function tacticalMoveBonus(
         }
 
         if (card.rank === "Joker") {
-            let removed = 0;
+            let oppRemoved = 0;
+            let ownRemoved = 0;
 
             for (const lane of LANE_INDICES) {
-                const delta =
+                const oppDelta =
                     calculatePoints(prev.players[opp].caravans[lane]) -
                     calculatePoints(next.players[opp].caravans[lane]);
 
-                if (delta > 0) removed += delta;
+                if (oppDelta > 0) oppRemoved += oppDelta;
+
+                const ownDelta =
+                    calculatePoints(prev.players[acting].caravans[lane]) -
+                    calculatePoints(next.players[acting].caravans[lane]);
+
+                if (ownDelta > 0) ownRemoved += ownDelta;
             }
 
-            let bonus = Math.min(removed, 40);
+            const net = oppRemoved - ownRemoved;
+            let saleBreak = false;
 
             for (const lane of LANE_INDICES) {
                 if (before[lane] === -1 && after[lane] !== -1) {
-                    bonus += 50;
+                    saleBreak = true;
                     break;
                 }
             }
 
-            return Math.min(bonus, 60);
+            // Speculative Jokers with little net value lose to building.
+
+            if (net <= 0 || (!saleBreak && net < JOKER_MIN_VALUE)) return 0;
+
+            return Math.min(Math.min(net, 40) + (saleBreak ? 50 : 0), 60);
         }
 
         return 0;
+    }
+
+    if (move.type === "playValueCard") {
+        // Seller-count is scored only above hard: closing and blocking matter more
+        // than raw points once the match comes down to two sellers.
+
+        if (level === "hard") return 0;
+
+        const myBefore = sellersOf(prev, acting).filter((s) => s === 1).length;
+        const myAfter = sellersOf(next, acting).filter((s) => s === 1).length;
+        const oppBefore = sellersOf(prev, acting).filter((s) => s === -1).length;
+        const oppAfter = sellersOf(next, acting).filter((s) => s === -1).length;
+        let bonus = 0;
+
+        if (myBefore === 1 && myAfter === 2) bonus += 30;
+
+        if (oppBefore < 2 && oppAfter === 2) bonus -= 40;
+
+        return bonus;
     }
 
     if (move.type === "discardCard") {
@@ -307,7 +375,7 @@ export function tacticalMoveBonus(
                 canPlaceCard(card, prev.players[acting].caravans[lane])
             );
 
-            // Throwing away a playable number hurts; ditching a dead card is fine.
+            // Throwing away a playable value card hurts; ditching a dead card is fine.
 
             return playable ? -4 : -0.2;
         }
@@ -315,15 +383,13 @@ export function tacticalMoveBonus(
         return -2;
     }
 
-    if (move.type === "disbandCaravan") {
-        const points = calculatePoints(prev.players[acting].caravans[move.lane]);
+    // Only disbandCaravan reaches here: every other move type returns above.
 
-        // Base eval already prices the lost seller; bonus only frees busted lanes.
+    const points = calculatePoints(prev.players[acting].caravans[move.lane]);
 
-        return points > MAX_SELLABLE ? 10 : 0;
-    }
+    // Base eval already prices the lost seller; bonus only frees busted lanes.
 
-    return 0;
+    return points > MAX_SELLABLE ? 10 : 0;
 }
 
 function isWinningState(next: GameState, acting: PlayerId): boolean {
@@ -362,12 +428,19 @@ function determineTacticalBestMove(state: GameState, acting: PlayerId, rng: Rng)
         } else if (sc === bestScore) best.push(a);
     }
 
-    return best[Math.floor(rng() * best.length)];
+    return pick(best, rng);
 }
 
 // ---- Expert: 2-ply minimax on the tactical eval (option C) ----
 
-function determineExpertBestMove(state: GameState, acting: PlayerId, rng: Rng): Move {
+function determineExpertBestMove(
+    state: GameState,
+    acting: PlayerId,
+    rng: Rng,
+    extraBonus: (prev: GameState, move: Move, next: GameState, acting: PlayerId) => number = () =>
+        0,
+    level: AiLevel = "expert"
+): Move {
     const opp = otherPlayer(acting);
     const acts = nonLosingMoves(state, acting);
 
@@ -378,7 +451,8 @@ function determineExpertBestMove(state: GameState, acting: PlayerId, rng: Rng): 
 
         if (isWinningState(next, acting)) return { a, next, win: true, s1: Infinity, bonus: 0 };
 
-        const bonus = tacticalMoveBonus(state, a, next, acting);
+        const bonus =
+            tacticalMoveBonus(state, a, next, acting, level) + extraBonus(state, a, next, acting);
 
         return { a, next, win: false, s1: evaluateTacticalBoard(next, acting) + bonus, bonus };
     });
@@ -403,37 +477,33 @@ function determineExpertBestMove(state: GameState, acting: PlayerId, rng: Rng): 
         } else {
             const replies = legalMoves(next);
 
-            if (replies.length === 0) {
-                final = bonus + 50;
-            } else {
-                // Opponent avoids handing us an immediate win unless forced.
+            // Opponent avoids handing us an immediate win unless forced.
 
-                const evaluated = replies.map((b) => {
-                    const next2 = applyMove(next, b);
+            const evaluated = replies.map((b) => {
+                const next2 = applyMove(next, b);
 
-                    return {
-                        next2,
-                        suicide: isWinningState(next2, acting),
-                        kill: isWinningState(next2, opp)
-                    };
-                });
-                const pool = evaluated.filter((e) => !e.suicide);
-                const considered = pool.length > 0 ? pool : evaluated;
-                let minReply = Infinity;
+                return {
+                    next2,
+                    suicide: isWinningState(next2, acting),
+                    kill: isWinningState(next2, opp)
+                };
+            });
+            const pool = evaluated.filter((e) => !e.suicide);
+            const considered = pool.length > 0 ? pool : evaluated;
+            let minReply = Infinity;
 
-                for (const e of considered) {
-                    if (e.kill) {
-                        minReply = -Infinity;
-                        break;
-                    }
-
-                    const v = evaluateTacticalBoard(e.next2, acting);
-
-                    if (v < minReply) minReply = v;
+            for (const e of considered) {
+                if (e.kill) {
+                    minReply = -Infinity;
+                    break;
                 }
 
-                final = minReply + bonus;
+                const v = evaluateTacticalBoard(e.next2, acting);
+
+                if (v < minReply) minReply = v;
             }
+
+            final = minReply + bonus;
         }
 
         if (final > bestScore) {
@@ -442,7 +512,100 @@ function determineExpertBestMove(state: GameState, acting: PlayerId, rng: Rng): 
         } else if (final === bestScore) best.push(a);
     }
 
-    return best[Math.floor(rng() * best.length)];
+    return pick(best, rng);
+}
+
+// ---- Master: risk-vs-reward on top of the expert shape ----
+
+/** Reward points gained per point of distance-to-sellable closed. */
+
+const MASTER_REWARD_PER_POINT = 2;
+
+/** Cap so steady progress never outranks a sale-break. */
+
+const MASTER_REWARD_CAP = 16;
+
+/** Bonus per opponent ply-to-win pushed out (negative when letting it shrink). */
+
+const MASTER_RISK_PER_PLY = 30;
+
+function masterReward(prev: GameState, next: GameState, acting: PlayerId): number {
+    if (prev.phase === "over" || next.phase === "over") return 0;
+
+    const dist = (points: number): number => Math.max(0, MIN_SELLABLE - points);
+    let closed = 0;
+
+    for (const lane of LANE_INDICES) {
+        const before = calculatePoints(prev.players[acting].caravans[lane]);
+        const after = calculatePoints(next.players[acting].caravans[lane]);
+
+        if (after > MAX_SELLABLE) continue;
+
+        closed += Math.max(0, dist(before) - dist(after));
+    }
+
+    return Math.min(closed * MASTER_REWARD_PER_POINT, MASTER_REWARD_CAP);
+}
+
+/**
+ * Minimal opponent plays to take a lane, assuming best-case cards
+ * (any value card closes up to 10 per turn). Busted lanes are unwinnable.
+ */
+
+function oppLanePlies(state: GameState, acting: PlayerId, lane: (typeof LANE_INDICES)[number]): number {
+    const opp = otherPlayer(acting);
+    const myPoints = calculatePoints(state.players[acting].caravans[lane]);
+    const oppPoints = calculatePoints(state.players[opp].caravans[lane]);
+
+    if (laneSeller(myPoints, oppPoints) === -1) return 0;
+
+    if (oppPoints > MAX_SELLABLE) return 99;
+
+    if (isSellablePoints(oppPoints)) return 1;
+
+    const hand = state.players[opp].hand;
+    const car = state.players[opp].caravans[lane];
+
+    for (const card of hand) {
+        if (!isValueCard(card)) continue;
+
+        if (!canPlaceCard(card, car)) continue;
+
+        const after = oppPoints + baseValue(card);
+
+        if (after > MAX_SELLABLE) continue;
+
+        if (isSellablePoints(after) && laneSeller(myPoints, after) === -1) return 1;
+    }
+
+    return Math.max(1, Math.ceil((MIN_SELLABLE - oppPoints) / 10));
+}
+
+/** Minimal opponent plays to win the game: the two closest lanes (two win). */
+
+function oppGamePlies(state: GameState, acting: PlayerId): number {
+    const plies = LANE_INDICES.map((lane) => oppLanePlies(state, acting, lane)).sort((a, b) => a - b);
+
+    return (plies[0] ?? 99) + (plies[1] ?? 99);
+}
+
+function masterRisk(prev: GameState, next: GameState, acting: PlayerId): number {
+    if (prev.phase === "over" || next.phase === "over") return 0;
+
+    return MASTER_RISK_PER_PLY * (oppGamePlies(next, acting) - oppGamePlies(prev, acting));
+}
+
+export function masterMoveBonus(
+    prev: GameState,
+    _move: Move,
+    next: GameState,
+    acting: PlayerId
+): number {
+    return masterReward(prev, next, acting) + masterRisk(prev, next, acting);
+}
+
+function determineMasterBestMove(state: GameState, acting: PlayerId, rng: Rng): Move {
+    return determineExpertBestMove(state, acting, rng, masterMoveBonus, "master");
 }
 
 export function determineBestMove(
@@ -454,11 +617,17 @@ export function determineBestMove(
     const level: AiLevel = opts.level ?? "normal";
     const rng: Rng = opts.rng ?? Math.random;
 
+    if (level === "master") return determineMasterBestMove(state, actingPlayerId, rng);
+
     if (level === "expert") return determineExpertBestMove(state, actingPlayerId, rng);
 
     if (level === "hard") return determineTacticalBestMove(state, actingPlayerId, rng);
 
     const acts = nonLosingMoves(state, actingPlayerId);
+
+    // Easiest level: mostly greedy, sometimes just plays something legal.
+
+    if (rng() < EASY_RANDOM_P) return pick(acts, rng);
 
     let bestScore = -Infinity;
     let best: Move[] = [];
@@ -466,7 +635,7 @@ export function determineBestMove(
     for (const a of acts) {
         const next = applyMove(state, a);
 
-        if (gameWinner(next) === actingPlayerId) return a;
+        if (isWinningState(next, actingPlayerId)) return a;
 
         let sc = evaluateBoard(next, actingPlayerId);
 
@@ -478,6 +647,6 @@ export function determineBestMove(
         } else if (sc === bestScore) best.push(a);
     }
 
-    return best[Math.floor(rng() * best.length)];
+    return pick(best, rng);
 }
 // #endregion

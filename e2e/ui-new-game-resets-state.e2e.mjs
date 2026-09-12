@@ -20,12 +20,12 @@ let selCount = await page.locator(".hand.human .slot.selected").count();
 logInfo("selected count after click", selCount);
 assert.equal(selCount, 1, "should have 1 selected before reset");
 
-// Also open deck and activity to test they get closed on reset.
-// NOTE: without ?peekDeck the AI deck has no onClick, so this click is a
+// Also open shoe and activity to test they get closed on reset.
+// NOTE: without ?peekShoe the AI shoe has no onClick, so this click is a
 // no-op in this config and guards nothing observable — no wait needed here.
 await page.evaluate(() => {
-  const aiDeck = document.querySelector(".deck.ai");
-  if (aiDeck) aiDeck.click();
+  const aiShoe = document.querySelector(".shoe.ai");
+  if (aiShoe) aiShoe.click();
 });
 // Semantic locator (role + accessible name) instead of .btn textContent scan.
 if ((await page.locator(".activity").count()) === 0) {
@@ -51,17 +51,16 @@ const after = await page.evaluate(() => {
   const store = window.__caravanStore;
   return {
     hand: s.players[0].hand.map(c=>c.id),
-    deckLen: s.players[0].deck.length,
+    shoeLen: s.players[0].shoe.length,
     selDom: document.querySelectorAll(".hand.human .slot.selected").length,
     selAria: document.querySelectorAll(".hand.human .slot[aria-pressed='true']").length,
     toast: document.querySelector(".toast")?.textContent || null,
     pendingRemove: document.querySelectorAll(".pending-remove, .is-remove-src").length,
-    viewDeckOpen: document.querySelectorAll(".overlay").length,
+    viewShoeOpen: document.querySelectorAll(".overlay").length,
     activityOpen: document.querySelectorAll(".activity").length,
     previous: store.previous,
     transition: store.transition,
     lastMove: store.lastMove,
-    thinking: store.thinking,
     winner: s.winner,
     phase: s.phase,
     logLen: s.log.length,
@@ -75,13 +74,12 @@ const wideActivityExpected = await page.evaluate(() => window.matchMedia("(min-w
 if (after.selDom !== 0) failures.push(`DOM still has ${after.selDom} is-selected after reset`);
 if (after.selAria !== 0) failures.push(`DOM still has ${after.selAria} aria-pressed after reset`);
 if (after.hand.join(",") === beforeSel.join(",")) failures.push("hand ids unchanged after reset");
-if (after.viewDeckOpen !== 0) failures.push("deck overlay still open after reset");
+if (after.viewShoeOpen !== 0) failures.push("shoe overlay still open after reset");
 if (after.activityOpen !== wideActivityExpected) failures.push(`activity open=${after.activityOpen}, expected ${wideActivityExpected} (persistent chrome on wide viewports)`);
 if (after.toast !== null) failures.push(`toast not cleared: ${after.toast}`);
 if (after.pendingRemove !== 0) failures.push(`pendingRemove not cleared: ${after.pendingRemove}`);
 if (after.previous !== null) failures.push(`previous not null`);
 if (after.transition !== null) failures.push(`transition not null`);
-if (after.thinking !== false) failures.push(`thinking not false`);
 if (after.winner !== null) failures.push(`winner not null`);
 if (after.phase !== "play") failures.push(`phase not play`);
 if (after.logLen !== 0) failures.push(`log not empty`);

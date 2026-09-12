@@ -12,8 +12,8 @@ function makeCard(id, rank, suit) {
 function caravanOf(rows, direction = null, suit = null) {
   return { rows, direction, suit };
 }
-function mkPlayer(caravans, hand = [], deck = []) {
-  return { deck, hand, caravans };
+function mkPlayer(caravans, hand = [], shoe = []) {
+  return { shoe, hand, caravans };
 }
 
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });

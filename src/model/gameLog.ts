@@ -7,6 +7,7 @@ import {
     Card,
     GameState,
     Human,
+    IllegalMoveError,
     JOKER_RANK,
     LANE_INDICES,
     LaneIndex,
@@ -103,7 +104,15 @@ export function cardsToRemove(state: GameState, refs: TargetRef[]): CardsToRemov
 
         if (byRow.has(key)) continue;
 
-        const cards = [...state.players[ref.player].caravans[ref.lane].rows[ref.cardIndex]];
+        const rows = state.players[ref.player].caravans[ref.lane].rows;
+
+        if (ref.cardIndex < 0 || ref.cardIndex >= rows.length) {
+            throw new IllegalMoveError(
+                `cardsToRemove: no row at ${String(ref.player)}-${String(ref.lane)}-${String(ref.cardIndex)}`
+            );
+        }
+
+        const cards = [...rows[ref.cardIndex]];
 
         byRow.set(key, { ref, cards });
     }

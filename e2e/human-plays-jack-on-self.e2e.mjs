@@ -16,7 +16,7 @@ function caravanOf(cards){
   if(cards.length>=1) suit=cards[0].card.suit;
   return { rows: cards.map(c=> [c.card, ...c.attachments]), direction, suit };
 }
-function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans, sales:0 }; }
+function mkPlayer(caravans, hand, shoe=[]){ return { shoe, hand, caravans, sales:0 }; }
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport:{width:1280,height:900} });

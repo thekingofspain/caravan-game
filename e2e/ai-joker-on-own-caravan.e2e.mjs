@@ -20,7 +20,7 @@ function caravanOf(rows) {
   const last = rows.at(-1)?.[0];
   return { rows, direction: null, suit: last ? last.suit : null, started: true };
 }
-function mkPlayer(caravans, hand, deck = []) { return { deck, hand, caravans }; }
+function mkPlayer(caravans, hand, shoe = []) { return { shoe, hand, caravans }; }
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });

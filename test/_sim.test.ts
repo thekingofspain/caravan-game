@@ -32,8 +32,9 @@ describe("balance sim", () => {
     console.log(
       `games=100 p0=${p0} p1=${p1} unfinished=${unfinished} avgSteps=${(steps / 100).toFixed(1)}`,
     );
-    // Allow small rate of placeholder-loop stalls (deck exhaustion) — engine loops discarding placeholders
-    // Increased from 5 to 10 after direction persistence fix (more stalls, still acceptable)
+    // Allow small rate of placeholder-loop stalls (shoe exhaustion) — engine loops discarding placeholders.
+    // Increased from 5 to 10 after direction persistence fix (more stalls, still acceptable).
+    // Tracks #13: investigate the stalls, then drive this cap down.
     expect(unfinished).toBeLessThanOrEqual(10);
   });
 });

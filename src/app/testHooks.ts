@@ -1,17 +1,11 @@
-import type { GameState, Move, Nullable } from "../model/types";
+import type { GameState, Move } from "../model/types";
 import type { GameStore, ReducerMove } from "../viewmodel/useGame";
 
-let cached: Nullable<boolean> = null;
-
 export function testHooksEnabled(): boolean {
-    if (cached !== null) return cached;
-
-    cached =
-        typeof window === "undefined"
-            ? false
-            : import.meta.env.DEV || new URLSearchParams(window.location.search).has("e2e");
-
-    return cached;
+    return (
+        typeof window !== "undefined" &&
+        (import.meta.env.DEV || new URLSearchParams(window.location.search).has("e2e"))
+    );
 }
 
 // Contract for the e2e remote control. Every `window.__*` test seam lives
@@ -54,4 +48,14 @@ export function publishTestHooks(fields: TestWindowHooks): () => void {
 
         if (fields.__caravanDispatch !== undefined) delete w.__caravanDispatch;
     };
+}
+
+// Merge-only freshness update (no cleanup): the mount-time publishTestHooks
+// cleanup still removes the fields on unmount. Use for per-render values so
+// polling e2e scripts never observe a delete/re-assign gap.
+
+export function updateTestHooks(fields: TestWindowHooks): void {
+    if (!testHooksEnabled() || typeof window === "undefined") return;
+
+    Object.assign(window as unknown as TestWindowHooks, fields);
 }

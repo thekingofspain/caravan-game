@@ -14,7 +14,7 @@ function caravanOf(ranks, suit="spades"){
   if(rows.length>=2){ const a=rows[0][0].rank==="A"?1:Number(rows[0][0].rank); const b=rows[1][0].rank==="A"?1:Number(rows[1][0].rank); direction = b>a ? "asc" : "desc"; }
   return { rows, direction, suit: rows.length? suit: null };
 }
-function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans }; }
+function mkPlayer(caravans, hand, shoe=[]){ return { shoe, hand, caravans }; }
 const Human=0, Ai=1;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport:{width:1280,height:900} });

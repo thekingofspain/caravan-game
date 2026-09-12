@@ -378,9 +378,9 @@ body {
     margin-top: auto;
 }
 
-/* ── 07 — Deck ── */
-/* Deck — base: .deck */
-.deck {
+/* ── 07 — Shoe ── */
+/* Shoe — base: .shoe */
+.shoe {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -391,12 +391,12 @@ body {
     cursor: pointer;
 }
 
-.deck .card {
+.shoe .card {
     width: var(--card-w);
     height: var(--card-h);
 }
 
-.deck .empty {
+.shoe .empty {
     width: var(--card-w);
     height: var(--card-h);
     border: var(--card-border);
@@ -405,14 +405,14 @@ body {
     opacity: 0.5;
 }
 
-.deck .count {
+.shoe .count {
     font-size: var(--fs-xs);
     font-weight: 700;
     color: var(--c-fg);
 }
-/* Discard pile: placeholder beside each deck showing the last discard
+/* Discard pile: placeholder beside each shoe showing the last discard
    face-up under a big red X (single card, no history). */
-.deck-pair {
+.shoe-pair {
     display: flex;
     align-items: flex-start;
     gap: var(--sp-2);
@@ -665,11 +665,8 @@ body {
 }
 
 .caravan .score.sold,
-.caravan .score.bold {
-    font-weight: 700;
-}
 .caravan .score.busted {
-    color: var(--c-bust);
+    font-weight: 700;
 }
 
 .caravan .total {
@@ -1158,8 +1155,7 @@ body {
     filter: brightness(0.85);
 }
 
-.log .score.sold,
-.log .score.bold {
+.log .score.sold {
     font-weight: 700;
 }
 .log .sep {
@@ -1380,9 +1376,20 @@ body {
     outline-offset: 0.125rem;
 }
 
-.caravan .track:focus-visible {
+.caravan .track:focus-visible,
+.caravan .card:focus-visible {
     outline: 0.1875rem solid var(--c-accent);
     outline-offset: 0.125rem;
+}
+
+/* ── 19c — Visually hidden (screen-reader-only) status text ── */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 /* ── 20 — Motion & forced-colors ── */

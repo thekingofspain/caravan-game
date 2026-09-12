@@ -21,8 +21,8 @@ function card(rank, suit) {
 function caravanOf(ranks, suit, direction) {
   return { rows: ranks.map((r) => [card(r, suit)]), direction, suit: ranks.length ? suit : null };
 }
-function mkPlayer(caravans, hand = [], deck = []) {
-  return { deck, hand, caravans };
+function mkPlayer(caravans, hand = [], shoe = []) {
+  return { shoe, hand, caravans };
 }
 
 // Human: asc (3,5), desc (9,7), single-row (4, no direction).

@@ -3,6 +3,7 @@ import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cardClassName } from "../model/cards";
+import { caravanName } from "../model/names";
 import type { CaravanPointsMeta } from "../model/scoring";
 import {
     Caravan as CaravanType,
@@ -20,12 +21,17 @@ interface CaravanProps {
     caravan: CaravanType;
     lane: LaneIndex;
     playerId: PlayerId;
-    highestSold: boolean;
     selection: SelectionState;
     onCardClick: (target: TargetRef) => void;
     onPlaceholderClick: (lane: LaneIndex) => void;
     onAcknowledge: () => void;
     children?: ReactNode;
+
+    // False where the placeholder has no action (AI side): renders a
+    // non-focusable marker.
+
+    placeholderInteractive?: boolean;
+
 }
 
 // Fixed pseudo-random tilt per caravan row: lane is the caravan column, row
@@ -61,7 +67,7 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
     // revealing its card is the closest equivalent.
 
     const focusRef = useCallback(
-        (node: Nullable<HTMLSpanElement>) => {
+        (node: Nullable<HTMLButtonElement>) => {
             if (!node) return;
 
             node.focus({ preventScroll: true });
@@ -104,22 +110,14 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
     if (!pos || typeof document === "undefined") return null;
 
     return createPortal(
-        <span
+        <button
             ref={focusRef}
-            role="button"
+            type="button"
             className="confirm portal"
-            tabIndex={0}
             aria-label={label}
             onClick={(e) => {
                 e.stopPropagation();
                 onAcknowledge();
-            }}
-            onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAcknowledge();
-                }
             }}
             style={{
                 position: "fixed",
@@ -131,7 +129,7 @@ function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: Port
             }}
         >
             {symbol}
-        </span>,
+        </button>,
         document.body
     );
 }
@@ -144,7 +142,8 @@ function CaravanImpl({
     onCardClick,
     onPlaceholderClick,
     onAcknowledge,
-    children
+    children,
+    placeholderInteractive = true
 }: CaravanProps) {
     const isHuman = playerId === Human;
 
@@ -214,13 +213,18 @@ function CaravanImpl({
                 />
             ))}
             {caravan.rows.length === 0 ? (
-                <button
-                    type="button"
-                    className={`empty ${selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
-                    onClick={() => {
-                        onPlaceholderClick(lane);
-                    }}
-                />
+                placeholderInteractive ? (
+                    <button
+                        type="button"
+                        className={`empty ${selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
+                        aria-label={`Play a card to ${caravanName(playerId, lane)}`}
+                        onClick={() => {
+                            onPlaceholderClick(lane);
+                        }}
+                    />
+                ) : (
+                    <span className="empty" aria-hidden="true" />
+                )
             ) : null}
         </div>
     );
@@ -321,13 +325,16 @@ function CaravanRowButton({
 }
 
 export function CaravanPoints({ meta }: { meta: CaravanPointsMeta }) {
+    const statusText = meta.isSold ? "sold" : meta.status;
+
     return (
         <span
-            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold bold" : ""} ${meta.isSold ? "highest" : ""} ${meta.status === "busted" ? "busted bold" : ""}`}
+            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold" : ""} ${meta.status === "busted" ? "busted" : ""}`}
             data-total={meta.points}
             data-sellable={meta.isSellable ? "1" : "0"}
         >
-            <span className="total">{meta.points}</span>
+            <span className="total" aria-hidden="true">{meta.points}</span>
+            <span className="visually-hidden">{`${String(meta.points)} points, ${statusText}`}</span>
         </span>
     );
 }

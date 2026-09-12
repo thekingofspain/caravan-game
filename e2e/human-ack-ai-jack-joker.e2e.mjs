@@ -11,8 +11,8 @@ const Human=0, Ai=1;
 function caravanOf(ranks, suit="spades"){
   return { rows: ranks.map(r=> [makeCard(suit, r)]), direction: ranks.length>=2 ? (ranks[1] > ranks[0] ? "asc" : "desc") : null, suit: ranks.length? suit: null };
 }
-function mkPlayer(caravans, hand, deck=[]){
-  return { deck, hand, caravans, sales:0 };
+function mkPlayer(caravans, hand, shoe=[]){
+  return { shoe, hand, caravans, sales:0 };
 }
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });

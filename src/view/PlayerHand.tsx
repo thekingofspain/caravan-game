@@ -68,8 +68,7 @@ function PlayerHandImpl({
                             >
                                 <div
                                     className={`${cardClassName("card", card)} ${selectedHandIndex === i ? "selected" : ""}`}
-                                    role="img"
-                                    aria-label={cardLabel(card)}
+                                    aria-hidden="true"
                                 />
                             </button>
                         );

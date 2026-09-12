@@ -9,7 +9,7 @@ function makeCard(deckId, rank, suitOrJoker) {
 }
 const Human=0, Ai=1;
 function caravanOf(rows, direction, suit){ return { rows, direction, suit }; }
-function mkPlayer(caravans, hand, deck=[]){ return { deck, hand, caravans }; }
+function mkPlayer(caravans, hand, shoe=[]){ return { shoe, hand, caravans }; }
 
 const BASE = process.env.BASE_URL || "http://localhost:5173/";
 const browser = await chromium.launch();

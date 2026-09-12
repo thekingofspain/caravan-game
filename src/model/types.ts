@@ -117,7 +117,7 @@ export type Direction = "asc" | "desc";
 export type PointsStatus = "sellable" | "busted" | "unsellable";
 export type CaravanRow = Card[];
 
-// Invariant: row[0] is a value card (A,2-10), row[1..4] are operation cards (J/Q/K/Joker), length 1..5.
+// Invariant: row[0] is a value card (A,2-10), row[1..3] are operation cards (J/Q/K/Joker), length 1..4.
 
 export interface Caravan {
     rows: CaravanRow[];
@@ -148,7 +148,13 @@ export function otherPlayer(player: PlayerId): PlayerId {
 }
 
 export function playedCard(state: GameState, player: PlayerId, handIndex: number): Card {
-    return state.players[player].hand[handIndex];
+    const hand = state.players[player].hand;
+
+    if (handIndex < 0 || handIndex >= hand.length) {
+        throw new IllegalMoveError(`playedCard: no card at hand index ${String(handIndex)}`);
+    }
+
+    return hand[handIndex];
 }
 
 export interface ActorRef {
@@ -166,13 +172,13 @@ export interface CaravanRef {
 }
 export type LogSegment = string | Card | ActorRef | CaravanRef;
 export type GamePhase = "play" | "over";
-export type AiLevel = "normal" | "hard" | "expert";
+export type AiLevel = "normal" | "hard" | "expert" | "master";
 export interface GameConfig {
     seed?: number;
 }
 export type SetupOptions = GameConfig & { first?: PlayerId };
 export interface PlayerState {
-    deck: Card[];
+    shoe: Card[];
     hand: Card[];
     caravans: Caravan[];
 

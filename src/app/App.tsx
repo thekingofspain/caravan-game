@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Board } from "../view/Board";
 import { GameConfig, useGame } from "../viewmodel/useGame";
-import { publishTestHooks } from "./testHooks";
+import { publishTestHooks, updateTestHooks } from "./testHooks";
 
 export default function App() {
     const [seed] = useState(() => {
-        const params = new URLSearchParams(window.location.search);
-        const seedParam = params.get("seed");
+        const seedParam = new URLSearchParams(window.location.search).get("seed");
+        const parsed = seedParam === null ? NaN : Number(seedParam);
 
-        return seedParam ? Number(seedParam) : Math.floor(Math.random() * 1e9);
+        return Number.isFinite(parsed) ? parsed : Math.floor(Math.random() * 1e9);
     });
 
     return <Game config={{ seed }} />;
@@ -17,23 +17,31 @@ export default function App() {
 
 function Game({ config }: { config: GameConfig }) {
     const store = useGame(config);
+    const storeRef = useRef(store);
 
-    // Dep is the whole store snapshot: ui-only updates (ack clears transition
-    // without touching act/reset identity) must still refresh the hook.
+    storeRef.current = store;
+
+    // Published once: closures read the latest store through the ref, so the
+    // seams are never deleted and re-assigned mid-session. Freshness of the
+    // readable snapshot arrives via the merge below.
 
     useEffect(
         () =>
             publishTestHooks({
-                __caravanStore: store,
+                __caravanStore: storeRef.current,
                 __resetWithSeed: (s: number) => {
-                    store.reset({ seed: s });
+                    storeRef.current.reset({ seed: s });
                 },
                 __act: (a) => {
-                    store.act(a);
+                    storeRef.current.act(a);
                 }
             }),
-        [store]
+        []
     );
+
+    useEffect(() => {
+        updateTestHooks({ __caravanStore: store });
+    }, [store]);
 
     return (
         <div className="app">

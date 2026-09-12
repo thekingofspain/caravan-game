@@ -25,8 +25,7 @@ function ScoreRow({ player, scores, wins, icon }: ScoreRowProps) {
                             className={[
                                 "score",
                                 s.isSellable ? "sellable" : "unsellable",
-                                s.isSold ? "sold" : "",
-                                s.isSold ? "bold" : ""
+                                s.isSold ? "sold" : ""
                             ]
                                 .filter(Boolean)
                                 .join(" ")}

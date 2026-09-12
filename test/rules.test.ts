@@ -27,7 +27,7 @@ describe("canPlaceCard", () => {
   it("allows any value card on an empty caravan", () => {
     expect(canPlaceCard(makeCard(1, "5" as any, "spades" as any), caravan([]))).toBe(true);
   });
-  it("rejects equal rank played in sequence", () => {
+  it("rejects equal rank with no direction change", () => {
     expect(canPlaceCard(makeCard(1, "5" as any, "hearts" as any), caravan([row("5")]))).toBe(false);
   });
   it("ascending direction requires increasing value", () => {
@@ -62,7 +62,7 @@ describe("calculatePoints / calculateRowPoints", () => {
   it("two kings quadruple the target", () => {
     expect(calculatePoints(caravan([row("10", "spades", 2)]))).toBe(40);
   });
-  it("ranks number cards A=1, 2-10 at face value", () => {
+  it("ranks value cards A=1, 2-10 at face value", () => {
     expect(calculatePoints(caravan([row("A")]))).toBe(1);
     expect(calculatePoints(caravan([row("7")]))).toBe(7);
   });
@@ -70,22 +70,22 @@ describe("calculatePoints / calculateRowPoints", () => {
     expect(isSellable(caravan([row("10"), row("9"), row("2")]))).toBe(true);
     expect(isSellable(caravan([row("10"), row("9"), row("7")]))).toBe(true);
   });
-  it("rejects bids below 21 and above 26", () => {
+  it("rejects points below 21 and above 26", () => {
     expect(isSellable(caravan([row("10"), row("9"), row("A")]))).toBe(false);
     expect(isSellable(caravan([row("10"), row("9"), row("8")]))).toBe(false);
   });
-  it("adds number cards plus King value to the bid", () => {
+  it("adds value cards plus King value to the points", () => {
     expect(calculatePoints(caravan([row("10"), row("6"), row("10", "spades", 1)]))).toBe(36);
   });
 });
 describe("reddit gap coverage", () => {
-  it("follows the suit or sequence of the last card", () => {
+  it("follows the suit or direction of the last card", () => {
     const c = caravan([row("3"), row("5", "hearts")]);
     expect(canPlaceCard(makeCard(1, "2" as any, "spades" as any), c)).toBe(true);
     expect(canPlaceCard(makeCard(1, "7" as any, "clubs" as any), c)).toBe(true);
     expect(canPlaceCard(makeCard(1, "4" as any, "clubs" as any), c)).toBe(false);
   });
-  it("allows gaps in numerical sequence", () => {
+  it("allows gaps in a direction run", () => {
     const c = caravan([row("3"), row("5")]);
     expect(canPlaceCard(makeCard(1, "7" as any, "clubs" as any), c)).toBe(true);
     expect(canPlaceCard(makeCard(1, "6" as any, "hearts" as any), c)).toBe(true);

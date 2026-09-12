@@ -17,7 +17,7 @@ function caravanOf(rows, started = false) {
   if (rows.length >= 1) s = rows[0][0].suit;
   return { rows, direction: d, suit: s, started };
 }
-function mkPlayer(caravans, hand, deck = []) { return { deck, hand, caravans }; }
+function mkPlayer(caravans, hand, shoe = []) { return { shoe, hand, caravans }; }
 
 const browser = await chromium.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });

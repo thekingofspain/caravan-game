@@ -16,7 +16,7 @@ function loadAiLevel(): AiLevel {
         const raw =
             typeof window === "undefined" ? null : window.localStorage.getItem(AI_LEVEL_KEY);
 
-        if (raw === "hard" || raw === "expert" || raw === "normal") return raw;
+        if (raw === "hard" || raw === "expert" || raw === "normal" || raw === "master") return raw;
     } catch {
         // private mode / SSR: fall through to default.
     }
@@ -29,7 +29,6 @@ export interface GameStore {
     legal: Move[];
     act: (a: Move) => void;
     reset: (cfg: GameConfig) => void;
-    thinking: boolean;
     aiLevel: AiLevel;
     setAiLevel: (level: AiLevel) => void;
 
@@ -55,7 +54,6 @@ function reducer(state: GameState, action: ReducerMove): GameState {
 export function useGame(initial: GameConfig): GameStore {
     const [cfg, setCfg] = useState<GameConfig>(initial);
     const [state, dispatch] = useReducer(reducer, cfg, (c) => setupGame({ ...c, first: Human }));
-    const [thinking, setThinking] = useState(false);
     const [aiLevel, setAiLevelState] = useState<AiLevel>(loadAiLevel);
     const [ui, setUi] = useState<{
         previous: Nullable<GameState>;
@@ -106,12 +104,10 @@ export function useGame(initial: GameConfig): GameStore {
         }
 
         const t = window.setTimeout(() => {
-            setThinking(true);
             const a = determineBestMove(state, Ai, { level: aiLevel });
             const next = applyMove(state, a);
 
             commitOrStage(state, a, next);
-            setThinking(false);
         }, 650);
 
         return () => {
@@ -121,6 +117,13 @@ export function useGame(initial: GameConfig): GameStore {
 
     const act = useCallback(
         (a: Move) => {
+            // Silent no-op on stale dispatches (fast double-activation after
+            // the turn flipped, effect races): previously applyMove threw
+            // IllegalMoveError into an error toast. Genuine illegal moves for
+            // the current player still throw from applyMove below.
+
+            if (state.phase !== "play" || a.player !== state.current) return;
+
             const next = applyMove(state, a);
 
             commitOrStage(state, a, next);
@@ -129,7 +132,6 @@ export function useGame(initial: GameConfig): GameStore {
     );
     const reset = useCallback((c: GameConfig) => {
         setCfg(c);
-        setThinking(false);
         setUi({ previous: null, lastMove: null, transition: null });
         dispatch({ type: "reset", config: c });
     }, []);
@@ -163,7 +165,6 @@ export function useGame(initial: GameConfig): GameStore {
         legal,
         act,
         reset,
-        thinking,
         aiLevel,
         setAiLevel,
         transition,

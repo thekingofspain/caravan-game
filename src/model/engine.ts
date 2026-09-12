@@ -34,29 +34,29 @@ function emptyCaravan(): Caravan {
 }
 
 function makePlayer(rng: () => number, deckId: number): PlayerState {
-    let deck = shuffle(buildDeck(deckId), rng).slice(0, 30);
-    let hand = deck.slice(0, 8);
-    let rest = deck.slice(8);
+    let shoe = shuffle(buildDeck(deckId), rng).slice(0, 30);
+    let hand = shoe.slice(0, 8);
+    let rest = shoe.slice(8);
 
-    // Opening mulligan (Mifflin): without three number cards the hand goes
+    // Opening mulligan (Mifflin): without three value cards the hand goes
     // back into the shoe (30 total), reshuffles, and redraws — until it hits.
 
     for (let i = 0; i < 100 && hand.filter((c) => isValueCard(c)).length < 3; i++) {
-        deck = shuffle([...hand, ...rest], rng);
-        hand = deck.slice(0, 8);
-        rest = deck.slice(8);
+        shoe = shuffle([...hand, ...rest], rng);
+        hand = shoe.slice(0, 8);
+        rest = shoe.slice(8);
     }
 
-    if (deck.length !== 30)
-        {throw new Error(`makePlayer: deck slice expected 30 got ${String(deck.length)}`);}
+    if (shoe.length !== 30)
+        {throw new Error(`makePlayer: shoe slice expected 30 got ${String(shoe.length)}`);}
 
     if (hand.length !== 8 || rest.length !== 22)
         {throw new Error(
-            `makePlayer: hand/deck expected 8/22 got ${String(hand.length)}/${String(rest.length)}`
+            `makePlayer: hand/shoe expected 8/22 got ${String(hand.length)}/${String(rest.length)}`
         );}
 
     return {
-        deck: rest,
+        shoe: rest,
         hand,
         discard: null,
         caravans: [emptyCaravan(), emptyCaravan(), emptyCaravan()]
@@ -78,8 +78,8 @@ export function setupGame(opts: SetupOptions): GameState {
 }
 
 function draw(player: PlayerState): void {
-    if (player.deck.length > 0) {
-        const c = player.deck.shift();
+    if (player.shoe.length > 0) {
+        const c = player.shoe.shift();
 
         if (c !== undefined) player.hand.push(c);
     }
@@ -272,11 +272,11 @@ function handleOperationCard(
 
     if (tgtPre === undefined) throw new IllegalMoveError("playOperationCard: invalid target");
 
-    // At most three pictures ride on one number card; fuller rows only leave
-    // via Joker elsewhere or disbanding.
+    // At most three operation cards ride on one value card; fuller rows only
+    // leave via Joker elsewhere or disbanding.
 
     if (tgtPre.length - 1 >= 3)
-        {throw new IllegalMoveError("playOperationCard: row already has three pictures");}
+        {throw new IllegalMoveError("playOperationCard: row already has three operation cards");}
 
     if (
         card.rank === "Q" &&
@@ -395,6 +395,10 @@ function applyNoMovesLoss(next: GameState, loser: PlayerId): void {
 // with no value cards): they lose immediately.
 
 export function forfeitNoMoves(state: GameState): GameState {
+    if (legalMoves(state).length > 0) {
+        throw new IllegalMoveError("forfeitNoMoves: turn player still has legal moves");
+    }
+
     const forfeited: GameState = structuredClone(state);
 
     applyNoMovesLoss(forfeited, state.current);
@@ -472,7 +476,7 @@ function operationCardTargets(state: GameState, pid: PlayerId, handIndex: number
             for (let cidx = 0; cidx < targetCar.rows.length; cidx++) {
                 const row = targetCar.rows[cidx];
 
-                // At most three pictures ride on one number card.
+                // At most three operation cards ride on one value card.
 
                 if (row.length - 1 >= 3) continue;
 

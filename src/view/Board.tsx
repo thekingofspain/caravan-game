@@ -33,8 +33,8 @@ const WIDE_ACTIVITY_QUERY = "(min-width: 70rem)";
 
 const SOLD_STAMP_TOPS = ["38%", "54%", "46%"] as const;
 const SOLD_STAMP_ROTS = ["-16deg", "-8deg", "-13deg"] as const;
-const DECK_PEEK_ENABLED =
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekDeck");
+const SHOE_PEEK_ENABLED =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekShoe");
 const BRACE_RE = /\{([^{}]+)\}/g;
 
  // Direction glyphs live in public/icons (Bootstrap Icons, MIT) and are picked
@@ -51,7 +51,8 @@ function CaravanColumn({
     onCardClick,
     onPlaceholderClick,
     onAcknowledge,
-    childrenFor
+    childrenFor,
+    placeholderInteractive = true
 }: {
     playerId: PlayerId;
     caravans: CaravanModel[];
@@ -62,11 +63,11 @@ function CaravanColumn({
     onPlaceholderClick: (laneIndex: number) => void;
     onAcknowledge: () => void;
     childrenFor?: (laneIndex: number) => React.ReactNode;
+    placeholderInteractive?: boolean;
 }) {
     return (
         <>
             {[0, 1, 2].map((laneIndex) => {
-                const seller = scores.sellers[laneIndex as 0 | 1 | 2];
                 const caravan = caravans[laneIndex];
                 const meta =
                     playerId === Human ? scores.humanPoints[laneIndex] : scores.aiPoints[laneIndex];
@@ -107,11 +108,11 @@ function CaravanColumn({
                             caravan={caravan}
                             lane={laneIndex as 0 | 1 | 2}
                             playerId={playerId}
-                            highestSold={seller === playerId}
                             selection={selection}
                             onCardClick={onCardClick}
                             onPlaceholderClick={onPlaceholderClick}
                             onAcknowledge={onAcknowledge}
+                            placeholderInteractive={placeholderInteractive}
                         >
                             {childrenFor?.(laneIndex)}
                         </Caravan>
@@ -122,7 +123,7 @@ function CaravanColumn({
     );
 }
 
-// Face-up slot beside each deck showing only the last player-initiated
+// Face-up slot beside each shoe showing only the last player-initiated
 // discard (big red X); Jack/Joker removals and disbanded caravans never land here.
 
 function DiscardSlot({ player, label }: { player: PlayerState; label: string }) {
@@ -158,7 +159,7 @@ export function Board({ store }: { store: GameStore }) {
     const [activityOpen, setActivityOpen] = useState(() =>
         typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
     );
-    const [viewDeck, setViewDeck] = useState<Nullable<PlayerId>>(null);
+    const [viewShoe, setViewShoe] = useState<Nullable<PlayerId>>(null);
     const [toast, setToast] = useState<Nullable<string>>(null);
     const [showGameOver, setShowGameOver] = useState(true);
     const [flashOffKey, setFlashOffKey] = useState<Nullable<string>>(null);
@@ -185,7 +186,7 @@ export function Board({ store }: { store: GameStore }) {
             const label = pid === Human ? "Human" : "AI";
 
             lines.push(
-                `${label} — hand:${String(p.hand.length)} deck:${String(p.deck.length)} | hand: ${p.hand.map(cardLabel).join(", ")}`
+                `${label} — hand:${String(p.hand.length)} shoe:${String(p.shoe.length)} | hand: ${p.hand.map(cardLabel).join(", ")}`
             );
             const metas = pid === Human ? scores.humanPoints : scores.aiPoints;
 
@@ -295,7 +296,7 @@ export function Board({ store }: { store: GameStore }) {
                 setPendingRemove(new Set());
                 setPendingDisband(null);
                 setToast(null);
-                setViewDeck(null);
+                setViewShoe(null);
                 setFlashOffKey(null);
             }, 0);
 
@@ -425,6 +426,7 @@ export function Board({ store }: { store: GameStore }) {
             const inOpening = humanPlayer.caravans.some((c) => !(c.started ?? c.rows.length > 0));
 
             if (!inOpening) return;
+
             const card = humanPlayer.hand[i];
 
             if (!isValueCard(card)) return;
@@ -535,17 +537,17 @@ export function Board({ store }: { store: GameStore }) {
         setPendingRemove(new Set());
         setPendingDisband(null);
         setToast(null);
-        setViewDeck(null);
-        setFlashOffKey(null);
-        store.reset({ seed: Math.floor(Math.random() * 1e9) });
+                setViewShoe(null);
+                setFlashOffKey(null);
+                store.reset({ seed: Math.floor(Math.random() * 1e9) });
     }, [store]);
 
-    const onDeckClick = useCallback(() => {
+    const onShoeClick = useCallback(() => {
         if (sel !== null && canDiscard) onDiscard();
-        else if (DECK_PEEK_ENABLED) setViewDeck(Human);
+        else if (SHOE_PEEK_ENABLED) setViewShoe(Human);
     }, [sel, canDiscard, onDiscard]);
-    const onViewAiDeck = useCallback(() => {
-        setViewDeck(Ai);
+    const onViewAiShoe = useCallback(() => {
+        setViewShoe(Ai);
     }, []);
 
     // Modern confirmation: stage the disband and let the in-app alertdialog
@@ -659,6 +661,7 @@ export function Board({ store }: { store: GameStore }) {
                                 onCardClick={onCardClick}
                                 onPlaceholderClick={NOOP}
                                 onAcknowledge={onAcknowledge}
+                                placeholderInteractive={false}
                             />
                         </div>
                         <div className="caravans human">
@@ -692,24 +695,24 @@ export function Board({ store }: { store: GameStore }) {
 
                     <div className="column hands">
                         <div className="hand-half">
-                            <div className="deck-pair">
+                            <div className="shoe-pair">
                                 <button
                                     type="button"
-                                    className={`deck ai ${aiPlayer.deck.length === 0 ? "empty" : ""}`}
-                                    onClick={DECK_PEEK_ENABLED ? onViewAiDeck : undefined}
+                                    className={`shoe ai ${aiPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                    onClick={SHOE_PEEK_ENABLED ? onViewAiShoe : undefined}
                                     aria-label={
-                                        DECK_PEEK_ENABLED
-                                            ? `AI deck, ${String(aiPlayer.deck.length)} cards remaining. View the deck.`
-                                            : `AI deck, ${String(aiPlayer.deck.length)} cards remaining.`
+                                        SHOE_PEEK_ENABLED
+                                            ? `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining. View the shoe.`
+                                            : `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining.`
                                     }
-                                    aria-disabled={DECK_PEEK_ENABLED ? undefined : true}
+                                    aria-disabled={SHOE_PEEK_ENABLED ? undefined : true}
                                 >
-                                    {aiPlayer.deck.length === 0 ? (
+                                    {aiPlayer.shoe.length === 0 ? (
                                         <div className="empty" aria-hidden="true" />
                                     ) : (
                                         <div className="card back deck2" />
                                     )}
-                                    <span className="count">{aiPlayer.deck.length}</span>
+                                    <span className="count">{aiPlayer.shoe.length}</span>
                                 </button>
                                 <DiscardSlot player={aiPlayer} label="AI" />
                             </div>
@@ -750,6 +753,7 @@ export function Board({ store }: { store: GameStore }) {
                                     <option value="normal">Normal</option>
                                     <option value="hard">Hard</option>
                                     <option value="expert">Expert</option>
+                                    <option value="master">Master</option>
                                 </select>
                             </label>
                         </div>
@@ -763,23 +767,23 @@ export function Board({ store }: { store: GameStore }) {
                                 onCardClick={onHandClick}
                                 onCardDoubleClick={onHandDoubleClick}
                             />
-                            <div className="deck-pair">
+                            <div className="shoe-pair">
                                 <button
                                     type="button"
-                                    className={`deck ${humanPlayer.deck.length === 0 ? "empty" : ""}`}
-                                    onClick={onDeckClick}
+                                    className={`shoe ${humanPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                    onClick={onShoeClick}
                                     aria-label={
-                                        DECK_PEEK_ENABLED
-                                            ? `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one, or view the deck.`
-                                            : `Your deck, ${String(humanPlayer.deck.length)} cards remaining. Click to discard the selected card and draw a new one.`
+                                        SHOE_PEEK_ENABLED
+                                            ? `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one, or view the shoe.`
+                                            : `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one.`
                                     }
                                 >
-                                    {humanPlayer.deck.length === 0 ? (
+                                    {humanPlayer.shoe.length === 0 ? (
                                         <div className="empty" aria-hidden="true" />
                                     ) : (
                                         <div className="card back deck1" />
                                     )}
-                                    <span className="count">{humanPlayer.deck.length}</span>
+                                    <span className="count">{humanPlayer.shoe.length}</span>
                                 </button>
                                 <DiscardSlot player={humanPlayer} label="Your" />
                             </div>
@@ -819,30 +823,29 @@ export function Board({ store }: { store: GameStore }) {
                 </div>
             ) : null}
 
-            {DECK_PEEK_ENABLED && viewDeck !== null ? (
+            {SHOE_PEEK_ENABLED && viewShoe !== null ? (
                 <div
                     className="overlay"
                     role="dialog"
-                    aria-label={`${viewDeck === Human ? "Your" : "AI"} remaining deck`}
+                    aria-label={`${viewShoe === Human ? "Your" : "AI"} remaining shoe`}
                 >
                     <header>
                         <span>
-                            {viewDeck === Human ? "Your" : "AI"} deck —{" "}
-                            {String(state.players[viewDeck].deck.length)} cards
+                            {viewShoe === Human ? "Your" : "AI"} shoe —{" "}
+                            {String(state.players[viewShoe].shoe.length)} cards
                         </span>
                         <button
                             type="button"
-                            className="close"
                             onClick={() => {
-                                setViewDeck(null);
+                                setViewShoe(null);
                             }}
-                            aria-label="Close deck view"
+                            aria-label="Close shoe view"
                         >
                             Close
                         </button>
                     </header>
                     <div className="cards">
-                        {state.players[viewDeck].deck.map((c) => (
+                        {state.players[viewShoe].shoe.map((c) => (
                             <CardView key={c.id} card={c} />
                         ))}
                     </div>
