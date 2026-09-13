@@ -91,10 +91,11 @@ assert.equal(dialogCount, 1, "disband must stage a modern in-app confirmation di
 // Cancel path: Keep caravan closes the dialog and changes nothing.
 const dialog = page.locator('.disband-confirm[role="alertdialog"]');
 assert.match(
-  (await dialog.locator("p").textContent()) ?? "",
-  /cannot be undone/,
-  "dialog must name the consequence"
+  (await dialog.locator("h2").textContent()) ?? "",
+  /Disband your/,
+  "dialog asks to confirm the disband"
 );
+assert.equal(await dialog.locator("p").count(), 0, "dialog carries no detail text");
 await dialog.getByRole("button", { name: "Keep caravan" }).click();
 await page.waitForSelector('.disband-confirm[role="alertdialog"]', { state: "detached", timeout: 8000 });
 assert.equal(

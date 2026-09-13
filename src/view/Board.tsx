@@ -159,9 +159,11 @@ export function Board({ store }: { store: GameStore }) {
     const [activityOpen, setActivityOpen] = useState(() =>
         typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
     );
+    const [isWide, setIsWide] = useState(() =>
+        typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
+    );
     const [viewShoe, setViewShoe] = useState<Nullable<PlayerId>>(null);
     const [toast, setToast] = useState<Nullable<string>>(null);
-    const [showGameOver, setShowGameOver] = useState(true);
     const [flashOffKey, setFlashOffKey] = useState<Nullable<string>>(null);
     const human = isHumanTurn(state);
 
@@ -170,6 +172,24 @@ export function Board({ store }: { store: GameStore }) {
     const awaitingHumanAck = transition?.pendingAck?.confirmer === Human;
     const humanCanAct = human && !awaitingHumanAck;
     const scores = useMemo(() => getCaravanScores(state), [state]);
+    const aiLevelControl = (
+        <label className="ai-level">
+            AI
+            <select
+                className="btn"
+                aria-label="AI difficulty"
+                value={store.aiLevel}
+                onChange={(e) => {
+                    store.setAiLevel(e.target.value as AiLevel);
+                }}
+            >
+                <option value="normal">Normal</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+                <option value="master">Master</option>
+            </select>
+        </label>
+    );
 
     const onCopyActivity = async () => {
         const lines: string[] = [];
@@ -221,7 +241,7 @@ export function Board({ store }: { store: GameStore }) {
 
         try {
             await navigator.clipboard.writeText(text);
-            setToast("Copied activity + debug to clipboard");
+            setToast("Copied");
         } catch {
             setToast("Copy failed");
         }
@@ -261,17 +281,12 @@ export function Board({ store }: { store: GameStore }) {
     const humanWon = state.winner === Human;
     const aiWon = isGameOver && state.winner === Ai;
 
-    // Re-show the banner for each new finished game.
-
-    useEffect(() => {
-        if (isGameOver) setShowGameOver(true);
-    }, [isGameOver, state.winner]);
-
     // Re-open the panel whenever the viewport becomes wide enough to dock it.
 
     useEffect(() => {
         const mq = window.matchMedia(WIDE_ACTIVITY_QUERY);
         const onChange = (e: MediaQueryListEvent) => {
+            setIsWide(e.matches);
             if (e.matches) setActivityOpen(true);
         };
 
@@ -618,12 +633,12 @@ export function Board({ store }: { store: GameStore }) {
 
     return (
         <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
-            {toast !== null ? (
+            {!activityOpen && toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
                 </div>
             ) : null}
-            {isGameOver && showGameOver ? (
+            {isGameOver ? (
                 <div
                     role="alertdialog"
                     aria-label={humanWon ? "You won the game" : "AI won the game"}
@@ -636,16 +651,6 @@ export function Board({ store }: { store: GameStore }) {
                     <span id="gameover-detail" className="gameover-banner-detail">
                         Caravans {scores.humanWins} – {scores.aiWins}
                     </span>
-                    <button
-                        type="button"
-                        className="close"
-                        onClick={() => {
-                            setShowGameOver(false);
-                        }}
-                        aria-label="Dismiss game over announcement"
-                    >
-                        ×
-                    </button>
                 </div>
             ) : null}
             <div className="field">
@@ -732,7 +737,7 @@ export function Board({ store }: { store: GameStore }) {
                             </button>
                             <button
                                 type="button"
-                                className="btn"
+                                className={`btn${activityOpen ? " is-active" : ""}`}
                                 onClick={() => {
                                     setActivityOpen((v) => !v);
                                 }}
@@ -740,22 +745,7 @@ export function Board({ store }: { store: GameStore }) {
                             >
                                 Activity
                             </button>
-                            <label className="ai-level">
-                                AI
-                                <select
-                                    className="btn"
-                                    aria-label="AI difficulty"
-                                    value={store.aiLevel}
-                                    onChange={(e) => {
-                                        store.setAiLevel(e.target.value as AiLevel);
-                                    }}
-                                >
-                                    <option value="normal">Normal</option>
-                                    <option value="hard">Hard</option>
-                                    <option value="expert">Expert</option>
-                                    <option value="master">Master</option>
-                                </select>
-                            </label>
+                            {isWide ? null : aiLevelControl}
                         </div>
 
                         <div className="hand-half human">
@@ -792,10 +782,18 @@ export function Board({ store }: { store: GameStore }) {
                 </div>
             </div>
 
-            {activityOpen ? (
+            {activityOpen || isWide ? (
+                <div className="activity-rail">
+                    {isWide ? aiLevelControl : null}
+                    {activityOpen ? (
                 <div className="activity" role="dialog" aria-label="Activity log">
                     <header>
                         <span>Activity</span>
+                        {toast !== null ? (
+                            <div role="alert" className="toast activity-toast">
+                                {toast}
+                            </div>
+                        ) : null}
                         <div className="activity-actions">
                             <button
                                 type="button"
@@ -804,22 +802,34 @@ export function Board({ store }: { store: GameStore }) {
                                     void onCopyActivity();
                                 }}
                                 aria-label="Copy activity log and debug info"
+                                title="Copy activity log and debug info"
                             >
-                                Copy
+                                <svg
+                                    viewBox="0 0 16 16"
+                                    width="14"
+                                    height="14"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+                                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                className="close"
+                                onClick={() => {
+                                    setActivityOpen(false);
+                                }}
+                                aria-label="Close activity log"
+                            >
+                                ×
                             </button>
                         </div>
                     </header>
-                    <button
-                        type="button"
-                        className="close"
-                        onClick={() => {
-                            setActivityOpen(false);
-                        }}
-                        aria-label="Close activity log"
-                    >
-                        ×
-                    </button>
                     <Sidebar log={state.log} state={state} scores={scores} />
+                </div>
+                    ) : null}
                 </div>
             ) : null}
 
@@ -861,23 +871,15 @@ export function Board({ store }: { store: GameStore }) {
                     <div
                         role="alertdialog"
                         aria-modal="true"
-                        aria-labelledby="disband-confirm-title"
-                        aria-describedby="disband-confirm-detail"
-                        aria-label={`Disband your ${caravanName(Human, pendingDisband)}`}
+                        aria-label={`Disband your ${caravanName(Human, pendingDisband)}?`}
                         className="disband-confirm"
                         onClick={(e) => {
                             e.stopPropagation();
                         }}
                     >
-                        <h2 id="disband-confirm-title">
+                        <h2>
                             Disband your {caravanName(Human, pendingDisband)}?
                         </h2>
-                        <p id="disband-confirm-detail">
-                            This removes all{" "}
-                            {String(humanPlayer.caravans[pendingDisband].rows.flat().length)} cards
-                            (points {String(scores.humanPoints[pendingDisband].points)}) and cannot
-                            be undone.
-                        </p>
                         <div className="actions">
                             <button
                                 type="button"
@@ -889,9 +891,8 @@ export function Board({ store }: { store: GameStore }) {
                             </button>
                             <button
                                 type="button"
-                                className="btn btn-danger"
+                                className="btn"
                                 onClick={onConfirmDisband}
-                                aria-label={`Disband your ${caravanName(Human, pendingDisband)}`}
                             >
                                 Disband
                             </button>

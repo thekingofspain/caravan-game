@@ -59,16 +59,12 @@ export default defineConfig(
             "test/**",
             "scripts/**",
             ".claude/**",
+            "agent/**",
+            ".agents/**",
             "vite.config.*",
             "eslint.config.*",
             "svgo.config.*"
         ]
-    },
-    {
-        files: [".agents/skills/setup-ts-deep-modules/dependency-cruiser.config.cjs"],
-        languageOptions: {
-            globals: globals.node
-        }
     },
     js.configs.recommended,
     ...tseslint.configs.strictTypeChecked,
