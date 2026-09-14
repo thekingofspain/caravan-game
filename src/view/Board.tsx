@@ -394,6 +394,110 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, [isGameOver, state]);
 
+    // Align hand extremes with the starting placeholders: the AI hand's
+    // lowest fan point meets the bottom of the AI placeholder, and the human
+    // hand's top meets the top of the human placeholder (mirrored about the
+    // board center). Static CSS can't express this across columns and fluid
+    // type, so measure pre-paint and nudge .cards via CSS vars (same scope
+    // both sides, so the reciprocally-packed shoes never drift). Shifts
+    // accumulate in a ref (rects already include the applied lift);
+    // placeholders only exist at game start, otherwise the last lifts hold.
+    // A new game resets the lifts before re-measuring.
+
+    const handLifts = useRef({ ai: 0, human: 0 });
+
+    useLayoutEffect(() => {
+        const board = boardRef.current;
+
+        if (!board) return;
+
+        const isNewGame =
+            state.log.length === 0 &&
+            state.players.every((p) => p.caravans.every((c) => c.rows.length === 0));
+        const aiCardsEl = board.querySelector<HTMLElement>(".hand.ai .cards");
+        const humanCardsEl = board.querySelector<HTMLElement>(".hand.human .cards");
+
+        if (isNewGame && aiCardsEl && humanCardsEl) {
+            handLifts.current = { ai: 0, human: 0 };
+
+            aiCardsEl.style.removeProperty("--ai-hand-lift");
+            humanCardsEl.style.removeProperty("--human-hand-lift");
+        }
+
+        const update = () => {
+            const root = boardRef.current;
+
+            if (!root) return;
+
+            const aiPlaceholder = root.querySelector(".caravans.ai .caravan .empty");
+            const humanPlaceholder = root.querySelector(".caravans.human .caravan .empty");
+            const aiCards = [...root.querySelectorAll(".hand.ai .slot .card")];
+            const humanCards = [...root.querySelectorAll(".hand.human .slot .card")];
+
+            if (!aiPlaceholder || !humanPlaceholder) return;
+
+            if (aiCards.length === 0 || humanCards.length === 0) return;
+
+            const bottom = (els: Element[]) =>
+                Math.max(...els.map((el) => el.getBoundingClientRect().bottom));
+            const top = (els: Element[]) =>
+                Math.min(...els.map((el) => el.getBoundingClientRect().top));
+            const aiNeed = aiPlaceholder.getBoundingClientRect().bottom - bottom(aiCards);
+            const humanNeed = humanPlaceholder.getBoundingClientRect().top - top(humanCards);
+
+            // No clamp and no transition on either .cards (see global.css):
+            // the correction converges instead of feeding back, so any
+            // magnitude is the true geometric need.
+
+            if (Math.abs(aiNeed) >= 0.5 && aiCardsEl) {
+                handLifts.current.ai += aiNeed;
+
+                aiCardsEl.style.setProperty("--ai-hand-lift", `${String(handLifts.current.ai)}px`);
+            }
+
+            if (Math.abs(humanNeed) >= 0.5 && humanCardsEl) {
+                handLifts.current.human += humanNeed;
+
+                humanCardsEl.style.setProperty(
+                    "--human-hand-lift",
+                    `${String(handLifts.current.human)}px`
+                );
+            }
+        };
+
+        // The fan slots ease their transforms (~0.12s), so a single pass can
+        // measure mid-flight cards: re-check on the next frame and once more
+        // after the glide settles. Each pass only applies the residual need.
+
+        let settled = false;
+
+        update();
+
+        const raf = requestAnimationFrame(() => {
+            if (!settled) update();
+        });
+        const timer = window.setTimeout(() => {
+            if (!settled) update();
+        }, 200);
+        const onResize = () => {
+            update();
+
+            requestAnimationFrame(() => {
+                if (!settled) update();
+            });
+        };
+
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            settled = true;
+
+            cancelAnimationFrame(raf);
+            window.clearTimeout(timer);
+            window.removeEventListener("resize", onResize);
+        };
+    }, [state]);
+
     // Reset all UI selections on new game (state with empty log + empty caravans).
 
     useEffect(() => {

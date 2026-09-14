@@ -344,10 +344,13 @@ body {
 .board .column.hands > .hand-half:first-child {
     justify-content: flex-start;
 }
-
+/* Reciprocal packing about the board center: AI half packs its shoe + hand
+   to the top, human half packs its hand + shoe to the bottom. The precise
+   hand extremes are then nudged via --ai-hand-lift / --human-hand-lift on
+   .cards (see Board.tsx). No transition: re-measured after every render,
+   a glide would feed mid-flight positions back into the next correction. */
 .hand-half.human {
-    transform: translateY(var(--hand-lift, 0rem));
-    transition: transform 120ms ease;
+    justify-content: flex-end;
 }
 
 .hand-half .hand {
@@ -377,8 +380,16 @@ body {
     height: calc(var(--card-h) * 1.4);
 }
 
+/* Mirror shifts, set at runtime from measured DOM rects (see Board.tsx):
+   the AI hand's lowest fan point lines up with the bottom of the AI
+   starting placeholder; the human hand's top lines up with the top of the
+   human starting placeholder. Same scope both sides (.cards only) so the
+   shoes stay packed reciprocally and never drift with the nudge. */
 .hand.ai .cards {
-    --hand-rot: 3deg;
+    transform: translateY(var(--ai-hand-lift, 0px)) rotate(var(--hand-rot));
+}
+.hand.human .cards {
+    transform: translateY(var(--human-hand-lift, 0px)) rotate(var(--hand-rot));
 }
 
 .hand .slot {
@@ -405,10 +416,6 @@ body {
 .hand .slot.selected {
     transform: translateX(-50%) rotate(calc((var(--i) - var(--fan-center)) * var(--fan-step)))
         translateY(-25%);
-}
-
-.hand.human {
-    margin-top: auto;
 }
 
 /* ── 07 — Shoe ── */
