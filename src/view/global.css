@@ -133,9 +133,11 @@ body {
 }
 .gameover-banner {
     position: absolute;
-    top: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
+    /* Same band as the topbar row (2rem button): centered on it, so the win
+       toast sits inline with the hamburger and brand. */
+    top: calc(var(--relief) + 1rem);
+    /* Inline left pins the measured middle-lane center. */
+    transform: translate(-50%, -50%);
     z-index: 90;
     display: flex;
     align-items: center;
@@ -179,11 +181,11 @@ body {
 @keyframes gameover-pop {
     from {
         opacity: 0;
-        transform: translateX(-50%) scale(0.85);
+        transform: translate(-50%, -50%) scale(0.85);
     }
     to {
         opacity: 1;
-        transform: translateX(-50%) scale(1);
+        transform: translate(-50%, -50%) scale(1);
     }
 }
 /* Winner side glows. Loser side stays at full brightness: no dimming. */
@@ -1205,6 +1207,10 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.1em;
     cursor: pointer;
+}
+
+.btn-small {
+    padding: var(--sp-1) var(--sp-3);
 }
 
 .btn:hover {

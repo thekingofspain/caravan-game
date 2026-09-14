@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { cardLabel } from "../model/cards";
 import { segmentsText } from "../model/gameLog";
@@ -175,8 +175,9 @@ export function Board({ store }: { store: GameStore }) {
     const [sel, setSel] = useState<Nullable<number>>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
     const [pendingDisband, setPendingDisband] = useState<Nullable<number>>(null);
-
+    const boardRef = useRef<HTMLDivElement>(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [bannerLeft, setBannerLeft] = useState<Nullable<number>>(null);
     const [isWide, setIsWide] = useState(() =>
         typeof window === "undefined" ? false : window.matchMedia(WIDE_SIDEBAR_QUERY).matches
     );
@@ -362,6 +363,36 @@ export function Board({ store }: { store: GameStore }) {
     const isGameOver = state.phase === "over";
     const humanWon = state.winner === Human;
     const aiWon = isGameOver && state.winner === Ai;
+
+    // Center the winner banner on the human middle lane: measure its center x
+    // pre-paint (vertical stays in the topbar band via CSS). Viewport-relative
+    // rects stay correct under board scroll.
+    useLayoutEffect(() => {
+        if (!isGameOver) {
+            setBannerLeft(null);
+
+            return;
+        }
+
+        const update = () => {
+            const board = boardRef.current;
+            const lane = board?.querySelector(".caravans.human > .caravan:nth-child(2)");
+
+            if (!board || !lane) return;
+
+            const b = board.getBoundingClientRect();
+            const r = lane.getBoundingClientRect();
+
+            setBannerLeft(r.left - b.left + r.width / 2);
+        };
+
+        update();
+        window.addEventListener("resize", update);
+
+        return () => {
+            window.removeEventListener("resize", update);
+        };
+    }, [isGameOver, state]);
 
     // Reset all UI selections on new game (state with empty log + empty caravans).
 
@@ -697,7 +728,10 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     return (
-        <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
+        <div
+            ref={boardRef}
+            className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}
+        >
             <header className="topbar">
                 {isWide ? null : (
                     <button
@@ -725,12 +759,13 @@ export function Board({ store }: { store: GameStore }) {
                     {toast}
                 </div>
             ) : null}
-            {isGameOver ? (
+            {isGameOver && bannerLeft !== null ? (
                 <div
                     role="alertdialog"
                     aria-label={humanWon ? "You won the game" : "AI won the game"}
                     aria-describedby="gameover-detail"
                     className={`gameover-banner ${humanWon ? "human" : "ai"}`}
+                    style={{ left: bannerLeft }}
                 >
                     <span className="gameover-banner-title">
                         {humanWon ? "You win!" : "AI wins"}
@@ -738,6 +773,9 @@ export function Board({ store }: { store: GameStore }) {
                     <span id="gameover-detail" className="gameover-banner-detail">
                         Caravans {scores.humanWins} – {scores.aiWins}
                     </span>
+                    <button type="button" className="btn btn-small" onClick={onNewGame}>
+                        New game
+                    </button>
                 </div>
             ) : null}
             <div className="board-body">
