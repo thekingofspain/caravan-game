@@ -404,7 +404,7 @@ export function Board({ store }: { store: GameStore }) {
     // placeholders only exist at game start, otherwise the last lifts hold.
     // A new game resets the lifts before re-measuring.
 
-    const handLifts = useRef({ ai: 0, human: 0 });
+    const handLifts = useRef({ ai: 0, human: 0, aiX: 0, humanX: 0 });
 
     useLayoutEffect(() => {
         const board = boardRef.current;
@@ -418,10 +418,12 @@ export function Board({ store }: { store: GameStore }) {
         const humanCardsEl = board.querySelector<HTMLElement>(".hand.human .cards");
 
         if (isNewGame && aiCardsEl && humanCardsEl) {
-            handLifts.current = { ai: 0, human: 0 };
+            handLifts.current = { ai: 0, human: 0, aiX: 0, humanX: 0 };
 
             aiCardsEl.style.removeProperty("--ai-hand-lift");
             humanCardsEl.style.removeProperty("--human-hand-lift");
+            aiCardsEl.style.removeProperty("--ai-hand-shift");
+            humanCardsEl.style.removeProperty("--human-hand-shift");
         }
 
         const update = () => {
@@ -438,6 +440,8 @@ export function Board({ store }: { store: GameStore }) {
 
             if (aiCards.length === 0 || humanCards.length === 0) return;
 
+            const right = (els: Element[]) =>
+                Math.max(...els.map((el) => el.getBoundingClientRect().right));
             const bottom = (els: Element[]) =>
                 Math.max(...els.map((el) => el.getBoundingClientRect().bottom));
             const top = (els: Element[]) =>
@@ -462,6 +466,36 @@ export function Board({ store }: { store: GameStore }) {
                     "--human-hand-lift",
                     `${String(handLifts.current.human)}px`
                 );
+            }
+
+            // Either fan can render wider than the hands column: shift it
+            // left until its right extreme meets the column's right edge, so
+            // the space right of the hand equals the board's outer padding.
+            // Left-only, so a narrower mid-game fan stays centered.
+
+            const colRight = root.querySelector(".column.hands")?.getBoundingClientRect().right;
+
+            if (colRight !== undefined && aiCardsEl) {
+                const aiShift = colRight - right(aiCards);
+
+                if (aiShift <= -0.5) {
+                    handLifts.current.aiX += aiShift;
+
+                    aiCardsEl.style.setProperty("--ai-hand-shift", `${String(handLifts.current.aiX)}px`);
+                }
+            }
+
+            if (colRight !== undefined && humanCardsEl) {
+                const humanShift = colRight - right(humanCards);
+
+                if (humanShift <= -0.5) {
+                    handLifts.current.humanX += humanShift;
+
+                    humanCardsEl.style.setProperty(
+                        "--human-hand-shift",
+                        `${String(handLifts.current.humanX)}px`
+                    );
+                }
             }
         };
 

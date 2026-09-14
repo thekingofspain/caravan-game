@@ -62,6 +62,11 @@
     --c-sort: #e9c46a;
     --fan-step: 5.5deg;
     --fan-pivot: 1.67;
+    /* Full-hand default: --hand-w below sizes the hands column to a full
+       8-card fan. .cards overrides --fan-count per hand for its own fan
+       math; the column keeps this stable width so it never wobbles as
+       hands shrink mid-game. */
+    --fan-count: 8;
     --fan-outer-angle: calc((var(--fan-count) - 1) / 2 * var(--fan-step));
     --hand-skew: 3deg;
     --hand-w: calc(
@@ -384,12 +389,16 @@ body {
    the AI hand's lowest fan point lines up with the bottom of the AI
    starting placeholder; the human hand's top lines up with the top of the
    human starting placeholder. Same scope both sides (.cards only) so the
-   shoes stay packed reciprocally and never drift with the nudge. */
+   shoes stay packed reciprocally and never drift with the nudge. Each fan
+   also shifts left until its right extreme meets the column's right edge —
+   the space right of the hand then equals the board's outer padding. */
 .hand.ai .cards {
-    transform: translateY(var(--ai-hand-lift, 0px)) rotate(var(--hand-rot));
+    transform: translateX(var(--ai-hand-shift, 0px)) translateY(var(--ai-hand-lift, 0px))
+        rotate(var(--hand-rot));
 }
 .hand.human .cards {
-    transform: translateY(var(--human-hand-lift, 0px)) rotate(var(--hand-rot));
+    transform: translateX(var(--human-hand-shift, 0px)) translateY(var(--human-hand-lift, 0px))
+        rotate(var(--hand-rot));
 }
 
 .hand .slot {
