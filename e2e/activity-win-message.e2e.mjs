@@ -43,7 +43,9 @@ const programmedState = {
 };
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
 await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
-if ((await page.locator(".activity").count()) === 0) await page.locator("button", { hasText: "Activity" }).click();
+if ((await page.locator(".activity").count()) === 0) {
+    await page.getByRole("button", { name: "Menu" }).click();
+}
 await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
 await page.waitForFunction(() => document.querySelector(".log .win-details") && document.querySelector(".log .row.human .player") && document.querySelector(".log .row.ai .player"), null, { timeout: 5000 });
 

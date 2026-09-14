@@ -11,7 +11,6 @@ import type {
     SelectionState
 } from "../model/types";
 import { Ai, AiLevel, Human, isValueCard, type Move, PlayerId, TargetRef } from "../model/types";
-import { SUIT_SYMBOL } from "../model/types";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
@@ -24,9 +23,10 @@ const EMPTY_SET: ReadonlySet<number> = new Set();
 const EMPTY_STRINGS: ReadonlySet<string> = new Set();
 const NOOP = (): void => undefined;
 
-// Must match the docked-activity `@media` query in global.css.
-
-const WIDE_ACTIVITY_QUERY = "(min-width: 70rem)";
+// Only genuinely big screens dock the sidebar: at half-width windows the
+// docked rail would eat a caravan, so those stay on the hamburger drawer.
+// (100rem ≈ 1.4k–1.9k px given the fluid root type; full-HD and up docks.)
+const WIDE_SIDEBAR_QUERY = "(min-width: 100rem)";
 
 // Branding-iron stamp placement per caravan: heights staggered so the three
 // across never line up vertically; tilt inverts around -12deg within ±5deg.
@@ -41,6 +41,20 @@ const BRACE_RE = /\{([^{}]+)\}/g;
  // by CSS class below: human asc → sort-human-asc.svg, human desc →
  // sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
  // Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
+
+// Title type scale per location, calibrated so every name renders the same
+// pixel width: factors are C/k with C = 6.15 and k the measured per-em text
+// width of each name (4.91/4.28/6.80/4.29/4.91/4.29 — stable across
+// viewports since per-em advances scale linearly). Retune from fresh
+// measurements if the names or the typeface change.
+const NAME_SCALES: Record<string, number> = {
+    Boneyard: 1.253,
+    Redding: 1.436,
+    "Shady Sands": 0.904,
+    Dayglow: 1.435,
+    "New Reno": 1.252,
+    "The Hub": 1.435
+};
 
 function CaravanColumn({
     playerId,
@@ -74,6 +88,9 @@ function CaravanColumn({
                 const sellable = meta.isSellable;
                 const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && meta.isSold;
+                // Equal rendered widths via the calibrated table above.
+                const name = caravanName(playerId, laneIndex);
+                const nameScale = NAME_SCALES[name] ?? 1;
 
                 return (
                     <div
@@ -96,13 +113,18 @@ function CaravanColumn({
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
                             <CaravanPoints meta={meta} />
-                            <span className="title">{caravanName(playerId, laneIndex)}</span>
-                            <span className="sort-icon" aria-hidden="true" />
-                            {caravan.suit !== null ? (
-                                <span className={`suit card-name ${caravan.suit}`}>
-                                    {SUIT_SYMBOL[caravan.suit]}
-                                </span>
-                            ) : null}
+                            <span className="title" style={{ "--name-scale": nameScale.toFixed(3) } as React.CSSProperties}>{name}</span>
+                            <span className="sigil">
+                                {/* Suit pip is a baked SVG icon (public/cards/H|D|C|S)
+                                    painted via CSS below; the empty box reserves
+                                    the slot before the first card lands, exactly
+                                    like the direction placeholder beside it. */}
+                                <span
+                                    className={caravan.suit !== null ? `suit card-name ${caravan.suit}` : "suit"}
+                                    aria-hidden="true"
+                                />
+                                <span className="sort-icon" aria-hidden="true" />
+                            </span>
                         </header>
                         <Caravan
                             caravan={caravan}
@@ -154,13 +176,9 @@ export function Board({ store }: { store: GameStore }) {
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
     const [pendingDisband, setPendingDisband] = useState<Nullable<number>>(null);
 
-    // Wide viewport (matches the docked-activity media query): panel stays open.
-
-    const [activityOpen, setActivityOpen] = useState(() =>
-        typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
-    );
+    const [menuOpen, setMenuOpen] = useState(false);
     const [isWide, setIsWide] = useState(() =>
-        typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
+        typeof window === "undefined" ? false : window.matchMedia(WIDE_SIDEBAR_QUERY).matches
     );
     const [viewShoe, setViewShoe] = useState<Nullable<PlayerId>>(null);
     const [toast, setToast] = useState<Nullable<string>>(null);
@@ -174,7 +192,7 @@ export function Board({ store }: { store: GameStore }) {
     const scores = useMemo(() => getCaravanScores(state), [state]);
     const aiLevelControl = (
         <label className="ai-level">
-            AI
+            Difficulty level
             <select
                 className="btn"
                 aria-label="AI difficulty"
@@ -247,6 +265,52 @@ export function Board({ store }: { store: GameStore }) {
         }
     };
 
+    // Shared sidebar contents: docked rail on wide screens, drawer on narrow.
+    // New game also closes the drawer (no-op when docked).
+    const menuItems = (
+        <>
+            <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                    onNewGame();
+                    setMenuOpen(false);
+                }}
+            >
+                New game
+            </button>
+            {aiLevelControl}
+            <section className="activity" role="dialog" aria-label="Activity log">
+                <header>
+                    <span>Activity</span>
+                    <div className="activity-actions">
+                        <button
+                            type="button"
+                            className="copy"
+                            onClick={() => {
+                                void onCopyActivity();
+                            }}
+                            aria-label="Copy activity log and debug info"
+                            title="Copy activity log and debug info"
+                        >
+                            <svg
+                                viewBox="0 0 16 16"
+                                width="18"
+                                height="18"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+                <Sidebar log={state.log} state={state} scores={scores} />
+            </section>
+        </>
+    );
+
     // auto-clear toast after 3s
 
     useEffect(() => {
@@ -261,13 +325,16 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, [toast]);
 
-    // Escape cancels a staged disband; the safe action stays the easy default.
+    // Escape cancels a staged disband or closes the menu; the safe action stays the easy default.
 
     useEffect(() => {
-        if (pendingDisband === null) return;
+        if (pendingDisband === null && !menuOpen) return;
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setPendingDisband(null);
+            if (e.key === "Escape") {
+                setPendingDisband(null);
+                setMenuOpen(false);
+            }
         };
 
         window.addEventListener("keydown", onKey);
@@ -275,19 +342,14 @@ export function Board({ store }: { store: GameStore }) {
         return () => {
             window.removeEventListener("keydown", onKey);
         };
-    }, [pendingDisband]);
+    }, [pendingDisband, menuOpen]);
 
-    const isGameOver = state.phase === "over";
-    const humanWon = state.winner === Human;
-    const aiWon = isGameOver && state.winner === Ai;
-
-    // Re-open the panel whenever the viewport becomes wide enough to dock it.
-
+    // Docking the sidebar makes the drawer redundant: close it.
     useEffect(() => {
-        const mq = window.matchMedia(WIDE_ACTIVITY_QUERY);
+        const mq = window.matchMedia(WIDE_SIDEBAR_QUERY);
         const onChange = (e: MediaQueryListEvent) => {
             setIsWide(e.matches);
-            if (e.matches) setActivityOpen(true);
+            if (e.matches) setMenuOpen(false);
         };
 
         mq.addEventListener("change", onChange);
@@ -297,8 +359,11 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, []);
 
-    // Reset all UI state on new game (state with empty log + empty caravans).
-    // Activity stays as-is: it is persistent chrome on wide viewports.
+    const isGameOver = state.phase === "over";
+    const humanWon = state.winner === Human;
+    const aiWon = isGameOver && state.winner === Ai;
+
+    // Reset all UI selections on new game (state with empty log + empty caravans).
 
     useEffect(() => {
         const isNewGame =
@@ -633,7 +698,29 @@ export function Board({ store }: { store: GameStore }) {
 
     return (
         <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
-            {!activityOpen && toast !== null ? (
+            <header className="topbar">
+                {isWide ? null : (
+                    <button
+                        type="button"
+                        className="menu-button"
+                        onClick={() => {
+                            setMenuOpen((v) => !v);
+                        }}
+                        aria-expanded={menuOpen}
+                        aria-controls="game-menu"
+                        aria-label="Menu"
+                        title="Menu"
+                    >
+                        <span aria-hidden="true" className="menu-icon">
+                            <span />
+                            <span />
+                            <span />
+                        </span>
+                    </button>
+                )}
+                <span className="brand">Caravan</span>
+            </header>
+            {toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
                 </div>
@@ -653,6 +740,12 @@ export function Board({ store }: { store: GameStore }) {
                     </span>
                 </div>
             ) : null}
+            <div className="board-body">
+                {isWide ? (
+                    <aside className="side-rail" aria-label="Game menu">
+                        {menuItems}
+                    </aside>
+                ) : null}
             <div className="field">
                 <div className="columns">
                     <div className="column caravans">
@@ -731,23 +824,6 @@ export function Board({ store }: { store: GameStore }) {
                             />
                         </div>
 
-                        <div className="controls">
-                            <button type="button" className="btn" onClick={onNewGame}>
-                                New game
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn${activityOpen ? " is-active" : ""}`}
-                                onClick={() => {
-                                    setActivityOpen((v) => !v);
-                                }}
-                                aria-expanded={activityOpen}
-                            >
-                                Activity
-                            </button>
-                            {isWide ? null : aiLevelControl}
-                        </div>
-
                         <div className="hand-half human">
                             <PlayerHand
                                 playerId={Human}
@@ -781,55 +857,25 @@ export function Board({ store }: { store: GameStore }) {
                     </div>
                 </div>
             </div>
+            </div>
 
-            {activityOpen || isWide ? (
-                <div className="activity-rail">
-                    {isWide ? aiLevelControl : null}
-                    {activityOpen ? (
-                <div className="activity" role="dialog" aria-label="Activity log">
-                    <header>
-                        <span>Activity</span>
-                        {toast !== null ? (
-                            <div role="alert" className="toast activity-toast">
-                                {toast}
-                            </div>
-                        ) : null}
-                        <div className="activity-actions">
-                            <button
-                                type="button"
-                                className="btn copy"
-                                onClick={() => {
-                                    void onCopyActivity();
-                                }}
-                                aria-label="Copy activity log and debug info"
-                                title="Copy activity log and debug info"
-                            >
-                                <svg
-                                    viewBox="0 0 16 16"
-                                    width="14"
-                                    height="14"
-                                    fill="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
-                                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                className="close"
-                                onClick={() => {
-                                    setActivityOpen(false);
-                                }}
-                                aria-label="Close activity log"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    </header>
-                    <Sidebar log={state.log} state={state} scores={scores} />
-                </div>
-                    ) : null}
+            {!isWide && menuOpen ? (
+                <div
+                    className="menu-backdrop"
+                    onClick={() => {
+                        setMenuOpen(false);
+                    }}
+                >
+                    <nav
+                        id="game-menu"
+                        aria-label="Game menu"
+                        className="menu-panel"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                    >
+                        {menuItems}
+                    </nav>
                 </div>
             ) : null}
 

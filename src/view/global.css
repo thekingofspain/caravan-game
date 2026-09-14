@@ -41,16 +41,19 @@
         calc(100dvh / 38),
         calc(var(--card-h) * 0.45)
     );
-    /* Caravan width: min 2.25 cards, max 3 cards, preferred = even share of
-       available row width (cqw resolves against the .caravans container).
-       Roomy enough for score + name + sort + suit header content. */
+    /* Caravan width: min 2.86 cards, max 3.3 cards, preferred = even share
+       of available row width (cqw resolves against the .caravans container),
+       all scaled 10% up. Roomy enough for score + name + sort + suit header
+       content: the header needs ~210px at reference type and narrower floors
+       truncated names once the icons stopped overlapping (worst case is the
+       widest name with a suited two-icon sigil at ~1024px viewports). */
     --caravan-w: clamp(
-        calc(var(--card-w) * 2.25),
-        calc((100cqw - 2 * var(--relief)) / 3),
-        calc(var(--card-w) * 3)
+        calc(var(--card-w) * 2.6 * 1.1),
+        calc((100cqw - 2 * var(--relief)) / 3 * 1.1),
+        calc(var(--card-w) * 3 * 1.1)
     );
-    /* Gaps between caravans: horizontal follows vw, vertical follows vh. */
-    --caravan-gap-x: clamp(calc(var(--card-w) * 0.25), 2.5vw, calc(var(--card-w) * 0.75));
+    /* Fill the row exactly: remainder after three (10%-up) caravans, split in two. Floored so lanes never crush, capped at the old maximum. */
+    --caravan-gap-x: max(calc(var(--card-w) * 0.1), min(calc((100cqw - 2 * var(--relief) - 3 * var(--caravan-w)) / 2), calc(var(--card-w) * 0.75)));
     --caravan-gap-y: clamp(calc(var(--card-h) * 0.15), 2.5vh, calc(var(--card-h) * 0.5));
     /* Lead-in from the track edge facing board center: empty-slot marker and
        first-card landing spot share it, so the stack keys off the marker. */
@@ -205,6 +208,7 @@ body {
 .board {
     position: relative;
     display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
     width: 100%;
@@ -212,10 +216,48 @@ body {
     overflow-x: hidden;
     overflow-y: auto;
 }
+/* Slim top bar: bare yellow hamburger in the upper corner plus the wordmark.
+   Only on narrow screens (wide docks the sidebar instead). Pinned to the top
+   of the board scroll so it never spills into the field; always fully
+   visible, open or closed — the drawer docks below it. Gaps use relief to
+   match the board padding all around. */
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding-bottom: var(--relief);
+    background: var(--c-felt);
+}
+.topbar .brand {
+    font: 700 var(--fs-md) var(--font-base);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-fg);
+}
+/* Board body: docked sidebar beside the field on wide screens. */
+.board-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+}
+/* Docked sidebar: the same menu contents, persistently visible. */
+.side-rail {
+    width: var(--activity-w);
+    max-width: 85vw;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    min-height: 0;
+    margin-right: var(--relief);
+}
 
 .sidebar-log {
     overflow: hidden;
-    padding: var(--sp-2);
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
@@ -251,7 +293,7 @@ body {
 .board .column.caravans {
     flex: 1 1 auto;
     min-width: 0;
-    gap: var(--caravan-gap-y);
+    gap: 0;
 }
 
 .board .column.hands {
@@ -452,6 +494,13 @@ body {
     container-type: inline-size;
 }
 
+/* The column stacking the AI/human rows: a slight vertical breath between
+   them. This must beat the row gap above — the column matches that selector
+   too, and later/specific wins. */
+.board .field .column.caravans {
+    gap: var(--sp-1);
+}
+
 .caravans.human {
     --player-color: var(--c-human);
     --player-rgb: var(--c-human-rgb);
@@ -494,19 +543,10 @@ body {
     position: relative;
     align-items: center;
 }
-
 .caravan::before {
-    content: "";
-    position: absolute;
-    top: 0.125rem;
-    bottom: 0.125rem;
-    left: 0;
-    right: 0;
-    z-index: 0;
-    border-radius: 1.75rem;
-    border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-    pointer-events: none;
+    /* No container chrome: no tint, no insets, no border. (This also takes
+       the sellable outline with it — that state keeps its score coloring.) */
+    display: none;
 }
 
 .caravans .caravan::before {
@@ -515,7 +555,7 @@ body {
 }
 
 .caravan.sellable::before {
-    border-width: 0.1875rem;
+    border-width: 0.09375rem;
 }
 
 .caravans .caravan.sellable::before {
@@ -548,56 +588,95 @@ body {
 .caravan header {
     width: 100%;
     height: auto;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: row;
+    /* Flex row: score | name | sigil, packed from the lane's left. Every
+       position is known: fixed score, fixed name (the calibrated scale fills
+       it exactly), fixed suit and direction boxes, uniform `gap` twice. What
+       the eye reads as gap is exactly `gap` on both sides. The name shrinks
+       with ellipsis only when the lane itself is crushed, so nothing in the
+       row ever shifts from play. Leftover stays right of the direction icon. */
     align-items: center;
-    row-gap: var(--sp-1);
+    justify-content: flex-start;
+    gap: 0.5em;
     position: relative;
     pointer-events: none;
 }
 .caravan .score {
-    grid-column: 1;
-    justify-self: start;
+    /* Fixed width fitting bold 2-digit totals with room to spare; digits stay
+       right-aligned via the flex rules in the text block further down. A
+       freak 3-digit total clips with ellipsis instead of shifting the row —
+       scores past 99 need absurd stacking and never occur in real games. */
+    flex: 0 0 auto;
+    width: calc(var(--fs-md) * 1.9 + var(--sp-2));
     padding-left: var(--sp-2);
+    padding-right: 0;
+    overflow: hidden;
 }
 .caravan .title {
-    grid-column: 2;
-    justify-self: center;
-    font-size: var(--fs-md);
+    /* Fixed width: the per-name scale (see NAME_SCALES) renders every name at
+       C × fs-md, so a C-wide track always hugs its text and the eye-gap after
+       the name equals `gap`. Shrinks with ellipsis only when the lane itself
+       is crushed. */
+    flex: 0 1 auto;
+    min-width: 0;
+    width: calc(var(--fs-md) * 6.15);
+    font-size: calc(var(--fs-md) * var(--name-scale, 1));
     /* Single line at fs-xl: row height matches suit/score rows exactly. */
     line-height: var(--fs-xl);
-    width: auto;
     max-width: 100%;
-    text-align: center;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.caravan .sort-icon,
-.caravan .suit {
-    grid-column: 3;
-    grid-row: 1;
+/* Sigil: suit + direction icons as one slot. The spec lists no gap between
+   them, so they sit adjacent with a hairline. The suit pip is a baked SVG
+   (public/cards/H|D|C|S: suit color with a gold outline) painted centered in
+   its fixed box; every suit shares the box, so box-level gaps and the shared
+   axis are exact and only sub-3px ink-centering variance remains. The empty
+   box reserves the slot before the first card lands, exactly like the
+   direction placeholder. */
+.caravan .sigil {
+    display: flex;
+    align-items: center;
+    column-gap: 0.05em;
+    flex: none;
 }
 .caravan .suit {
-    justify-self: start;
-    font-size: var(--fs-xl);
-    font-weight: 700;
-    line-height: 1;
+    width: var(--fs-xl);
+    height: var(--fs-xl);
+    flex: none;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+.caravan .suit.hearts {
+    background-image: url("/cards/H.svg");
+}
+.caravan .suit.diamonds {
+    background-image: url("/cards/D.svg");
+}
+.caravan .suit.clubs {
+    background-image: url("/cards/C.svg");
+}
+.caravan .suit.spades {
+    background-image: url("/cards/S.svg");
 }
 /* Flat-DOM sort icon: empty placeholder by default (no direction yet) that
    reserves its box; header[data-dir] hooks paint the mask when one exists. */
-.caravans.ai .caravan {
-    margin-bottom: 0.23rem;
+ .caravans.ai .caravan {
+    margin-bottom: 0;
 }
-.caravans.human .caravan {
-    margin-top: 0.23rem;
+ .caravans.human .caravan {
+    margin-top: 0;
 }
 .caravans.human .caravan header {
-    padding-top: var(--sp-2);
+    padding-top: 0;
     padding-bottom: 0;
 }
 .caravans.ai .caravan header {
-    padding-bottom: var(--sp-2);
+    padding-bottom: 0;
     padding-top: 0;
 }
 .caravan .sort-icon {
@@ -605,15 +684,75 @@ body {
     width: var(--fs-xl);
     height: var(--fs-xl);
     background-color: transparent;
-    justify-self: start;
     font-size: var(--fs-xl);
-    margin-left: calc(0.61em + 0.05rem);
-    -webkit-mask-position: center;
+    /* All four arrow assets start their ink at x=3/24, so shift the mask
+       left by that fraction: the painted arrow hugs the suit instead of
+       floating mid-box. em units keep the shift proportional in compact. */
+    -webkit-mask-position: -0.125em center;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: contain;
-    mask-position: center;
+    mask-position: -0.125em center;
     mask-repeat: no-repeat;
     mask-size: contain;
+}
+/* Narrow viewports: the lane floor shrinks faster than the fluid type, so the
+   header compacts (tighter gaps and score inset, 0.85× icons, 0.75× names at
+   the same relative scales) to keep full names visible with margin to spare.
+   Below this floor the ellipsis is a last resort. */
+@media (max-width: 48rem) {
+    .caravan header {
+        gap: 0.25em;
+    }
+    .caravan .score {
+        width: auto;
+        min-width: 2.5ch;
+        padding-left: 0;
+    }
+    .caravan .title {
+        font-size: calc(var(--fs-md) * var(--name-scale, 1) * 0.75);
+        width: calc(var(--fs-md) * 6.15 * 0.75);
+    }
+    .caravan .suit {
+        width: calc(var(--fs-xl) * 0.85);
+        height: calc(var(--fs-xl) * 0.85);
+    }
+    .caravan .sort-icon {
+        width: calc(var(--fs-xl) * 0.85);
+        height: calc(var(--fs-xl) * 0.85);
+        font-size: calc(var(--fs-xl) * 0.85);
+    }
+}
+/* Mid viewports (tablets, small windows): lanes narrow faster than the fluid
+   type between the compact breakpoint and ~1000px, so names step down to the
+   compact scale with slightly tighter gaps while icons and score keep full
+   size. Above 63rem full-size type fits with margin to spare. */
+@media (min-width: 48.01rem) and (max-width: 63rem) {
+    .caravan header {
+        gap: 0.4em;
+    }
+    .caravan .title {
+        font-size: calc(var(--fs-md) * var(--name-scale, 1) * 0.75);
+        width: calc(var(--fs-md) * 6.15 * 0.75);
+    }
+}
+/* Very narrow viewports: below ~640px even the compact header cannot fit its
+   lane, so the whole row scales down proportionally instead of clipping any
+   name. Proportions, gaps, and alignment are preserved — only absolute size
+   yields. The ellipsis below remains an absolute last resort. */
+@media (max-width: 40rem) {
+    .caravan header {
+        zoom: 0.8;
+    }
+}
+@media (max-width: 30rem) {
+    .caravan header {
+        zoom: 0.6;
+    }
+}
+@media (max-width: 23rem) {
+    .caravan header {
+        zoom: 0.52;
+    }
 }
  .caravans.human .caravan header[data-dir="asc"] .sort-icon {
     background-color: var(--c-sort);
@@ -635,16 +774,15 @@ body {
     -webkit-mask-image: url("/icons/sort-ai-desc.svg");
     mask-image: url("/icons/sort-ai-desc.svg");
  }
-/* Score readout text styling; placement is handled by the header grid above. */
+/* Score readout text styling; placement is handled by the flex row above. */
 .caravan .score {
     height: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    font-size: var(--fs-md);
+    font-size: calc(var(--fs-md) * 1.25);
     font-weight: 400;
     font-variant-numeric: tabular-nums;
-    min-width: 2.5ch;
     text-align: right;
     color: #fff;
 }
@@ -663,10 +801,13 @@ body {
 
 .caravan .total {
     min-width: 2.5ch;
+    max-width: 100%;
     text-align: right;
     display: inline-block;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ── 10 — Track (stack) ── */
@@ -1025,24 +1166,26 @@ body {
     pointer-events: none;
 }
 
-/* ── 15 — Controls ── */
-/* Controls / buttons */
+/* ── 15 — Buttons ── */
 .activity-actions {
     display: flex;
     gap: var(--sp-2);
     align-items: center;
 }
+/* Bare copy icon: no button box, consistent with the hamburger. */
 .activity-actions .copy {
-    padding: var(--sp-2);
+    background: transparent;
+    border: 0;
+    padding: var(--sp-1) 0;
     line-height: 0;
+    cursor: pointer;
+    color: var(--c-fg);
+}
+.activity-actions .copy:hover {
+    color: var(--c-accent);
 }
 .activity-actions .copy svg {
     display: block;
-}
-.controls {
-    display: flex;
-    gap: var(--sp-2);
-    flex-wrap: wrap;
 }
 .ai-level {
     display: inline-flex;
@@ -1052,7 +1195,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
-
 .btn {
     font: 700 var(--fs-xs) var(--font-base);
     background: var(--c-accent);
@@ -1070,18 +1212,82 @@ body {
     border-color: #e6c34d;
 }
 
-/* Widescreen: the Activity toggle reads depressed while its panel is open. */
-@media (min-width: 70rem) {
-    .controls .btn.is-active {
-        background: #b8942a;
-        border-color: #b8942a;
-        box-shadow: inset 0 0.125rem 0.3125rem rgba(0, 0, 0, 0.4);
-    }
-}
-
 .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+}
+/* ── 15b — Sidebar hamburger menu ── */
+/* Bare yellow hamburger in the top bar: no button box. */
+.menu-button {
+    background: transparent;
+    border: 0;
+    /* Fixed height so the drawer can dock exactly below the top bar. */
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--sp-2);
+    line-height: 0;
+    cursor: pointer;
+    color: var(--c-accent);
+}
+.menu-button:hover .menu-icon span {
+    background: #e6c34d;
+}
+.menu-icon {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+}
+.menu-icon span {
+    display: block;
+    width: 1.25rem;
+    height: 0.1875rem;
+    background: currentColor;
+    border-radius: 0.0625rem;
+}
+/* Drawer: transparent backdrop catches outside clicks; panel slides from the left. */
+.menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+}
+.menu-panel {
+    position: absolute;
+    /* Dock exactly below the pinned top bar (board padding + 2rem button +
+       relief gap): header stays fully visible and never overlaps the panel. */
+    top: calc(2 * var(--relief) + 2rem);
+    left: 0;
+    bottom: 0;
+    width: var(--activity-w);
+    max-width: 85vw;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    min-height: 0;
+    padding: var(--relief);
+    background: var(--c-panel);
+    border-right: 0.0625rem solid var(--c-line);
+}
+.menu-panel header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    color: var(--c-fg);
+    font-weight: 700;
+}
+.menu-panel > .btn,
+.side-rail > .btn {
+    align-self: flex-start;
+}
+/* Integrated activity log: fills the sidebar below the controls and scrolls. */
+.menu-panel .activity,
+.side-rail .activity {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: var(--sp-2);
 }
 
 /* ── 16 — Log & activity ── */
@@ -1170,23 +1376,11 @@ body {
     text-align: center;
 }
 .activity {
-    /* Dialog mode (narrow): fixed over the right-hand shoe & hand column
-       so board scroll never uncenters it; always fills the free height. */
-    position: fixed;
-    right: var(--sp-3);
-    left: auto;
-    top: 50%;
-    transform: translateY(-50%);
-    width: var(--activity-w);
-    height: 70vh;
-    height: 70dvh;
+    /* Integrated mode: the log lives inside the sidebar drawer and fills it. */
     display: flex;
     flex-direction: column;
-    background: var(--c-panel);
-    border: 0.0625rem solid var(--c-line);
-    border-radius: var(--radius);
-    box-shadow: 0 0.5rem 1.75rem rgba(0, 0, 0, 0.45);
-    z-index: 50;
+    flex: 1;
+    min-height: 0;
 }
 .log .wins {
     display: flex;
@@ -1197,83 +1391,8 @@ body {
     color: var(--c-ink);
 }
 
-/* Narrow viewport: rail is an invisible wrapper so the fixed dialog still
-   positions to the viewport exactly as before. */
-.activity-rail {
-    display: contents;
-}
-
-/* Wide viewport: activity docks as a persistent left column of the board,
-   with the AI difficulty control riding above it in the same rail. */
-@media (min-width: 70rem) {
-    .activity-rail {
-        display: flex;
-        flex-direction: column;
-        order: -1;
-        align-self: stretch;
-        flex-shrink: 0;
-        gap: var(--relief);
-        margin-right: var(--relief);
-    }
-    .activity {
-        position: static;
-        transform: none;
-        height: auto;
-        min-height: 0;
-        flex: 1;
-        align-self: stretch;
-        flex-shrink: 0;
-    }
-    .activity-rail .ai-level {
-        align-self: flex-end;
-    }
-}
-
-.activity header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3);
-    color: var(--c-fg);
-    font-weight: 700;
-    border-bottom: none;
-}
-.activity header .toast {
-    position: static;
-    transform: none;
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: center;
-    font-size: var(--fs-xs);
-    font-weight: 400;
-    padding: 0;
-    background: transparent;
-    color: var(--c-fg);
-    border-radius: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.activity .close {
-    position: static;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    width: 1.5rem;
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-    color: var(--c-fg);
-    font-size: var(--fs-xl);
-}
-
 .activity .log {
-    margin: var(--sp-2);
+    margin: 0;
     flex: 1;
     min-height: 0;
 }
@@ -1324,12 +1443,14 @@ body {
 /* Four-suit palette, shared by the log and the caravan header readout. */
 .card-name.red,
 .card-name.hearts {
-    color: #b3261e;
+    /* Matches the hearts pips in public/cards/*.svg (fill="red"). */
+    color: red;
 }
 
 .card-name.black,
 .card-name.spades {
-    color: #1a1a1a;
+    /* Matches the spades pips in public/cards/*.svg (stroke="#000"). */
+    color: #000;
 }
 
 .card-name.diamonds {
