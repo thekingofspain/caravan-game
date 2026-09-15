@@ -11,8 +11,10 @@ const page = await context.newPage();
 await page.goto(`${BASE}?seed=42`, { waitUntil: "networkidle" });
 await boardReady(page);
 
-// Open activity
-if ((await page.locator(".activity").count()) === 0) await page.locator(".btn", { hasText: "Activity" }).click();
+// Open the menu unless the activity log is already docked (wide screens).
+if ((await page.locator(".activity").count()) === 0) {
+    await page.getByRole("button", { name: "Menu" }).click();
+}
 await page.waitForSelector(".activity");
 
 // Click Copy

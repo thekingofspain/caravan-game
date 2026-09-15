@@ -1,8 +1,8 @@
 import { Ai, Human, PlayerId } from "./types";
 
 const NAMES: Record<PlayerId, [string, string, string]> = {
-    [Human]: ["Boneyard", "Redding", "Shady Sands"],
-    [Ai]: ["Dayglow", "New Reno", "The Hub"]
+    [Human]: ["Dayglow", "New Reno", "The Hub"],
+    [Ai]: ["Boneyard", "Redding", "Shady Sands"]
 };
 
 export const ALL_CARAVAN_NAMES = Object.values(NAMES).flat();

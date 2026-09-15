@@ -1,4 +1,4 @@
-import type { GameState, Move } from "../model/types";
+import type { GameState, Move, PlayerId } from "../model/types";
 import type { GameStore, ReducerMove } from "../viewmodel/useGame";
 
 export function testHooksEnabled(): boolean {
@@ -19,6 +19,7 @@ export interface TestWindowHooks {
     __caravanStore?: GameStore;
     __resetWithSeed?: (s: number) => void;
     __act?: (a: Move) => void;
+    __bestMove?: (state: GameState, acting: PlayerId) => Move;
     __setCaravanState?: (s: GameState) => void;
     __caravanDispatch?: (a: ReducerMove) => void;
 }
@@ -43,6 +44,8 @@ export function publishTestHooks(fields: TestWindowHooks): () => void {
         if (fields.__resetWithSeed !== undefined) delete w.__resetWithSeed;
 
         if (fields.__act !== undefined) delete w.__act;
+
+        if (fields.__bestMove !== undefined) delete w.__bestMove;
 
         if (fields.__setCaravanState !== undefined) delete w.__setCaravanState;
 

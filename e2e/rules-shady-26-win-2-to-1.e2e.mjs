@@ -190,7 +190,9 @@ assert.equal(after.pair1, Human, "Redding 26 vs 4 -> Human");
 assert.equal(after.pair2, Human, "Shady 26 vs 24 -> Human");
 assert.ok(after.logLast.some((t) => t.includes("You won")), "log should contain win message");
 
-if ((await page.locator(".activity").count()) === 0) await page.getByRole("button", { name: "Activity" }).click();
+if ((await page.locator(".activity").count()) === 0) {
+    await page.getByRole("button", { name: "Menu" }).click();
+}
 await page.waitForSelector(".activity");
 let uiWinner = await page.evaluate(() => document.body.innerText.includes("You won") || document.body.innerText.includes("won"));
 console.log("UI shows win:", uiWinner);
