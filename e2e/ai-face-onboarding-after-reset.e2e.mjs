@@ -85,12 +85,6 @@ let onboardingCheck = await page.evaluate(()=>{
 });
 console.log("onboarding legal:", JSON.stringify(onboardingCheck,null,2));
 
-// Check what AI would pick as best move
-let aiBest = await page.evaluate(()=>{
-  // Use the AI algorithm directly if exposed, otherwise use legal
-  // Try to import determineBestMove via dynamic import
-  return window.__caravanStore.legal;
-});
 console.log("AI legal moves:", onboardingCheck.legalTypes);
 
 // The bug: AI places a face card during onboarding (when hasEmpty true)
@@ -101,15 +95,10 @@ let hasValueToEmpty = onboardingCheck.legal.some(m=> m.type==="playValueCard" &&
 console.log(`hasFaceCardMove: ${hasFaceCardMove}, hasValueToEmpty: ${hasValueToEmpty}`);
 
 // Also check what determineBestMove would pick
-let bestMoveInfo = await page.evaluate(async ()=>{
-  try {
-    const mod = await import("/src/model/ai.ts");
-    const state = window.__caravanStore.state;
-    const move = mod.determineBestMove(state, state.current, ()=>0.5);
-    return { move, moveType: move.type, isFace: move.type==="playOperationCard" };
-  } catch(e){
-    return { error: String(e) };
-  }
+let bestMoveInfo = await page.evaluate(()=>{
+  const state = window.__caravanStore.state;
+  const move = window.__bestMove(state, state.current);
+  return { move, moveType: move.type, isFace: move.type==="playOperationCard" };
 });
 console.log("AI best move:", JSON.stringify(bestMoveInfo,null,2));
 

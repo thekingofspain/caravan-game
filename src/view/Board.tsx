@@ -26,6 +26,7 @@ const NOOP = (): void => undefined;
 // Only genuinely big screens dock the sidebar: at half-width windows the
 // docked rail would eat a caravan, so those stay on the hamburger drawer.
 // (100rem ≈ 1.4k–1.9k px given the fluid root type; full-HD and up docks.)
+
 const WIDE_SIDEBAR_QUERY = "(min-width: 100rem)";
 
 // Branding-iron stamp placement per caravan: heights staggered so the three
@@ -47,6 +48,7 @@ const BRACE_RE = /\{([^{}]+)\}/g;
 // width of each name (4.91/4.28/6.80/4.29/4.91/4.29 — stable across
 // viewports since per-em advances scale linearly). Retune from fresh
 // measurements if the names or the typeface change.
+
 const NAME_SCALES: Record<string, number> = {
     Boneyard: 1.253,
     Redding: 1.436,
@@ -88,7 +90,9 @@ function CaravanColumn({
                 const sellable = meta.isSellable;
                 const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && meta.isSold;
+
                 // Equal rendered widths via the calibrated table above.
+
                 const name = caravanName(playerId, laneIndex);
                 const nameScale = NAME_SCALES[name] ?? 1;
 
@@ -268,6 +272,7 @@ export function Board({ store }: { store: GameStore }) {
 
     // Shared sidebar contents: docked rail on wide screens, drawer on narrow.
     // New game also closes the drawer (no-op when docked).
+
     const menuItems = (
         <>
             <button
@@ -346,6 +351,7 @@ export function Board({ store }: { store: GameStore }) {
     }, [pendingDisband, menuOpen]);
 
     // Docking the sidebar makes the drawer redundant: close it.
+
     useEffect(() => {
         const mq = window.matchMedia(WIDE_SIDEBAR_QUERY);
         const onChange = (e: MediaQueryListEvent) => {
@@ -367,6 +373,7 @@ export function Board({ store }: { store: GameStore }) {
     // Center the winner banner on the human middle lane: measure its center x
     // pre-paint (vertical stays in the topbar band via CSS). Viewport-relative
     // rects stay correct under board scroll.
+
     useLayoutEffect(() => {
         if (!isGameOver) {
             setBannerLeft(null);
