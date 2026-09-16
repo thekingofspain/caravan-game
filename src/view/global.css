@@ -25,8 +25,11 @@
     --sp-5: 1.5rem;
     --radius: 0.375rem;
     --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-    /* Card + type scale react to BOTH vw and vh (dv* preferred, vw/vh fallback). */
-    --card-h: clamp(3.5rem, min(13.5vh, 13.5dvh, 10.5vw, 10.5dvw), 12.5rem);
+    /* Cards react to BOTH vw and vh (dv* preferred, vw/vh fallback). The vw
+       terms dominate at half-width laptop windows, so the whole board (card
+       faces, lane widths from --card-w, hand fans, and rem type via html)
+       scales down until the minimum below. */
+    --card-h: clamp(2.5rem, min(13.5vh, 13.5dvh, 10.5vw, 10.5dvw), 12.5rem);
     --card-w: calc(var(--card-h) * 212 / 329);
     --card-offset-x: calc(var(--card-w) * 0.275);
     /* Stack looseness follows vertical excess: tight (corners only) when short,
@@ -52,8 +55,14 @@
         calc((100cqw - 2 * var(--relief)) / 3 * 1.1),
         calc(var(--card-w) * 3 * 1.1)
     );
-    /* Fill the row exactly: remainder after three (10%-up) caravans, split in two. Floored so lanes never crush, capped at the old maximum. */
-    --caravan-gap-x: max(calc(var(--card-w) * 0.1), min(calc((100cqw - 2 * var(--relief) - 3 * var(--caravan-w)) / 2), calc(var(--card-w) * 0.75)));
+    /* Fill the row exactly: remainder after three (10%-up) caravans, split in two. Floored low so half-width windows shrink gaps before crushing lanes, capped at the old maximum. */
+    --caravan-gap-x: max(
+        calc(var(--card-w) * 0.05),
+        min(
+            calc((100cqw - 2 * var(--relief) - 3 * var(--caravan-w)) / 2),
+            calc(var(--card-w) * 0.75)
+        )
+    );
     --caravan-gap-y: clamp(calc(var(--card-h) * 0.15), 2.5vh, calc(var(--card-h) * 0.5));
     /* Lead-in from the track edge facing board center: empty-slot marker and
        first-card landing spot share it, so the stack keys off the marker. */
@@ -138,10 +147,9 @@ body {
 }
 .gameover-banner {
     position: absolute;
-    /* Same band as the topbar row (2rem button): centered on it, so the win
-       toast sits inline with the hamburger and brand. */
+    /* Top band beside the floating hamburger; centered on the board. */
     top: calc(var(--relief) + 1rem);
-    /* Inline left pins the measured middle-lane center. */
+    left: 50%;
     transform: translate(-50%, -50%);
     z-index: 90;
     display: flex;
@@ -223,22 +231,10 @@ body {
     overflow-x: hidden;
     overflow-y: auto;
 }
-/* Slim top bar: bare yellow hamburger in the upper corner plus the wordmark.
-   Only on narrow screens (wide docks the sidebar instead). Pinned to the top
-   of the board scroll so it never spills into the field; always fully
-   visible, open or closed — the drawer docks below it. Gaps use relief to
-   match the board padding all around. */
-.topbar {
-    position: sticky;
-    top: 0;
-    z-index: 90;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    padding-bottom: var(--relief);
-    background: var(--c-felt);
-}
-.topbar .brand {
+/* No top bar: the hamburger floats over the board gutter on narrow screens,
+   and the docked rail carries its own wordmark on wide screens. Neither
+   takes space from the field. */
+.board .brand {
     font: 700 var(--fs-md) var(--font-base);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -246,6 +242,7 @@ body {
 }
 /* Board body: docked sidebar beside the field on wide screens. */
 .board-body {
+    position: relative;
     display: flex;
     flex: 1;
     min-height: 0;
@@ -307,6 +304,7 @@ body {
     flex: 0 0 auto;
     width: var(--hand-w);
     align-items: center;
+    justify-content: space-between;
 }
 
 .board .controls {
@@ -340,44 +338,41 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: var(--sp-3);
     flex: 1 1 0;
     min-height: 0;
+    justify-content: space-between;
 }
 
+/* /* Hands flank the board center: equal halves share the column height, the AI
+   half packs shoe + hand to its bottom edge and the human half packs hand +
+   shoe to its top edge, so both hands sit against the center gap beside the
+   caravan placeholders. 
 .board .column.hands > .hand-half:first-child {
-    justify-content: flex-start;
-}
-/* Reciprocal packing about the board center: AI half packs its shoe + hand
-   to the top, human half packs its hand + shoe to the bottom. The precise
-   hand extremes are then nudged via --ai-hand-lift / --human-hand-lift on
-   .cards (see Board.tsx). No transition: re-measured after every render,
-   a glide would feed mid-flight positions back into the next correction. */
-.hand-half.human {
     justify-content: flex-end;
 }
+.hand-half.human {
+    justify-content: flex-start;
+} */
 
 .hand-half .hand {
     flex: 0 0 auto;
     width: var(--hand-w);
     overflow: visible;
 }
-
 /* Hand — base: .hand */
 .hand {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
-    padding: 1.5rem 0;
     overflow-x: auto;
 }
-
 .hand .cards {
     display: flex;
     justify-content: center;
     flex: 1;
     position: relative;
+    overflow: visible;
     --fan-center: calc((var(--fan-count) - 1) / 2);
     --hand-rot: 3deg;
     transform: rotate(var(--hand-rot));
@@ -385,21 +380,7 @@ body {
     height: calc(var(--card-h) * 1.4);
 }
 
-/* Mirror shifts, set at runtime from measured DOM rects (see Board.tsx):
-   the AI hand's lowest fan point lines up with the bottom of the AI
-   starting placeholder; the human hand's top lines up with the top of the
-   human starting placeholder. Same scope both sides (.cards only) so the
-   shoes stay packed reciprocally and never drift with the nudge. Each fan
-   also shifts left until its right extreme meets the column's right edge —
-   the space right of the hand then equals the board's outer padding. */
-.hand.ai .cards {
-    transform: translateX(var(--ai-hand-shift, 0px)) translateY(var(--ai-hand-lift, 0px))
-        rotate(var(--hand-rot));
-}
-.hand.human .cards {
-    transform: translateX(var(--human-hand-shift, 0px)) translateY(var(--human-hand-lift, 0px))
-        rotate(var(--hand-rot));
-}
+/* Hands are placed by flexbox alone: no runtime nudges. */
 
 .hand .slot {
     border-radius: var(--radius);
@@ -407,7 +388,6 @@ body {
     appearance: none;
     position: absolute;
     left: 50%;
-    bottom: 0;
     width: var(--card-w);
     z-index: var(--i);
     transform-origin: 50% 167%;
@@ -416,6 +396,12 @@ body {
     border: 0;
     padding: 0;
     transition: transform 0.12s ease;
+}
+.hand.human .slot {
+    bottom: 0;
+}
+.hand.ai .slot {
+    top: 0;
 }
 
 .hand .slot.ai {
@@ -683,10 +669,10 @@ body {
 }
 /* Flat-DOM sort icon: empty placeholder by default (no direction yet) that
    reserves its box; header[data-dir] hooks paint the mask when one exists. */
- .caravans.ai .caravan {
+.caravans.ai .caravan {
     margin-bottom: 0;
 }
- .caravans.human .caravan {
+.caravans.human .caravan {
     margin-top: 0;
 }
 .caravans.human .caravan header {
@@ -772,26 +758,26 @@ body {
         zoom: 0.52;
     }
 }
- .caravans.human .caravan header[data-dir="asc"] .sort-icon {
+.caravans.human .caravan header[data-dir="asc"] .sort-icon {
     background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-human-asc.svg");
     mask-image: url("/icons/sort-human-asc.svg");
- }
- .caravans.human .caravan header[data-dir="desc"] .sort-icon {
+}
+.caravans.human .caravan header[data-dir="desc"] .sort-icon {
     background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-human-desc.svg");
     mask-image: url("/icons/sort-human-desc.svg");
- }
- .caravans.ai .caravan header[data-dir="asc"] .sort-icon {
+}
+.caravans.ai .caravan header[data-dir="asc"] .sort-icon {
     background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-ai-asc.svg");
     mask-image: url("/icons/sort-ai-asc.svg");
- }
- .caravans.ai .caravan header[data-dir="desc"] .sort-icon {
+}
+.caravans.ai .caravan header[data-dir="desc"] .sort-icon {
     background-color: var(--c-sort);
     -webkit-mask-image: url("/icons/sort-ai-desc.svg");
     mask-image: url("/icons/sort-ai-desc.svg");
- }
+}
 /* Score readout text styling; placement is handled by the flex row above. */
 .caravan .score {
     height: 1.5rem;
@@ -916,7 +902,7 @@ body {
 
 .caravans.ai .card > .card:nth-of-type(3) {
     --col-y: calc(var(--card-h) * -0.12);
- }
+}
 
 .caravans.human .card > .card {
     left: calc(var(--c, 0) * var(--card-offset-x));
@@ -1239,11 +1225,10 @@ body {
     cursor: not-allowed;
 }
 /* ── 15b — Sidebar hamburger menu ── */
-/* Bare yellow hamburger in the top bar: no button box. */
+/* Bare yellow hamburger: floating toggle on narrow screens, no button box. */
 .menu-button {
     background: transparent;
     border: 0;
-    /* Fixed height so the drawer can dock exactly below the top bar. */
     height: 2rem;
     display: inline-flex;
     align-items: center;
@@ -1254,6 +1239,14 @@ body {
 }
 .menu-button:hover .menu-icon span {
     background: #e6c34d;
+}
+/* Narrow screens: the toggle floats over the top-left board gutter, so no
+   header row takes space from the field. */
+.menu-button.menu-fab {
+    position: absolute;
+    top: var(--relief);
+    left: var(--relief);
+    z-index: 70;
 }
 .menu-icon {
     display: inline-flex;
@@ -1269,15 +1262,13 @@ body {
 }
 /* Drawer: transparent backdrop catches outside clicks; panel slides from the left. */
 .menu-backdrop {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 80;
 }
 .menu-panel {
     position: absolute;
-    /* Dock exactly below the pinned top bar (board padding + 2rem button +
-       relief gap): header stays fully visible and never overlaps the panel. */
-    top: calc(2 * var(--relief) + 2rem);
+    top: 0;
     left: 0;
     bottom: 0;
     width: var(--activity-w);
@@ -1290,6 +1281,31 @@ body {
     background: var(--c-panel);
     border-right: 0.0625rem solid var(--c-line);
 }
+.menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+}
+.menu-close {
+    background: transparent;
+    border: 0;
+    padding: 0 var(--sp-1);
+    line-height: 1;
+    font-size: var(--fs-lg);
+    cursor: pointer;
+    color: var(--c-fg);
+}
+.menu-close:hover {
+    color: var(--c-accent);
+}
+/* Compact controls row: New game beside difficulty, wrapping on narrow drawers. */
+.menu-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) var(--sp-3);
+}
 .menu-panel header {
     display: flex;
     align-items: center;
@@ -1297,10 +1313,6 @@ body {
     gap: var(--sp-2);
     color: var(--c-fg);
     font-weight: 700;
-}
-.menu-panel > .btn,
-.side-rail > .btn {
-    align-self: flex-start;
 }
 /* Integrated activity log: fills the sidebar below the controls and scrolls. */
 .menu-panel .activity,
