@@ -78,9 +78,27 @@ console.log("  all 3 placeholders filled (1 card each)");
 
 // ── Bug: after placeholders are filled, a real click must still place a card ──
 console.log("Attempting to place a value card on a filled caravan...");
-await waitHumanTurn();
-
-const candidates = await valueSlots();
+// The no-seed start deals a random hand: after 3 forced placements plus the
+// AI's replies the fresh draws can be all face cards / direction-blocked
+// aces with no legal lane. Retry the whole flow on a fresh deck instead of
+// asserting on one deal.
+let candidates = [];
+for (let attempt = 0; attempt < 3 && candidates.length === 0; attempt++) {
+    if (attempt > 0) {
+        await page.goto(BASE, { waitUntil: "networkidle" });
+        await boardReady(page);
+        for (let ci = 0; ci < 3; ci++) {
+            await waitHumanTurn();
+            const slots = await valueSlots();
+            assert.ok(slots.length > 0, "no value card available to fill a placeholder");
+            await slots[0].dispatchEvent("click");
+            await page.waitForSelector(".slot.selected", { timeout: 5000 });
+            await placeOnCaravan(ci);
+        }
+    }
+    await waitHumanTurn();
+    candidates = await valueSlots();
+}
 assert.ok(candidates.length > 0, "no value card selectable to place on a filled caravan");
 
 let placed = false;
