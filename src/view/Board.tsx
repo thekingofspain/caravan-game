@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { cardLabel } from "../model/cards";
 import { segmentsText } from "../model/gameLog";
@@ -11,7 +11,6 @@ import type {
     SelectionState
 } from "../model/types";
 import { Ai, AiLevel, Human, isValueCard, type Move, PlayerId, TargetRef } from "../model/types";
-import { SUIT_SYMBOL } from "../model/types";
 import { getDisplayedState, targetKey } from "../viewmodel/transition";
 import { useBoardSelection } from "../viewmodel/useBoardSelection";
 import { GameStore, handSelectable, isHumanTurn } from "../viewmodel/useGame";
@@ -24,9 +23,11 @@ const EMPTY_SET: ReadonlySet<number> = new Set();
 const EMPTY_STRINGS: ReadonlySet<string> = new Set();
 const NOOP = (): void => undefined;
 
-// Must match the docked-activity `@media` query in global.css.
+// Only genuinely big screens dock the sidebar: at half-width windows the
+// docked rail would eat a caravan, so those stay on the hamburger drawer.
+// (100rem ≈ 1.4k–1.9k px given the fluid root type; full-HD and up docks.)
 
-const WIDE_ACTIVITY_QUERY = "(min-width: 70rem)";
+const WIDE_SIDEBAR_QUERY = "(min-width: 100rem)";
 
 // Branding-iron stamp placement per caravan: heights staggered so the three
 // across never line up vertically; tilt inverts around -12deg within ±5deg.
@@ -41,6 +42,21 @@ const BRACE_RE = /\{([^{}]+)\}/g;
  // by CSS class below: human asc → sort-human-asc.svg, human desc →
  // sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
  // Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
+
+// Title type scale per location, calibrated so every name renders the same
+// pixel width: factors are C/k with C = 6.15 and k the measured per-em text
+// width of each name (4.91/4.28/6.80/4.29/4.91/4.29 — stable across
+// viewports since per-em advances scale linearly). Retune from fresh
+// measurements if the names or the typeface change.
+
+const NAME_SCALES: Record<string, number> = {
+    Boneyard: 1.253,
+    Redding: 1.436,
+    "Shady Sands": 0.904,
+    Dayglow: 1.435,
+    "New Reno": 1.252,
+    "The Hub": 1.435
+};
 
 function CaravanColumn({
     playerId,
@@ -75,6 +91,11 @@ function CaravanColumn({
                 const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && meta.isSold;
 
+                // Equal rendered widths via the calibrated table above.
+
+                const name = caravanName(playerId, laneIndex);
+                const nameScale = NAME_SCALES[name] ?? 1;
+
                 return (
                     <div
                         className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""} ${sold ? "is-sold" : ""}`}
@@ -96,13 +117,18 @@ function CaravanColumn({
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
                             <CaravanPoints meta={meta} />
-                            <span className="title">{caravanName(playerId, laneIndex)}</span>
-                            <span className="sort-icon" aria-hidden="true" />
-                            {caravan.suit !== null ? (
-                                <span className={`suit card-name ${caravan.suit}`}>
-                                    {SUIT_SYMBOL[caravan.suit]}
-                                </span>
-                            ) : null}
+                            <span className="title" style={{ "--name-scale": nameScale.toFixed(3) } as React.CSSProperties}>{name}</span>
+                            <span className="sigil">
+                                {/* Suit pip is a baked SVG icon (public/cards/H|D|C|S)
+                                    painted via CSS below; the empty box reserves
+                                    the slot before the first card lands, exactly
+                                    like the direction placeholder beside it. */}
+                                <span
+                                    className={caravan.suit !== null ? `suit card-name ${caravan.suit}` : "suit"}
+                                    aria-hidden="true"
+                                />
+                                <span className="sort-icon" aria-hidden="true" />
+                            </span>
                         </header>
                         <Caravan
                             caravan={caravan}
@@ -153,14 +179,11 @@ export function Board({ store }: { store: GameStore }) {
     const [sel, setSel] = useState<Nullable<number>>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
     const [pendingDisband, setPendingDisband] = useState<Nullable<number>>(null);
-
-    // Wide viewport (matches the docked-activity media query): panel stays open.
-
-    const [activityOpen, setActivityOpen] = useState(() =>
-        typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
-    );
+    const boardRef = useRef<HTMLDivElement>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [bannerLeft, setBannerLeft] = useState<Nullable<number>>(null);
     const [isWide, setIsWide] = useState(() =>
-        typeof window === "undefined" ? false : window.matchMedia(WIDE_ACTIVITY_QUERY).matches
+        typeof window === "undefined" ? false : window.matchMedia(WIDE_SIDEBAR_QUERY).matches
     );
     const [viewShoe, setViewShoe] = useState<Nullable<PlayerId>>(null);
     const [toast, setToast] = useState<Nullable<string>>(null);
@@ -174,7 +197,7 @@ export function Board({ store }: { store: GameStore }) {
     const scores = useMemo(() => getCaravanScores(state), [state]);
     const aiLevelControl = (
         <label className="ai-level">
-            AI
+            Difficulty level
             <select
                 className="btn"
                 aria-label="AI difficulty"
@@ -247,6 +270,53 @@ export function Board({ store }: { store: GameStore }) {
         }
     };
 
+    // Shared sidebar contents: docked rail on wide screens, drawer on narrow.
+    // New game also closes the drawer (no-op when docked).
+
+    const menuItems = (
+        <>
+            <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                    onNewGame();
+                    setMenuOpen(false);
+                }}
+            >
+                New game
+            </button>
+            {aiLevelControl}
+            <section className="activity" role="dialog" aria-label="Activity log">
+                <header>
+                    <span>Activity</span>
+                    <div className="activity-actions">
+                        <button
+                            type="button"
+                            className="copy"
+                            onClick={() => {
+                                void onCopyActivity();
+                            }}
+                            aria-label="Copy activity log and debug info"
+                            title="Copy activity log and debug info"
+                        >
+                            <svg
+                                viewBox="0 0 16 16"
+                                width="18"
+                                height="18"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
+                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+                <Sidebar log={state.log} state={state} scores={scores} />
+            </section>
+        </>
+    );
+
     // auto-clear toast after 3s
 
     useEffect(() => {
@@ -261,13 +331,16 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, [toast]);
 
-    // Escape cancels a staged disband; the safe action stays the easy default.
+    // Escape cancels a staged disband or closes the menu; the safe action stays the easy default.
 
     useEffect(() => {
-        if (pendingDisband === null) return;
+        if (pendingDisband === null && !menuOpen) return;
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setPendingDisband(null);
+            if (e.key === "Escape") {
+                setPendingDisband(null);
+                setMenuOpen(false);
+            }
         };
 
         window.addEventListener("keydown", onKey);
@@ -275,19 +348,15 @@ export function Board({ store }: { store: GameStore }) {
         return () => {
             window.removeEventListener("keydown", onKey);
         };
-    }, [pendingDisband]);
+    }, [pendingDisband, menuOpen]);
 
-    const isGameOver = state.phase === "over";
-    const humanWon = state.winner === Human;
-    const aiWon = isGameOver && state.winner === Ai;
-
-    // Re-open the panel whenever the viewport becomes wide enough to dock it.
+    // Docking the sidebar makes the drawer redundant: close it.
 
     useEffect(() => {
-        const mq = window.matchMedia(WIDE_ACTIVITY_QUERY);
+        const mq = window.matchMedia(WIDE_SIDEBAR_QUERY);
         const onChange = (e: MediaQueryListEvent) => {
             setIsWide(e.matches);
-            if (e.matches) setActivityOpen(true);
+            if (e.matches) setMenuOpen(false);
         };
 
         mq.addEventListener("change", onChange);
@@ -297,8 +366,180 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, []);
 
-    // Reset all UI state on new game (state with empty log + empty caravans).
-    // Activity stays as-is: it is persistent chrome on wide viewports.
+    const isGameOver = state.phase === "over";
+    const humanWon = state.winner === Human;
+    const aiWon = isGameOver && state.winner === Ai;
+
+    // Center the winner banner on the human middle lane: measure its center x
+    // pre-paint (vertical stays in the topbar band via CSS). Viewport-relative
+    // rects stay correct under board scroll.
+
+    useLayoutEffect(() => {
+        if (!isGameOver) {
+            setBannerLeft(null);
+
+            return;
+        }
+
+        const update = () => {
+            const board = boardRef.current;
+            const lane = board?.querySelector(".caravans.human > .caravan:nth-child(2)");
+
+            if (!board || !lane) return;
+
+            const b = board.getBoundingClientRect();
+            const r = lane.getBoundingClientRect();
+
+            setBannerLeft(r.left - b.left + r.width / 2);
+        };
+
+        update();
+        window.addEventListener("resize", update);
+
+        return () => {
+            window.removeEventListener("resize", update);
+        };
+    }, [isGameOver, state]);
+
+    // Align hand extremes with the starting placeholders: the AI hand's
+    // lowest fan point meets the bottom of the AI placeholder, and the human
+    // hand's top meets the top of the human placeholder (mirrored about the
+    // board center). Static CSS can't express this across columns and fluid
+    // type, so measure pre-paint and nudge .cards via CSS vars (same scope
+    // both sides, so the reciprocally-packed shoes never drift). Shifts
+    // accumulate in a ref (rects already include the applied lift);
+    // placeholders only exist at game start, otherwise the last lifts hold.
+    // A new game resets the lifts before re-measuring.
+
+    const handLifts = useRef({ ai: 0, human: 0, aiX: 0, humanX: 0 });
+
+    useLayoutEffect(() => {
+        const board = boardRef.current;
+
+        if (!board) return;
+
+        const isNewGame =
+            state.log.length === 0 &&
+            state.players.every((p) => p.caravans.every((c) => c.rows.length === 0));
+        const aiCardsEl = board.querySelector<HTMLElement>(".hand.ai .cards");
+        const humanCardsEl = board.querySelector<HTMLElement>(".hand.human .cards");
+
+        if (isNewGame && aiCardsEl && humanCardsEl) {
+            handLifts.current = { ai: 0, human: 0, aiX: 0, humanX: 0 };
+
+            aiCardsEl.style.removeProperty("--ai-hand-lift");
+            humanCardsEl.style.removeProperty("--human-hand-lift");
+            aiCardsEl.style.removeProperty("--ai-hand-shift");
+            humanCardsEl.style.removeProperty("--human-hand-shift");
+        }
+
+        const update = () => {
+            const root = boardRef.current;
+
+            if (!root) return;
+
+            const aiPlaceholder = root.querySelector(".caravans.ai .caravan .empty");
+            const humanPlaceholder = root.querySelector(".caravans.human .caravan .empty");
+            const aiCards = [...root.querySelectorAll(".hand.ai .slot .card")];
+            const humanCards = [...root.querySelectorAll(".hand.human .slot .card")];
+
+            if (!aiPlaceholder || !humanPlaceholder) return;
+
+            if (aiCards.length === 0 || humanCards.length === 0) return;
+
+            const right = (els: Element[]) =>
+                Math.max(...els.map((el) => el.getBoundingClientRect().right));
+            const bottom = (els: Element[]) =>
+                Math.max(...els.map((el) => el.getBoundingClientRect().bottom));
+            const top = (els: Element[]) =>
+                Math.min(...els.map((el) => el.getBoundingClientRect().top));
+            const aiNeed = aiPlaceholder.getBoundingClientRect().bottom - bottom(aiCards);
+            const humanNeed = humanPlaceholder.getBoundingClientRect().top - top(humanCards);
+
+            // No clamp and no transition on either .cards (see global.css):
+            // the correction converges instead of feeding back, so any
+            // magnitude is the true geometric need.
+
+            if (Math.abs(aiNeed) >= 0.5 && aiCardsEl) {
+                handLifts.current.ai += aiNeed;
+
+                aiCardsEl.style.setProperty("--ai-hand-lift", `${String(handLifts.current.ai)}px`);
+            }
+
+            if (Math.abs(humanNeed) >= 0.5 && humanCardsEl) {
+                handLifts.current.human += humanNeed;
+
+                humanCardsEl.style.setProperty(
+                    "--human-hand-lift",
+                    `${String(handLifts.current.human)}px`
+                );
+            }
+
+            // Either fan can render wider than the hands column: shift it
+            // left until its right extreme meets the column's right edge, so
+            // the space right of the hand equals the board's outer padding.
+            // Left-only, so a narrower mid-game fan stays centered.
+
+            const colRight = root.querySelector(".column.hands")?.getBoundingClientRect().right;
+
+            if (colRight !== undefined && aiCardsEl) {
+                const aiShift = colRight - right(aiCards);
+
+                if (aiShift <= -0.5) {
+                    handLifts.current.aiX += aiShift;
+
+                    aiCardsEl.style.setProperty("--ai-hand-shift", `${String(handLifts.current.aiX)}px`);
+                }
+            }
+
+            if (colRight !== undefined && humanCardsEl) {
+                const humanShift = colRight - right(humanCards);
+
+                if (humanShift <= -0.5) {
+                    handLifts.current.humanX += humanShift;
+
+                    humanCardsEl.style.setProperty(
+                        "--human-hand-shift",
+                        `${String(handLifts.current.humanX)}px`
+                    );
+                }
+            }
+        };
+
+        // The fan slots ease their transforms (~0.12s), so a single pass can
+        // measure mid-flight cards: re-check on the next frame and once more
+        // after the glide settles. Each pass only applies the residual need.
+
+        let settled = false;
+
+        update();
+
+        const raf = requestAnimationFrame(() => {
+            if (!settled) update();
+        });
+        const timer = window.setTimeout(() => {
+            if (!settled) update();
+        }, 200);
+        const onResize = () => {
+            update();
+
+            requestAnimationFrame(() => {
+                if (!settled) update();
+            });
+        };
+
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            settled = true;
+
+            cancelAnimationFrame(raf);
+            window.clearTimeout(timer);
+            window.removeEventListener("resize", onResize);
+        };
+    }, [state]);
+
+    // Reset all UI selections on new game (state with empty log + empty caravans).
 
     useEffect(() => {
         const isNewGame =
@@ -632,18 +873,44 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     return (
-        <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
-            {!activityOpen && toast !== null ? (
+        <div
+            ref={boardRef}
+            className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}
+        >
+            <header className="topbar">
+                {isWide ? null : (
+                    <button
+                        type="button"
+                        className="menu-button"
+                        onClick={() => {
+                            setMenuOpen((v) => !v);
+                        }}
+                        aria-expanded={menuOpen}
+                        aria-controls="game-menu"
+                        aria-label="Menu"
+                        title="Menu"
+                    >
+                        <span aria-hidden="true" className="menu-icon">
+                            <span />
+                            <span />
+                            <span />
+                        </span>
+                    </button>
+                )}
+                <span className="brand">Caravan</span>
+            </header>
+            {toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
                 </div>
             ) : null}
-            {isGameOver ? (
+            {isGameOver && bannerLeft !== null ? (
                 <div
                     role="alertdialog"
                     aria-label={humanWon ? "You won the game" : "AI won the game"}
                     aria-describedby="gameover-detail"
                     className={`gameover-banner ${humanWon ? "human" : "ai"}`}
+                    style={{ left: bannerLeft }}
                 >
                     <span className="gameover-banner-title">
                         {humanWon ? "You win!" : "AI wins"}
@@ -651,8 +918,17 @@ export function Board({ store }: { store: GameStore }) {
                     <span id="gameover-detail" className="gameover-banner-detail">
                         Caravans {scores.humanWins} – {scores.aiWins}
                     </span>
+                    <button type="button" className="btn btn-small" onClick={onNewGame}>
+                        New game
+                    </button>
                 </div>
             ) : null}
+            <div className="board-body">
+                {isWide ? (
+                    <aside className="side-rail" aria-label="Game menu">
+                        {menuItems}
+                    </aside>
+                ) : null}
             <div className="field">
                 <div className="columns">
                     <div className="column caravans">
@@ -731,23 +1007,6 @@ export function Board({ store }: { store: GameStore }) {
                             />
                         </div>
 
-                        <div className="controls">
-                            <button type="button" className="btn" onClick={onNewGame}>
-                                New game
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn${activityOpen ? " is-active" : ""}`}
-                                onClick={() => {
-                                    setActivityOpen((v) => !v);
-                                }}
-                                aria-expanded={activityOpen}
-                            >
-                                Activity
-                            </button>
-                            {isWide ? null : aiLevelControl}
-                        </div>
-
                         <div className="hand-half human">
                             <PlayerHand
                                 playerId={Human}
@@ -781,55 +1040,25 @@ export function Board({ store }: { store: GameStore }) {
                     </div>
                 </div>
             </div>
+            </div>
 
-            {activityOpen || isWide ? (
-                <div className="activity-rail">
-                    {isWide ? aiLevelControl : null}
-                    {activityOpen ? (
-                <div className="activity" role="dialog" aria-label="Activity log">
-                    <header>
-                        <span>Activity</span>
-                        {toast !== null ? (
-                            <div role="alert" className="toast activity-toast">
-                                {toast}
-                            </div>
-                        ) : null}
-                        <div className="activity-actions">
-                            <button
-                                type="button"
-                                className="btn copy"
-                                onClick={() => {
-                                    void onCopyActivity();
-                                }}
-                                aria-label="Copy activity log and debug info"
-                                title="Copy activity log and debug info"
-                            >
-                                <svg
-                                    viewBox="0 0 16 16"
-                                    width="14"
-                                    height="14"
-                                    fill="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
-                                    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
-                                </svg>
-                            </button>
-                            <button
-                                type="button"
-                                className="close"
-                                onClick={() => {
-                                    setActivityOpen(false);
-                                }}
-                                aria-label="Close activity log"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    </header>
-                    <Sidebar log={state.log} state={state} scores={scores} />
-                </div>
-                    ) : null}
+            {!isWide && menuOpen ? (
+                <div
+                    className="menu-backdrop"
+                    onClick={() => {
+                        setMenuOpen(false);
+                    }}
+                >
+                    <nav
+                        id="game-menu"
+                        aria-label="Game menu"
+                        className="menu-panel"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                        }}
+                    >
+                        {menuItems}
+                    </nav>
                 </div>
             ) : null}
 

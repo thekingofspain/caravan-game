@@ -38,12 +38,15 @@ const programmedState = {
 };
 
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-// The programmed state is already phase "over"; confirm the hook applied it,
-// then wait for the winner rows to render instead of sleeping.
+// The activity log is docked on wide screens, behind the hamburger on narrow:
+// open the menu first only when the log is not already visible, then wait for
+// the winner rows to render instead of sleeping.
+if ((await page.locator(".activity").count()) === 0) {
+  await page.getByRole("button", { name: "Menu" }).click();
+}
+await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
 await waitGameOver(page);
 await page.waitForSelector(".log .row.human .score", { timeout: 8000 });
-if ((await page.locator(".activity").count()) === 0) await page.locator("button", { hasText: "Activity" }).click();
-await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
 await page.waitForSelector(".log .row.human .wins", { timeout: 8000 });
 
 const info = await page.evaluate(() => {

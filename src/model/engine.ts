@@ -169,15 +169,39 @@ function removeTargets(state: GameState, refs: TargetRef[]): void {
         (a, b) => b.ref.player - a.ref.player || b.ref.lane - a.ref.lane || b.ref.cardIndex - a.ref.cardIndex
     );
     const touched = new Set<Caravan>();
+    const before = new Map<Caravan, { direction: Caravan["direction"]; pair: [number, number] | null }>();
 
     for (const { ref } of rows) {
         const car = state.players[ref.player].caravans[ref.lane];
+
+        if (!before.has(car)) {
+            const n = car.rows.length;
+
+            before.set(car, {
+                direction: car.direction,
+                pair: n >= 2 ? [baseValue(car.rows[n - 2][0]), baseValue(car.rows[n - 1][0])] : null
+            });
+        }
 
         car.rows.splice(ref.cardIndex, 1);
         touched.add(car);
     }
 
-    for (const car of touched) normalizeCaravan(car);
+    for (const car of touched) {
+        normalizeCaravan(car);
+        const prev = before.get(car);
+        const n = car.rows.length;
+
+        // A removal that leaves the bottom pair untouched must not disturb
+        // the direction (e.g. a Queen flip); only a changed tail re-establishes it.
+
+        if (prev !== undefined && prev.pair !== null && n >= 2) {
+            const [a, b] = prev.pair;
+
+            if (baseValue(car.rows[n - 2][0]) === a && baseValue(car.rows[n - 1][0]) === b)
+                {car.direction = prev.direction;}
+        }
+    }
 }
 
 function handlePlayValueCard(

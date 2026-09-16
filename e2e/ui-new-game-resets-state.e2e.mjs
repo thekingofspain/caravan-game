@@ -27,19 +27,18 @@ await page.evaluate(() => {
   const aiShoe = document.querySelector(".shoe.ai");
   if (aiShoe) aiShoe.click();
 });
-// Semantic locator (role + accessible name) instead of .btn textContent scan.
-if ((await page.locator(".activity").count()) === 0) {
-  await page.getByRole("button", { name: "Activity" }).dispatchEvent("click");
+// Open the drawer when the sidebar is not docked (narrow screens) to test it
+// gets closed on reset; on wide screens the sidebar stays docked throughout.
+const hasMenu = (await page.getByRole("button", { name: "Menu" }).count()) > 0;
+if (hasMenu) {
+  await page.getByRole("button", { name: "Menu" }).dispatchEvent("click");
 }
-// Resolves immediately on wide viewports where the activity panel is persistent
-// chrome; lenient elsewhere, where the post-reset assertion is the real check.
-await page.waitForSelector(".activity", { timeout: 5000 }).catch(() => {
-  // Narrow viewport with no Activity panel pre-reset — nothing to wait for.
-});
+await page.waitForSelector(".activity", { timeout: 5000 });
 
 // Click New game via dispatchEvent to bypass overlay intercept; then wait for the
 // reset's observable effects (the Board reset effect clears UI state in a
 // setTimeout(0), so the selection/overlay disappearing IS the reset landing).
+// The button resolves in the drawer and in the docked rail alike.
 await page.getByRole("button", { name: "New game" }).dispatchEvent("click");
 await page.waitForFunction(
   () => document.querySelectorAll(".hand.human .slot.selected").length === 0 &&
@@ -54,10 +53,11 @@ const after = await page.evaluate(() => {
     shoeLen: s.players[0].shoe.length,
     selDom: document.querySelectorAll(".hand.human .slot.selected").length,
     selAria: document.querySelectorAll(".hand.human .slot[aria-pressed='true']").length,
+    activityCount: document.querySelectorAll(".activity").length,
     toast: document.querySelector(".toast")?.textContent || null,
     pendingRemove: document.querySelectorAll(".pending-remove, .is-remove-src").length,
     viewShoeOpen: document.querySelectorAll(".overlay").length,
-    activityOpen: document.querySelectorAll(".activity").length,
+    menuOpen: document.querySelectorAll("#game-menu").length,
     previous: store.previous,
     transition: store.transition,
     lastMove: store.lastMove,
@@ -69,13 +69,14 @@ const after = await page.evaluate(() => {
 });
 logInfo("after reset", after);
 let failures = [];
-// Persistent panel: stays open across resets on viewports wide enough to dock it.
-const wideActivityExpected = await page.evaluate(() => window.matchMedia("(min-width: 70rem)").matches ? 1 : 0);
 if (after.selDom !== 0) failures.push(`DOM still has ${after.selDom} is-selected after reset`);
 if (after.selAria !== 0) failures.push(`DOM still has ${after.selAria} aria-pressed after reset`);
 if (after.hand.join(",") === beforeSel.join(",")) failures.push("hand ids unchanged after reset");
 if (after.viewShoeOpen !== 0) failures.push("shoe overlay still open after reset");
-if (after.activityOpen !== wideActivityExpected) failures.push(`activity open=${after.activityOpen}, expected ${wideActivityExpected} (persistent chrome on wide viewports)`);
+// Narrow: the New game button closes the drawer. Wide: the docked sidebar
+// (with its activity log) persists across resets.
+if (hasMenu && after.menuOpen !== 0) failures.push(`menu still open after reset`);
+if (!hasMenu && after.activityCount !== 1) failures.push(`docked sidebar missing after reset`);
 if (after.toast !== null) failures.push(`toast not cleared: ${after.toast}`);
 if (after.pendingRemove !== 0) failures.push(`pendingRemove not cleared: ${after.pendingRemove}`);
 if (after.previous !== null) failures.push(`previous not null`);

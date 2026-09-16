@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { determineBestMove } from "../model/ai";
 import { Board } from "../view/Board";
 import { GameConfig, useGame } from "../viewmodel/useGame";
 import { publishTestHooks, updateTestHooks } from "./testHooks";
@@ -34,7 +35,8 @@ function Game({ config }: { config: GameConfig }) {
                 },
                 __act: (a) => {
                     storeRef.current.act(a);
-                }
+                },
+                __bestMove: (s, acting) => determineBestMove(s, acting, () => 0.5)
             }),
         []
     );

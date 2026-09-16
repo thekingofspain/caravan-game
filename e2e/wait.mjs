@@ -4,7 +4,7 @@
 //
 // Test-hook surface (see src/app/App.tsx, src/viewmodel/useGame.ts):
 //   window.__caravanStore -> { state, legal, transition, previous, lastMove, ... }
-//   window.__setCaravanState(state), window.__act(move), window.__resetWithSeed(n)
+//   window.__setCaravanState(state), window.__act(move), window.__resetWithSeed(n), window.__bestMove(state, acting)
 const DEFAULT_TIMEOUT = 10000;
 
 export async function boardReady(page, timeout = DEFAULT_TIMEOUT) {

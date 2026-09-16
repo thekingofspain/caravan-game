@@ -75,12 +75,12 @@ await legalWrap.hover();
 // Hover styles apply on the next frame; poll the computed outline until the
 // legal (green) color lands instead of sleeping a fixed delay.
 await page.waitForFunction(
-  (el) => /46, 204, 113/.test(getComputedStyle(el).outlineColor),
+  (el) => /50, 205, 50/.test(getComputedStyle(el).outlineColor),
   await legalWrap.elementHandle(),
   { timeout: 5000 }
 );
 const legalColor = await legalWrap.evaluate((el) => getComputedStyle(el).outlineColor);
-assert.ok(/46, 204, 113/.test(legalColor), `legal hover outline should be green, got: ${legalColor}`);
+assert.ok(/50, 205, 50/.test(legalColor), `legal hover outline should be green, got: ${legalColor}`);
 console.log("  PASS: legal hover is green");
 
 // ── ILLEGAL move -> red temporary placeholder ──

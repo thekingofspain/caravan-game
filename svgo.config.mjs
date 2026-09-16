@@ -1,29 +1,25 @@
+// SVGO settings for game art (public/cards, public/icons).
+// All SVGs are external assets (CSS background / mask-image) with explicitly
+// sized boxes, never inlined: IDs can't collide, intrinsic dimensions are dead.
+// Cards render at 0.17-0.61 px/unit, so floatPrecision 1 (≈0.06px max error).
 export default {
   multipass: true,
-  js2svg: { pretty: false },
   plugins: [
     {
-      name: "preset-default",
+      name: 'preset-default',
       params: {
         overrides: {
-          // Keep the viewBox: the card box ratio (212/329) is derived from it,
-          // and CSS uses background-size: contain, so it must stay.
-          removeViewBox: false,
-          // Round coordinates. Cards render ~100px tall, so 2 decimals is
-          // sub-pixel safe and is the single biggest size win.
-          convertPathData: { floatPrecision: 2 },
-          convertTransform: { floatPrecision: 2 },
-          // cleanupIds (on by default) is safe: IDs (SCA/VCA/B1/B2) are only
-          // referenced internally via <use>, so SVGO keeps refs in sync.
+          convertPathData: { floatPrecision: 1 },
+          cleanupNumericValues: { floatPrecision: 1 },
+          convertTransform: { floatPrecision: 1, transformPrecision: 1 },
+          // Keep <rect> borders as <rect>: the path form is longer.
+          convertShapeToPath: false,
         },
       },
     },
-    // CSS sizes the card via background-size: contain; the box ratio equals the
-    // viewBox ratio, so the intrinsic width/height are redundant -> drop them.
-    "removeDimensions",
-    // Reorder attributes for better gzip/brotli compression across the 56 files.
-    "sortAttrs",
-    // `face="AC"` etc. is dead data not used by the app -> strip it.
-    { name: "removeAttrs", params: { attrs: ["face"] } },
+    // xlink:href -> native href; removeUnusedNS then drops xmlns:xlink.
+    { name: 'removeXlink' },
+    // Never add removeViewBox: CSS contain-scaling depends on it.
+    { name: 'removeDimensions' },
   ],
 };

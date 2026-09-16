@@ -6,7 +6,12 @@ export type Nullable<T> = T | null;
 export const SUITS = ["spades", "hearts", "diamonds", "clubs"] as const;
 export const SUIT_SYMBOL: Record<Suit, string> = {
     spades: "♠",
-    hearts: "♥",
+
+    // U+FE0E forces text presentation: bare U+2665 falls back to an emoji
+    // font in some renderers (twice as wide as the other suits, ignores CSS
+    // color). Text form matches ♠/♦/♣ metrics and honors .card-name color.
+
+    hearts: "♥︎",
     diamonds: "♦",
     clubs: "♣"
 };
