@@ -10,10 +10,12 @@ import {
     MIN_SELLABLE
 } from "./scoring";
 import {
+    Ai,
     AiLevel,
     baseValue,
     Caravan,
     GameState,
+    Human,
     isValueCard,
     LANE_INDICES,
     Move,
@@ -34,10 +36,6 @@ const EXPERT_BREADTH = 12;
 
 const JOKER_MIN_VALUE = 8;
 
-/** Probability the easiest level plays a random legal move instead of the best one. */
-
-export const EASY_RANDOM_P = 0.25;
-
 // ---- Types ----
 
 export type Rng = () => number;
@@ -56,15 +54,17 @@ function pick<T>(items: readonly T[], rng: Rng): T {
 // ---- Functions ----
 
 function calculateCaravanAdvantage(current: Caravan, opposing: Caravan): number {
-    // Points are positional (first/second arg); the seller is resolved
-    // player-relatively so this stays correct whichever side is acting.
+    // humanPoints/aiPoints are positional: points of the first/second arg (current/opposing here).
 
-    const { aiPoints: opposingPoints, humanPoints: currentPoints } = calcLaneScoreboard(current, opposing);
-    const seller = laneSeller(currentPoints, opposingPoints);
+    const {
+        aiPoints: opposingPoints,
+        humanPoints: currentPoints,
+        seller
+    } = calcLaneScoreboard(current, opposing);
 
-    if (seller === 1) return EVAL_SOLD_WEIGHT + (currentPoints - 21);
+    if (seller === Human) return EVAL_SOLD_WEIGHT + (currentPoints - 21);
 
-    if (seller === -1) return -EVAL_SOLD_WEIGHT - (26 - opposingPoints);
+    if (seller === Ai) return -EVAL_SOLD_WEIGHT - (26 - opposingPoints);
 
     if (isSellablePoints(currentPoints)) return -EVAL_TIE_WEIGHT;
 
@@ -625,17 +625,13 @@ export function determineBestMove(
 
     const acts = nonLosingMoves(state, actingPlayerId);
 
-    // Easiest level: mostly greedy, sometimes just plays something legal.
-
-    if (rng() < EASY_RANDOM_P) return pick(acts, rng);
-
     let bestScore = -Infinity;
     let best: Move[] = [];
 
     for (const a of acts) {
         const next = applyMove(state, a);
 
-        if (isWinningState(next, actingPlayerId)) return a;
+        if (gameWinner(next) === actingPlayerId) return a;
 
         let sc = evaluateBoard(next, actingPlayerId);
 
@@ -647,6 +643,6 @@ export function determineBestMove(
         } else if (sc === bestScore) best.push(a);
     }
 
-    return pick(best, rng);
+    return best[Math.floor(rng() * best.length)];
 }
 // #endregion

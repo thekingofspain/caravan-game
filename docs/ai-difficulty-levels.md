@@ -118,10 +118,9 @@ Grounding: everything below uses existing symbols — `legalMoves`/`applyMove` (
 `laneSeller`/`laneBase`/`sellersOf`/`countPlaceablePairs`/`isLaneDead`/`tacticalMoveBonus`/`nonLosingMoves`/`EXPERT_BREADTH`
 (`src/model/ai.ts`), `canPlaceCard` (`caravanCardRules.ts`), `GameState.log`/`TargetRef` (`src/model/types.ts:191-229`).
 
-- **Easy = `normal` label (fallible).** Status: implemented (`EASY_RANDOM_P`, random branch in
-  `determineBestMove`). No eval change was needed (see correction in §2(a); probe: +100 own sale /
-  −105 opp sale). Behavior: epsilon-greedy random legal move at 0.25 via the passed `rng`, drawn from the
-  shared `nonLosingMoves` guardrail; no `tacticalMoveBonus` on this path (as before). No lookahead.
+- **Normal (a6 behavior, restored).** Pure greedy `evaluateBoard` + `nonLosingMoves` guardrail, no
+  epsilon-random detour, immediate-win take via `gameWinner`. Weakness is accidental (wrong
+  objective + ties), not designed fallibility.
 - **Middle = `hard` label (conservation).** Status: implemented (shared `tacticalMoveBonus`). Jack:
   `saleBreak ? 60 : min(removedRowPoints × distanceWeight, 20)` — measured row delta
   (`calculateRowPoints`), full weight within one play of selling, decaying beyond, so second hits on a
@@ -166,7 +165,7 @@ new eval abstractions, difficulty-specific weights beyond the three constants ab
 
 | Knob | Applies to | Suggested default | Effect of turning it |
 |---|---|---|---|
-| `EASY_RANDOM_P` (new const) | easy | 0.25 | higher = more fallible; 0 = fixed-normal |
+| Normal | a6 greedy + guardrail | no fallibility knob (pure argmax, ties by rng) |
 | `JACK_SALE_BREAK` (inline) | hard, expert | 60 | sale-breaks outrank any row snipe |
 | Jack/Joker row value | hard, expert | measured delta, cap ~20 / net ≥ ~8 emerges | no constant: below ~7 building wins naturally |
 | distance-to-sellable weight (inline in `tacticalMoveBonus`) | expert (opt. hard) | full ≤1 move away, decay beyond | second hit on degraded lane loses to rotation/building |

@@ -115,20 +115,10 @@ describe("hard", () => {
 });
 
 describe("normal control", () => {
-    // Never takes the 25% random branch; deterministic tie-break.
-    const greedyRng = () => 0.99;
-
     it("ignores the scoreless Queen play and builds instead", () => {
         const s = queenSituation();
-        const move = determineBestMove(s, Ai, { level: "normal", rng: greedyRng });
+        const move = determineBestMove(s, Ai, { level: "normal", rng: mulberry32(1) });
         expect(move).toMatchObject({ type: "playValueCard" });
-    });
-
-    it("sometimes plays a random legal move instead of the best one", () => {
-        const s = queenSituation();
-        // rng 0 < EASY_RANDOM_P takes the random branch at index 0.
-        const move = determineBestMove(s, Ai, { level: "normal", rng: () => 0 });
-        expect(legalMoves(s).some((l) => sameMove(l, move))).toBe(true);
     });
 });
 
@@ -433,20 +423,11 @@ describe("immediate-loss guardrail", () => {
     }
 
     it("normal gives up a lane instead of selling into a loss", () => {
-        // Greedy branch: never takes the 25% random detour.
         const move = determineBestMove(losingSaleSituation(), Ai, {
             level: "normal",
-            rng: () => 0.99
+            rng: mulberry32(1)
         });
         expect(move).toMatchObject({ type: "disbandCaravan" });
-    });
-
-    it("normal never sells into a loss even on random detours", () => {
-        for (let seed = 1; seed <= 30; seed++) {
-            const s = losingSaleSituation();
-            const move = determineBestMove(s, Ai, { level: "normal", rng: mulberry32(seed) });
-            expect(gameWinner(applyMove(s, move))).not.toBe(Human);
-        }
     });
 
     it("hard avoids the sale that hands the game over", () => {
