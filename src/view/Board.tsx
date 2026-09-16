@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cardLabel } from "../model/cards";
 import { segmentsText } from "../model/gameLog";
@@ -23,11 +23,14 @@ const EMPTY_SET: ReadonlySet<number> = new Set();
 const EMPTY_STRINGS: ReadonlySet<string> = new Set();
 const NOOP = (): void => undefined;
 
-// Only genuinely big screens dock the sidebar: at half-width windows the
-// docked rail would eat a caravan, so those stay on the hamburger drawer.
-// (100rem ≈ 1.4k–1.9k px given the fluid root type; full-HD and up docks.)
+// Below the breakpoint the sidebar is a hamburger drawer; at and above it
+// the rail docks. Measured live: rail (~330-400px) + hands (~185-250px) +
+// three lanes crush the caravans column until ~1460px wide at 950px height
+// (taller viewports grow the cards further, needing more). 1500px keeps
+// half-width laptop windows (~720-1280px) on the drawer and docks only
+// once the rail fits without crushing lanes.
 
-const WIDE_SIDEBAR_QUERY = "(min-width: 100rem)";
+const WIDE_SIDEBAR_QUERY = "(min-width: 1500px)";
 
 // Branding-iron stamp placement per caravan: heights staggered so the three
 // across never line up vertically; tilt inverts around -12deg within ±5deg.
@@ -38,10 +41,10 @@ const SHOE_PEEK_ENABLED =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekShoe");
 const BRACE_RE = /\{([^{}]+)\}/g;
 
- // Direction glyphs live in public/icons (Bootstrap Icons, MIT) and are picked
- // by CSS class below: human asc → sort-human-asc.svg, human desc →
- // sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
- // Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
+// Direction glyphs live in public/icons (Bootstrap Icons, MIT) and are picked
+// by CSS class below: human asc → sort-human-asc.svg, human desc →
+// sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
+// Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
 
 // Title type scale per location, calibrated so every name renders the same
 // pixel width: factors are C/k with C = 6.15 and k the measured per-em text
@@ -117,14 +120,25 @@ function CaravanColumn({
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
                             <CaravanPoints meta={meta} />
-                            <span className="title" style={{ "--name-scale": nameScale.toFixed(3) } as React.CSSProperties}>{name}</span>
+                            <span
+                                className="title"
+                                style={
+                                    { "--name-scale": nameScale.toFixed(3) } as React.CSSProperties
+                                }
+                            >
+                                {name}
+                            </span>
                             <span className="sigil">
                                 {/* Suit pip is a baked SVG icon (public/cards/H|D|C|S)
                                     painted via CSS below; the empty box reserves
                                     the slot before the first card lands, exactly
                                     like the direction placeholder beside it. */}
                                 <span
-                                    className={caravan.suit !== null ? `suit card-name ${caravan.suit}` : "suit"}
+                                    className={
+                                        caravan.suit !== null
+                                            ? `suit card-name ${caravan.suit}`
+                                            : "suit"
+                                    }
                                     aria-hidden="true"
                                 />
                                 <span className="sort-icon" aria-hidden="true" />
@@ -179,9 +193,7 @@ export function Board({ store }: { store: GameStore }) {
     const [sel, setSel] = useState<Nullable<number>>(null);
     const [pendingRemove, setPendingRemove] = useState<Set<string>>(new Set());
     const [pendingDisband, setPendingDisband] = useState<Nullable<number>>(null);
-    const boardRef = useRef<HTMLDivElement>(null);
     const [menuOpen, setMenuOpen] = useState(false);
-    const [bannerLeft, setBannerLeft] = useState<Nullable<number>>(null);
     const [isWide, setIsWide] = useState(() =>
         typeof window === "undefined" ? false : window.matchMedia(WIDE_SIDEBAR_QUERY).matches
     );
@@ -275,17 +287,19 @@ export function Board({ store }: { store: GameStore }) {
 
     const menuItems = (
         <>
-            <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                    onNewGame();
-                    setMenuOpen(false);
-                }}
-            >
-                New game
-            </button>
-            {aiLevelControl}
+            <div className="menu-controls">
+                <button
+                    type="button"
+                    className="btn"
+                    onClick={() => {
+                        onNewGame();
+                        setMenuOpen(false);
+                    }}
+                >
+                    New game
+                </button>
+                {aiLevelControl}
+            </div>
             <section className="activity" role="dialog" aria-label="Activity log">
                 <header>
                     <span>Activity</span>
@@ -370,174 +384,13 @@ export function Board({ store }: { store: GameStore }) {
     const humanWon = state.winner === Human;
     const aiWon = isGameOver && state.winner === Ai;
 
-    // Center the winner banner on the human middle lane: measure its center x
-    // pre-paint (vertical stays in the topbar band via CSS). Viewport-relative
-    // rects stay correct under board scroll.
+    // Winner banner centers on the board via CSS (left: 50%).
 
-    useLayoutEffect(() => {
-        if (!isGameOver) {
-            setBannerLeft(null);
-
-            return;
-        }
-
-        const update = () => {
-            const board = boardRef.current;
-            const lane = board?.querySelector(".caravans.human > .caravan:nth-child(2)");
-
-            if (!board || !lane) return;
-
-            const b = board.getBoundingClientRect();
-            const r = lane.getBoundingClientRect();
-
-            setBannerLeft(r.left - b.left + r.width / 2);
-        };
-
-        update();
-        window.addEventListener("resize", update);
-
-        return () => {
-            window.removeEventListener("resize", update);
-        };
-    }, [isGameOver, state]);
-
-    // Align hand extremes with the starting placeholders: the AI hand's
-    // lowest fan point meets the bottom of the AI placeholder, and the human
-    // hand's top meets the top of the human placeholder (mirrored about the
-    // board center). Static CSS can't express this across columns and fluid
-    // type, so measure pre-paint and nudge .cards via CSS vars (same scope
-    // both sides, so the reciprocally-packed shoes never drift). Shifts
-    // accumulate in a ref (rects already include the applied lift);
-    // placeholders only exist at game start, otherwise the last lifts hold.
-    // A new game resets the lifts before re-measuring.
-
-    const handLifts = useRef({ ai: 0, human: 0, aiX: 0, humanX: 0 });
-
-    useLayoutEffect(() => {
-        const board = boardRef.current;
-
-        if (!board) return;
-
-        const isNewGame =
-            state.log.length === 0 &&
-            state.players.every((p) => p.caravans.every((c) => c.rows.length === 0));
-        const aiCardsEl = board.querySelector<HTMLElement>(".hand.ai .cards");
-        const humanCardsEl = board.querySelector<HTMLElement>(".hand.human .cards");
-
-        if (isNewGame && aiCardsEl && humanCardsEl) {
-            handLifts.current = { ai: 0, human: 0, aiX: 0, humanX: 0 };
-
-            aiCardsEl.style.removeProperty("--ai-hand-lift");
-            humanCardsEl.style.removeProperty("--human-hand-lift");
-            aiCardsEl.style.removeProperty("--ai-hand-shift");
-            humanCardsEl.style.removeProperty("--human-hand-shift");
-        }
-
-        const update = () => {
-            const root = boardRef.current;
-
-            if (!root) return;
-
-            const aiPlaceholder = root.querySelector(".caravans.ai .caravan .empty");
-            const humanPlaceholder = root.querySelector(".caravans.human .caravan .empty");
-            const aiCards = [...root.querySelectorAll(".hand.ai .slot .card")];
-            const humanCards = [...root.querySelectorAll(".hand.human .slot .card")];
-
-            if (!aiPlaceholder || !humanPlaceholder) return;
-
-            if (aiCards.length === 0 || humanCards.length === 0) return;
-
-            const right = (els: Element[]) =>
-                Math.max(...els.map((el) => el.getBoundingClientRect().right));
-            const bottom = (els: Element[]) =>
-                Math.max(...els.map((el) => el.getBoundingClientRect().bottom));
-            const top = (els: Element[]) =>
-                Math.min(...els.map((el) => el.getBoundingClientRect().top));
-            const aiNeed = aiPlaceholder.getBoundingClientRect().bottom - bottom(aiCards);
-            const humanNeed = humanPlaceholder.getBoundingClientRect().top - top(humanCards);
-
-            // No clamp and no transition on either .cards (see global.css):
-            // the correction converges instead of feeding back, so any
-            // magnitude is the true geometric need.
-
-            if (Math.abs(aiNeed) >= 0.5 && aiCardsEl) {
-                handLifts.current.ai += aiNeed;
-
-                aiCardsEl.style.setProperty("--ai-hand-lift", `${String(handLifts.current.ai)}px`);
-            }
-
-            if (Math.abs(humanNeed) >= 0.5 && humanCardsEl) {
-                handLifts.current.human += humanNeed;
-
-                humanCardsEl.style.setProperty(
-                    "--human-hand-lift",
-                    `${String(handLifts.current.human)}px`
-                );
-            }
-
-            // Either fan can render wider than the hands column: shift it
-            // left until its right extreme meets the column's right edge, so
-            // the space right of the hand equals the board's outer padding.
-            // Left-only, so a narrower mid-game fan stays centered.
-
-            const colRight = root.querySelector(".column.hands")?.getBoundingClientRect().right;
-
-            if (colRight !== undefined && aiCardsEl) {
-                const aiShift = colRight - right(aiCards);
-
-                if (aiShift <= -0.5) {
-                    handLifts.current.aiX += aiShift;
-
-                    aiCardsEl.style.setProperty("--ai-hand-shift", `${String(handLifts.current.aiX)}px`);
-                }
-            }
-
-            if (colRight !== undefined && humanCardsEl) {
-                const humanShift = colRight - right(humanCards);
-
-                if (humanShift <= -0.5) {
-                    handLifts.current.humanX += humanShift;
-
-                    humanCardsEl.style.setProperty(
-                        "--human-hand-shift",
-                        `${String(handLifts.current.humanX)}px`
-                    );
-                }
-            }
-        };
-
-        // The fan slots ease their transforms (~0.12s), so a single pass can
-        // measure mid-flight cards: re-check on the next frame and once more
-        // after the glide settles. Each pass only applies the residual need.
-
-        let settled = false;
-
-        update();
-
-        const raf = requestAnimationFrame(() => {
-            if (!settled) update();
-        });
-        const timer = window.setTimeout(() => {
-            if (!settled) update();
-        }, 200);
-        const onResize = () => {
-            update();
-
-            requestAnimationFrame(() => {
-                if (!settled) update();
-            });
-        };
-
-        window.addEventListener("resize", onResize);
-
-        return () => {
-            settled = true;
-
-            cancelAnimationFrame(raf);
-            window.clearTimeout(timer);
-            window.removeEventListener("resize", onResize);
-        };
-    }, [state]);
+    // Hands flank the board center via flexbox (see global.css): the AI half
+    // packs its shoe + hand to its bottom edge and the human half packs its
+    // hand + shoe to its top edge, so both hands sit against the center gap
+    // beside the caravan placeholders. No measuring: equal halves share the
+    // column height, so the packed edges meet at the center.
 
     // Reset all UI selections on new game (state with empty log + empty caravans).
 
@@ -793,9 +646,9 @@ export function Board({ store }: { store: GameStore }) {
         setPendingRemove(new Set());
         setPendingDisband(null);
         setToast(null);
-                setViewShoe(null);
-                setFlashOffKey(null);
-                store.reset({ seed: Math.floor(Math.random() * 1e9) });
+        setViewShoe(null);
+        setFlashOffKey(null);
+        store.reset({ seed: Math.floor(Math.random() * 1e9) });
     }, [store]);
 
     const onShoeClick = useCallback(() => {
@@ -873,44 +726,18 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     return (
-        <div
-            ref={boardRef}
-            className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}
-        >
-            <header className="topbar">
-                {isWide ? null : (
-                    <button
-                        type="button"
-                        className="menu-button"
-                        onClick={() => {
-                            setMenuOpen((v) => !v);
-                        }}
-                        aria-expanded={menuOpen}
-                        aria-controls="game-menu"
-                        aria-label="Menu"
-                        title="Menu"
-                    >
-                        <span aria-hidden="true" className="menu-icon">
-                            <span />
-                            <span />
-                            <span />
-                        </span>
-                    </button>
-                )}
-                <span className="brand">Caravan</span>
-            </header>
+        <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
             {toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
                 </div>
             ) : null}
-            {isGameOver && bannerLeft !== null ? (
+            {isGameOver ? (
                 <div
                     role="alertdialog"
                     aria-label={humanWon ? "You won the game" : "AI won the game"}
                     aria-describedby="gameover-detail"
                     className={`gameover-banner ${humanWon ? "human" : "ai"}`}
-                    style={{ left: bannerLeft }}
                 >
                     <span className="gameover-banner-title">
                         {humanWon ? "You win!" : "AI wins"}
@@ -926,120 +753,139 @@ export function Board({ store }: { store: GameStore }) {
             <div className="board-body">
                 {isWide ? (
                     <aside className="side-rail" aria-label="Game menu">
+                        <span className="brand">Caravan</span>
                         {menuItems}
                     </aside>
-                ) : null}
-            <div className="field">
-                <div className="columns">
-                    <div className="column caravans">
-                        <div className="caravans ai">
-                            <CaravanColumn
-                                playerId={Ai}
-                                caravans={aiPlayer.caravans}
-                                selection={aiSelection}
-                                scores={scores}
-                                isGameOver={isGameOver}
-                                onCardClick={onCardClick}
-                                onPlaceholderClick={NOOP}
-                                onAcknowledge={onAcknowledge}
-                                placeholderInteractive={false}
-                            />
-                        </div>
-                        <div className="caravans human">
-                            <CaravanColumn
-                                playerId={Human}
-                                caravans={humanPlayer.caravans}
-                                selection={humanSelection}
-                                scores={scores}
-                                isGameOver={isGameOver}
-                                onCardClick={onCardClick}
-                                onPlaceholderClick={onPlaceholderClick}
-                                onAcknowledge={onAcknowledge}
-                                childrenFor={(laneIndex) =>
-                                    canDisbandAny &&
-                                    humanPlayer.caravans[laneIndex].rows.length > 0 ? (
-                                        <button
-                                            type="button"
-                                            className="disband"
-                                            onClick={() => {
-                                                onDisbandCaravan(laneIndex);
-                                            }}
-                                            aria-label={`Disband your ${caravanName(Human, laneIndex)}`}
-                                        >
-                                            Disband
-                                        </button>
-                                    ) : null
-                                }
-                            />
-                        </div>
-                    </div>
-
-                    <div className="column hands">
-                        <div className="hand-half">
-                            <div className="shoe-pair">
-                                <button
-                                    type="button"
-                                    className={`shoe ai ${aiPlayer.shoe.length === 0 ? "empty" : ""}`}
-                                    onClick={SHOE_PEEK_ENABLED ? onViewAiShoe : undefined}
-                                    aria-label={
-                                        SHOE_PEEK_ENABLED
-                                            ? `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining. View the shoe.`
-                                            : `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining.`
-                                    }
-                                    aria-disabled={SHOE_PEEK_ENABLED ? undefined : true}
-                                >
-                                    {aiPlayer.shoe.length === 0 ? (
-                                        <div className="empty" aria-hidden="true" />
-                                    ) : (
-                                        <div className="card back deck2" />
-                                    )}
-                                    <span className="count">{aiPlayer.shoe.length}</span>
-                                </button>
-                                <DiscardSlot player={aiPlayer} label="AI" />
+                ) : (
+                    <button
+                        type="button"
+                        className="menu-button menu-fab"
+                        onClick={() => {
+                            setMenuOpen((v) => !v);
+                        }}
+                        aria-expanded={menuOpen}
+                        aria-controls="game-menu"
+                        aria-label="Menu"
+                        title="Menu"
+                    >
+                        <span aria-hidden="true" className="menu-icon">
+                            <span />
+                            <span />
+                            <span />
+                        </span>
+                    </button>
+                )}
+                <div className="field">
+                    <div className="columns">
+                        <div className="column caravans">
+                            <div className="caravans ai">
+                                <CaravanColumn
+                                    playerId={Ai}
+                                    caravans={aiPlayer.caravans}
+                                    selection={aiSelection}
+                                    scores={scores}
+                                    isGameOver={isGameOver}
+                                    onCardClick={onCardClick}
+                                    onPlaceholderClick={NOOP}
+                                    onAcknowledge={onAcknowledge}
+                                    placeholderInteractive={false}
+                                />
                             </div>
-                            <PlayerHand
-                                playerId={Ai}
-                                player={aiPlayer}
-                                selectedHandIndex={null}
-                                selectableIndices={EMPTY_SET}
-                                onCardClick={NOOP}
-                                onCardDoubleClick={NOOP}
-                            />
+                            <div className="caravans human">
+                                <CaravanColumn
+                                    playerId={Human}
+                                    caravans={humanPlayer.caravans}
+                                    selection={humanSelection}
+                                    scores={scores}
+                                    isGameOver={isGameOver}
+                                    onCardClick={onCardClick}
+                                    onPlaceholderClick={onPlaceholderClick}
+                                    onAcknowledge={onAcknowledge}
+                                    childrenFor={(laneIndex) =>
+                                        canDisbandAny &&
+                                        humanPlayer.caravans[laneIndex].rows.length > 0 ? (
+                                            <button
+                                                type="button"
+                                                className="disband"
+                                                onClick={() => {
+                                                    onDisbandCaravan(laneIndex);
+                                                }}
+                                                aria-label={`Disband your ${caravanName(Human, laneIndex)}`}
+                                            >
+                                                Disband
+                                            </button>
+                                        ) : null
+                                    }
+                                />
+                            </div>
                         </div>
 
-                        <div className="hand-half human">
-                            <PlayerHand
-                                playerId={Human}
-                                player={humanPlayer}
-                                selectedHandIndex={sel}
-                                selectableIndices={selectableIndices}
-                                onCardClick={onHandClick}
-                                onCardDoubleClick={onHandDoubleClick}
-                            />
-                            <div className="shoe-pair">
-                                <button
-                                    type="button"
-                                    className={`shoe ${humanPlayer.shoe.length === 0 ? "empty" : ""}`}
-                                    onClick={onShoeClick}
-                                    aria-label={
-                                        SHOE_PEEK_ENABLED
-                                            ? `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one, or view the shoe.`
-                                            : `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one.`
-                                    }
-                                >
-                                    {humanPlayer.shoe.length === 0 ? (
-                                        <div className="empty" aria-hidden="true" />
-                                    ) : (
-                                        <div className="card back deck1" />
-                                    )}
-                                    <span className="count">{humanPlayer.shoe.length}</span>
-                                </button>
-                                <DiscardSlot player={humanPlayer} label="Your" />
+                        <div className="column hands">
+                            <div className="hand-half">
+                                <div className="shoe-pair">
+                                    <button
+                                        type="button"
+                                        className={`shoe ai ${aiPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                        onClick={SHOE_PEEK_ENABLED ? onViewAiShoe : undefined}
+                                        aria-label={
+                                            SHOE_PEEK_ENABLED
+                                                ? `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining. View the shoe.`
+                                                : `AI shoe, ${String(aiPlayer.shoe.length)} cards remaining.`
+                                        }
+                                        aria-disabled={SHOE_PEEK_ENABLED ? undefined : true}
+                                    >
+                                        {aiPlayer.shoe.length === 0 ? (
+                                            <div className="empty" aria-hidden="true" />
+                                        ) : (
+                                            <div className="card back deck2" />
+                                        )}
+                                        <span className="count">{aiPlayer.shoe.length}</span>
+                                    </button>
+                                    <DiscardSlot player={aiPlayer} label="AI" />
+                                </div>
+                                <PlayerHand
+                                    playerId={Ai}
+                                    player={aiPlayer}
+                                    selectedHandIndex={null}
+                                    selectableIndices={EMPTY_SET}
+                                    onCardClick={NOOP}
+                                    onCardDoubleClick={NOOP}
+                                />
+                            </div>
+
+                            <div className="hand-half human">
+                                <PlayerHand
+                                    playerId={Human}
+                                    player={humanPlayer}
+                                    selectedHandIndex={sel}
+                                    selectableIndices={selectableIndices}
+                                    onCardClick={onHandClick}
+                                    onCardDoubleClick={onHandDoubleClick}
+                                />
+                                <div className="shoe-pair">
+                                    <button
+                                        type="button"
+                                        className={`shoe ${humanPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                        onClick={onShoeClick}
+                                        aria-label={
+                                            SHOE_PEEK_ENABLED
+                                                ? `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one, or view the shoe.`
+                                                : `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one.`
+                                        }
+                                    >
+                                        {humanPlayer.shoe.length === 0 ? (
+                                            <div className="empty" aria-hidden="true" />
+                                        ) : (
+                                            <div className="card back deck1" />
+                                        )}
+                                        <span className="count">{humanPlayer.shoe.length}</span>
+                                    </button>
+                                    <DiscardSlot player={humanPlayer} label="Your" />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
 
             {!isWide && menuOpen ? (
@@ -1057,6 +903,19 @@ export function Board({ store }: { store: GameStore }) {
                             e.stopPropagation();
                         }}
                     >
+                        <div className="menu-head">
+                            <span className="brand">Caravan</span>
+                            <button
+                                type="button"
+                                className="menu-close"
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                }}
+                                aria-label="Close menu"
+                            >
+                                ×
+                            </button>
+                        </div>
                         {menuItems}
                     </nav>
                 </div>
@@ -1106,9 +965,7 @@ export function Board({ store }: { store: GameStore }) {
                             e.stopPropagation();
                         }}
                     >
-                        <h2>
-                            Disband your {caravanName(Human, pendingDisband)}?
-                        </h2>
+                        <h2>Disband your {caravanName(Human, pendingDisband)}?</h2>
                         <div className="actions">
                             <button
                                 type="button"
@@ -1118,11 +975,7 @@ export function Board({ store }: { store: GameStore }) {
                             >
                                 Keep caravan
                             </button>
-                            <button
-                                type="button"
-                                className="btn"
-                                onClick={onConfirmDisband}
-                            >
+                            <button type="button" className="btn" onClick={onConfirmDisband}>
                                 Disband
                             </button>
                         </div>
