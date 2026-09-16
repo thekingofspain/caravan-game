@@ -44,7 +44,10 @@ const programmedState = {
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
 await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
 if ((await page.locator(".activity").count()) === 0) {
-    await page.getByRole("button", { name: "Menu" }).click();
+    // The game-over banner shares the top band with the hamburger and can
+    // cover it: dispatch the click directly (same pattern as the
+    // sidebar-drawer-rail spec) so the drawer opens deterministically.
+    await page.getByRole("button", { name: "Menu" }).dispatchEvent("click");
 }
 await page.waitForSelector(".activity[role='dialog']", { timeout: 3000 });
 await page.waitForFunction(() => document.querySelector(".log .win-details") && document.querySelector(".log .row.human .player") && document.querySelector(".log .row.ai .player"), null, { timeout: 5000 });
