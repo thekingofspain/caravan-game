@@ -41,8 +41,8 @@ async function doHumanAction() {
       if (await ph.count() > 0) await ph.first().click({ force: true });
       else await track.locator(".card").last().click({ force: true });
     } else {
-      // Face card with no legal target (or no open caravan): discard the selected card via the shoe.
-      await page.locator(".shoe:not(.ai)").click({ force: true });
+      // Face card with no legal target (or no open caravan): discard the selected card via the red X on the discard pile.
+      await page.locator(".hand-half.human .discard-slot.discardable").first().click({ force: true });
     }
   }
   // Every branch above commits a move (logged in the store); wait for the log

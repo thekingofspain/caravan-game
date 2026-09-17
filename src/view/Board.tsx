@@ -6,6 +6,7 @@ import { caravanName } from "../model/names";
 import { type GameScores, getCaravanScores } from "../model/scoring";
 import type {
     Caravan as CaravanModel,
+    Card as CardModel,
     Nullable,
     PlayerState,
     SelectionState
@@ -164,10 +165,36 @@ function CaravanColumn({
 }
 
 // Face-up slot beside each shoe showing only the last player-initiated
-// discard (big red X); Jack/Joker removals and disbanded caravans never land here.
+// discard; Jack/Joker removals and disbanded caravans never land here.
+// The human slot becomes a red-X discard button while a selected card has a
+// legal discard: clicking the X performs the discard move.
 
-function DiscardSlot({ player, label }: { player: PlayerState; label: string }) {
+function DiscardSlot({
+    player,
+    label,
+    discardCard,
+    onDiscard
+}: {
+    player: PlayerState;
+    label: string;
+    discardCard: Nullable<CardModel>;
+    onDiscard: () => void;
+}) {
     const last = player.discard ?? null;
+
+    if (discardCard !== null) {
+        return (
+            <button
+                type="button"
+                className={`discard-slot${last ? " filled" : ""} discardable`}
+                onClick={onDiscard}
+                aria-label={`Discard ${cardLabel(discardCard)} to your discard pile`}
+                title={`Discard ${cardLabel(discardCard)} to your discard pile`}
+            >
+                {last ? <CardView card={last} /> : <div className="empty" aria-hidden="true" />}
+            </button>
+        );
+    }
 
     if (last === null) {
         return (
@@ -427,6 +454,14 @@ export function Board({ store }: { store: GameStore }) {
 
     const humanPlayer = displayedState.players[Human];
     const aiPlayer = displayedState.players[Ai];
+
+    // The selected human card offered as a red X on the human discard pile.
+    // Gated on the human turn (not just a legal discard) so the X never
+    // lingers on AI turns, game over, or while the human must ack a removal.
+
+    const discardCard: Nullable<CardModel> =
+        sel !== null && humanCanAct && canDiscard ? (humanPlayer.hand[sel] ?? null) : null;
+
     const canDisbandAny =
         humanCanAct &&
         sel === null &&
@@ -652,9 +687,8 @@ export function Board({ store }: { store: GameStore }) {
     }, [store]);
 
     const onShoeClick = useCallback(() => {
-        if (sel !== null && canDiscard) onDiscard();
-        else if (SHOE_PEEK_ENABLED) setViewShoe(Human);
-    }, [sel, canDiscard, onDiscard]);
+        if (SHOE_PEEK_ENABLED) setViewShoe(Human);
+    }, []);
     const onViewAiShoe = useCallback(() => {
         setViewShoe(Ai);
     }, []);
@@ -841,7 +875,12 @@ export function Board({ store }: { store: GameStore }) {
                                         )}
                                         <span className="count">{aiPlayer.shoe.length}</span>
                                     </button>
-                                    <DiscardSlot player={aiPlayer} label="AI" />
+                                    <DiscardSlot
+                                        player={aiPlayer}
+                                        label="AI"
+                                        discardCard={null}
+                                        onDiscard={NOOP}
+                                    />
                                 </div>
                                 <PlayerHand
                                     playerId={Ai}
@@ -869,9 +908,10 @@ export function Board({ store }: { store: GameStore }) {
                                         onClick={onShoeClick}
                                         aria-label={
                                             SHOE_PEEK_ENABLED
-                                                ? `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one, or view the shoe.`
-                                                : `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. Click to discard the selected card and draw a new one.`
+                                                ? `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining. View the shoe.`
+                                                : `Your shoe, ${String(humanPlayer.shoe.length)} cards remaining.`
                                         }
+                                        aria-disabled={SHOE_PEEK_ENABLED ? undefined : true}
                                     >
                                         {humanPlayer.shoe.length === 0 ? (
                                             <div className="empty" aria-hidden="true" />
@@ -880,7 +920,12 @@ export function Board({ store }: { store: GameStore }) {
                                         )}
                                         <span className="count">{humanPlayer.shoe.length}</span>
                                     </button>
-                                    <DiscardSlot player={humanPlayer} label="Your" />
+                                    <DiscardSlot
+                                        player={humanPlayer}
+                                        label="Your"
+                                        discardCard={discardCard}
+                                        onDiscard={onDiscard}
+                                    />
                                 </div>
                             </div>
                         </div>

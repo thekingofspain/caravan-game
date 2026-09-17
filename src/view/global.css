@@ -446,7 +446,8 @@ body {
     color: var(--c-fg);
 }
 /* Discard pile: placeholder beside each shoe showing the last discard
-   face-up under a big red X (single card, no history). */
+   face-up under a big red X (single card, no history). While the human has
+   a discardable card selected the empty slot becomes a red-X discard button. */
 .shoe-pair {
     display: flex;
     align-items: flex-start;
@@ -456,6 +457,18 @@ body {
     position: relative;
     width: var(--card-w);
     height: var(--card-h);
+    border: none;
+    padding: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+}
+button.discard-slot {
+    cursor: pointer;
+}
+button.discard-slot:focus-visible {
+    outline: 0.1875rem solid var(--c-accent);
+    outline-offset: 0.125rem;
 }
 .discard-slot .empty {
     width: var(--card-w);
@@ -465,8 +478,14 @@ body {
     background: transparent;
     opacity: 0.5;
 }
+button.discard-slot.discardable .empty {
+    border-color: rgba(195, 25, 15, 0.9);
+    opacity: 1;
+}
 .discard-slot.filled::before,
-.discard-slot.filled::after {
+.discard-slot.filled::after,
+button.discard-slot.discardable::before,
+button.discard-slot.discardable::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -478,10 +497,12 @@ body {
     box-shadow: 0 0 0.75rem rgba(195, 25, 15, 0.55);
     pointer-events: none;
 }
-.discard-slot.filled::before {
+.discard-slot.filled::before,
+button.discard-slot.discardable::before {
     transform: translate(-50%, -50%) rotate(45deg);
 }
-.discard-slot.filled::after {
+.discard-slot.filled::after,
+button.discard-slot.discardable::after {
     transform: translate(-50%, -50%) rotate(-45deg);
 }
 
