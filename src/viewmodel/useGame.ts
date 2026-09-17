@@ -90,7 +90,7 @@ export function useGame(initial: GameConfig): GameStore {
     const { previous, lastMove, transition } = ui;
 
     useEffect(() => {
-        if (state.phase === "over" || state.current !== Ai) return;
+        if (state.phase === "gameOver" || state.current !== Ai) return;
 
         if (transition?.pendingAck?.confirmer === Human) return;
 
@@ -149,7 +149,7 @@ export function useGame(initial: GameConfig): GameStore {
         // the confirmation visuals. At game over the winning card keeps
         // flashing, so the move is retained for the highlight.
 
-        if (state.phase === "over") {
+        if (state.phase === "gameOver") {
             setUi((prev) => ({ ...prev, transition: null }));
 
             return;

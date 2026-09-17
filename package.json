@@ -18,6 +18,7 @@
     "test:e2e": "for f in e2e/*.e2e.mjs; do echo \"=== $f\"; node \"$f\" || exit 1; done"
   },
   "dependencies": {
+    "lucide-react": "^1.46.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

@@ -16,7 +16,7 @@ interface SidebarProps {
 function SidebarImpl({ log, state, scores }: SidebarProps) {
     const logRef = useRef<HTMLOListElement>(null);
     const resolvedScores = scores ?? (state ? getCaravanScores(state) : undefined);
-    const isGameOver = state?.phase === "over";
+    const isGameOver = state?.winner != null;
     const winEntry = isGameOver && log.length > 0 ? log[log.length - 1] : null;
     const displayLog = isGameOver && winEntry !== null ? log.slice(0, -1) : log;
 

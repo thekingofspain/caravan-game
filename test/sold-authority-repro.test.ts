@@ -15,9 +15,9 @@ function caravanOf(value: ValueCard["rank"]): Caravan {
         rows: [
             [valueCard(`${value}-0`, value)],
             [valueCard(`${value}-1`, value)],
-            [valueCard(`${value}-2`, value)],
+            [valueCard(`${value}-2`, value)]
         ],
-        suit: null,
+        suit: null
     };
 }
 
@@ -48,8 +48,7 @@ describe("sold-state authority equivalence", () => {
             current: Human,
             phase: "play",
             winner: null,
-            log: [],
-            started: false
+            log: []
         };
         const lanes = [0, 1, 2] as const;
 

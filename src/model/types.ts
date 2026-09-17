@@ -176,7 +176,7 @@ export interface CaravanRef {
     lane: LaneIndex;
 }
 export type LogSegment = string | Card | ActorRef | CaravanRef;
-export type GamePhase = "play" | "over";
+export type GamePhase = "play" | "gameOver";
 export type AiLevel = "normal" | "hard" | "expert" | "master";
 export interface GameConfig {
     seed?: number;
@@ -197,7 +197,6 @@ export interface GameState {
     phase: GamePhase;
     winner: Nullable<PlayerId>;
     log: LogEntry[];
-    started: boolean;
 }
 export interface TargetRef {
     player: PlayerId;

@@ -2,7 +2,13 @@ import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
 import { applyMove, legalMoves, setupGame } from "../src/model/engine";
 import { gameWinner } from "../src/model/scoring";
-import { determineBestMove, evaluateTacticalBoard, masterMoveBonus, tacticalMoveBonus } from "../src/model/ai";
+import {
+    determineBestMove,
+    difficultyWeight,
+    evaluateTacticalBoard,
+    operationShapingWeight,
+    riskRewardWeight
+} from "../src/model/ai";
 import { mulberry32 } from "../src/model/rng";
 import { Ai, Caravan, Card, GameState, Human, Move, PlayerState } from "../src/model/types";
 
@@ -28,8 +34,7 @@ function mkGame(ai: PlayerState, human: PlayerState): GameState {
         current: Ai,
         phase: "play",
         winner: null,
-        log: [],
-        started: true
+        log: []
     };
 }
 
@@ -122,7 +127,7 @@ describe("normal control", () => {
     });
 });
 
-describe("tacticalMoveBonus", () => {
+describe("operationShapingWeight", () => {
     it("rates a Jack on a seller above a Jack on a small lane", () => {
         const s = jackSituation();
         const seller = legalMoves(s).find(
@@ -133,8 +138,8 @@ describe("tacticalMoveBonus", () => {
             (m) =>
                 m.type === "playOperationCard" && m.target.player === Human && m.target.lane === 1
         ) as Move;
-        expect(tacticalMoveBonus(s, seller, applyMove(s, seller), Ai)).toBeGreaterThan(
-            tacticalMoveBonus(s, small, applyMove(s, small), Ai)
+        expect(operationShapingWeight(s, seller, applyMove(s, seller), Ai)).toBeGreaterThan(
+            operationShapingWeight(s, small, applyMove(s, small), Ai)
         );
     });
 
@@ -143,10 +148,7 @@ describe("tacticalMoveBonus", () => {
             [
                 sold21Lane(),
                 startedCaravan(
-                    [
-                        [makeCard(221, "10", "hearts")],
-                        [makeCard(222, "9", "diamonds")]
-                    ],
+                    [[makeCard(221, "10", "hearts")], [makeCard(222, "9", "diamonds")]],
                     "desc",
                     "diamonds"
                 ),
@@ -173,8 +175,8 @@ describe("tacticalMoveBonus", () => {
                 m.target.lane === 1 &&
                 m.target.cardIndex === 1
         ) as Move;
-        expect(tacticalMoveBonus(s, fat, applyMove(s, fat), Ai)).toBeGreaterThan(
-            tacticalMoveBonus(s, thin, applyMove(s, thin), Ai)
+        expect(operationShapingWeight(s, fat, applyMove(s, fat), Ai)).toBeGreaterThan(
+            operationShapingWeight(s, thin, applyMove(s, thin), Ai)
         );
     });
     /** Joker removes 5 of yours and 5 of mine: net 0, breaks no sale. */
@@ -192,10 +194,7 @@ describe("tacticalMoveBonus", () => {
                     "spades"
                 ),
                 startedCaravan(
-                    [
-                        [makeCard(240, "10", "hearts")],
-                        [makeCard(241, "9", "diamonds")]
-                    ],
+                    [[makeCard(240, "10", "hearts")], [makeCard(241, "9", "diamonds")]],
                     "desc",
                     "diamonds"
                 ),
@@ -204,7 +203,11 @@ describe("tacticalMoveBonus", () => {
             [makeCard(235, "Joker", "Red"), makeCard(236, "2", "clubs")]
         );
         const human = mkPlayer(
-            [startedCaravan([[makeCard(237, "5", "clubs")]], null, "clubs"), smallLane(), smallLane()],
+            [
+                startedCaravan([[makeCard(237, "5", "clubs")]], null, "clubs"),
+                smallLane(),
+                smallLane()
+            ],
             [makeCard(238, "2", "clubs"), makeCard(239, "4", "diamonds")]
         );
 
@@ -224,10 +227,7 @@ describe("tacticalMoveBonus", () => {
                 sold21Lane(),
                 smallLane(),
                 startedCaravan(
-                    [
-                        [makeCard(241, "10", "hearts")],
-                        [makeCard(242, "9", "diamonds")]
-                    ],
+                    [[makeCard(241, "10", "hearts")], [makeCard(242, "9", "diamonds")]],
                     "desc",
                     "diamonds"
                 )
@@ -244,8 +244,8 @@ describe("tacticalMoveBonus", () => {
             (m) => m.type === "playValueCard" && m.handIndex === 0 && m.lane === 2
         ) as Move;
         const next = applyMove(s, closer);
-        expect(tacticalMoveBonus(s, closer, next, Ai, "expert")).toBeGreaterThan(
-            tacticalMoveBonus(s, closer, next, Ai, "hard")
+        expect(difficultyWeight(s, closer, next, Ai, "expert")).toBeGreaterThan(
+            difficultyWeight(s, closer, next, Ai, "hard")
         );
     });
 
@@ -289,8 +289,8 @@ describe("tacticalMoveBonus", () => {
             (m) => m.type === "playValueCard" && m.handIndex === 0 && m.lane === 0
         ) as Move;
         const next = applyMove(s, bust);
-        expect(tacticalMoveBonus(s, bust, next, Ai, "expert")).toBeLessThan(
-            tacticalMoveBonus(s, bust, next, Ai, "hard")
+        expect(difficultyWeight(s, bust, next, Ai, "expert")).toBeLessThan(
+            difficultyWeight(s, bust, next, Ai, "hard")
         );
     });
 });
@@ -467,10 +467,7 @@ describe("master", () => {
             [
                 sold21Lane(),
                 startedCaravan(
-                    [
-                        [makeCard(201, "10", "hearts")],
-                        [makeCard(202, "9", "diamonds")]
-                    ],
+                    [[makeCard(201, "10", "hearts")], [makeCard(202, "9", "diamonds")]],
                     "desc",
                     "diamonds"
                 ),
@@ -486,23 +483,19 @@ describe("master", () => {
         return mkGame(ai, human);
     }
 
-    it(
-        "plays only legal moves across a full game",
-        () => {
-            let s = setupGame({ seed: 5, first: Human });
-            const rng = mulberry32(5);
-            let allLegal = true;
-            // 2-ply search is slow (expert has no full-game loop for the same
-            // reason); 25 plies still covers opening play on every level.
-            for (let i = 0; i < 25 && s.phase === "play"; i++) {
-                const a = determineBestMove(s, s.current, { level: "master", rng });
-                if (!legalMoves(s).some((l) => sameMove(l, a))) allLegal = false;
-                s = applyMove(s, a);
-            }
-            expect(allLegal).toBe(true);
-        },
-        30000
-    );
+    it("plays only legal moves across a full game", () => {
+        let s = setupGame({ seed: 5, first: Human });
+        const rng = mulberry32(5);
+        let allLegal = true;
+        // 2-ply search is slow (expert has no full-game loop for the same
+        // reason); 25 plies still covers opening play on every level.
+        for (let i = 0; i < 25 && s.phase === "play"; i++) {
+            const a = determineBestMove(s, s.current, { level: "master", rng });
+            if (!legalMoves(s).some((l) => sameMove(l, a))) allLegal = false;
+            s = applyMove(s, a);
+        }
+        expect(allLegal).toBe(true);
+    }, 30000);
 
     it("prices blocking the near-win above building", () => {
         const s = masterRiskSituation();
@@ -511,9 +504,9 @@ describe("master", () => {
                 m.type === "playOperationCard" && m.target.player === Human && m.target.lane === 1
         ) as Move;
         const build = legalMoves(s).find((m) => m.type === "playValueCard") as Move;
-        const jackBonus = masterMoveBonus(s, jack, applyMove(s, jack), Ai);
-        const buildBonus = masterMoveBonus(s, build, applyMove(s, build), Ai);
-        expect(jackBonus).toBeGreaterThan(buildBonus);
+        const jackWeight = riskRewardWeight(s, jack, applyMove(s, jack), Ai);
+        const buildWeight = riskRewardWeight(s, build, applyMove(s, build), Ai);
+        expect(jackWeight).toBeGreaterThan(buildWeight);
     });
 
     it("prices bigger progress above smaller progress when the opponent is far", () => {
@@ -532,8 +525,8 @@ describe("master", () => {
         const small = legalMoves(s).find(
             (m) => m.type === "playValueCard" && m.handIndex === 1
         ) as Move;
-        expect(masterMoveBonus(s, big, applyMove(s, big), Ai)).toBeGreaterThan(
-            masterMoveBonus(s, small, applyMove(s, small), Ai)
+        expect(riskRewardWeight(s, big, applyMove(s, big), Ai)).toBeGreaterThan(
+            riskRewardWeight(s, small, applyMove(s, small), Ai)
         );
     });
 

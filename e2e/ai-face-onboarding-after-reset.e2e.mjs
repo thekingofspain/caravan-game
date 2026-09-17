@@ -23,13 +23,13 @@ const completedState = {
     mkPlayer([caravanOf([[{id:"h1",rank:"10",suit:"clubs"}]]), caravanOf([[{id:"h2",rank:"10",suit:"spades"}]]), caravanOf([[{id:"h3",rank:"10",suit:"hearts"}]])], [], []),
     mkPlayer([caravanOf([[{id:"a1",rank:"10",suit:"diamonds"}]]), caravanOf([[{id:"a2",rank:"10",suit:"hearts"}]]), caravanOf([[{id:"a3",rank:"10",suit:"spades"}]])], [], [])
   ],
-  current: 0, phase:"over", winner:0, log:[{id:1,text:"You win the caravan!",segments:[{type:"actor",player:0,form:"subject"}," win the caravan!"],detail:[]}], started:true
+  current: 0, phase:"gameOver", winner:0, log:[{id:1,text:"You win the caravan!",segments:[{type:"actor",player:0,form:"subject"}," win the caravan!"],detail:[]}], started:true
 };
 await page.evaluate(s=> window.__setCaravanState(s), completedState);
-await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
+await page.waitForFunction(() => window.__caravanStore?.state?.phase === "gameOver", null, { timeout: 5000 });
 let phaseOver = await page.evaluate(()=> window.__caravanStore.state.phase);
 console.log("phase after complete:", phaseOver);
-assert.equal(phaseOver, "over");
+assert.equal(phaseOver, "gameOver");
 
 console.log("=== Step 2: Start new game (reset) ===");
 await page.evaluate(()=> window.__resetWithSeed(12345));

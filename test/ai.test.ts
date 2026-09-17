@@ -72,7 +72,7 @@ describe("AI", () => {
             }
             plies++;
         }
-        expect(s.phase).toBe("over");
+        expect(s.phase).toBe("gameOver");
         expect(s.winner === Human || s.winner === Ai).toBe(true);
     });
 });

@@ -31,7 +31,7 @@ const aHub = caravanOf([[makeCard(27, "4", "clubs")]], null, "clubs");
 const programmedState = {
   players: [mkPlayer([hBoneyard, hRedding, hShady], [], []), mkPlayer([aDayglow, aNewReno, aHub], [], [])],
   current: 0,
-  phase: "over",
+  phase: "gameOver",
   winner: 0,
   log: [{ id: 1, text: "You win the caravan!", segments: [{type:"actor",player:0,form:"subject"}," win the caravan!"], detail: [] }],
   started: true,

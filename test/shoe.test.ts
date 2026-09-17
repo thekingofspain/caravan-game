@@ -26,12 +26,16 @@ function caravanOf(ranks: ValueRank[], suit: Suit): Caravan {
     }
     return { rows, direction, suit: ranks.length ? suit : null };
 }
-const EMPTY: Caravan[] = [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf([], "spades")];
+const EMPTY: Caravan[] = [
+    caravanOf([], "spades"),
+    caravanOf([], "spades"),
+    caravanOf([], "spades")
+];
 function mkPlayer(caravans: Caravan[], hand: Card[]): PlayerState {
     return { shoe: [], hand, discard: null, caravans };
 }
 function mkGame(p0: PlayerState, p1: PlayerState, current: PlayerId = 0): GameState {
-    return { players: [p0, p1], current, phase: "play", winner: null, log: [], started: false };
+    return { players: [p0, p1], current, phase: "play", winner: null, log: [] };
 }
 function unfillableShoeSituation(shoe: Card[], hand: Card[]) {
     const p0: PlayerState = {
@@ -80,20 +84,39 @@ describe("draw exhaustion", () => {
             shoe: [],
             hand: [makeCard(1, "5", "hearts"), makeCard(1, "4", "diamonds")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         return mkGame(p0, mkPlayer(EMPTY, [makeCard(2, "2", "clubs")]), 0);
     }
     it("draws nothing from an empty shoe after a value play", () => {
-        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        const next = applyMove(emptyShoeSituation(), {
+            type: "playValueCard",
+            player: 0,
+            lane: 0,
+            handIndex: 0
+        });
         expect(next.players[Human].shoe.length).toBe(0);
     });
     it("leaves the played card unreplaced when the shoe is empty", () => {
-        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        const next = applyMove(emptyShoeSituation(), {
+            type: "playValueCard",
+            player: 0,
+            lane: 0,
+            handIndex: 0
+        });
         expect(next.players[Human].hand.length).toBe(1);
     });
     it("keeps the unplayed card in hand when the shoe is empty", () => {
-        const next = applyMove(emptyShoeSituation(), { type: "playValueCard", player: 0, lane: 0, handIndex: 0 });
+        const next = applyMove(emptyShoeSituation(), {
+            type: "playValueCard",
+            player: 0,
+            lane: 0,
+            handIndex: 0
+        });
         expect(next.players[Human].hand[0].rank).toBe("4");
     });
 });

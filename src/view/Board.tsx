@@ -1,6 +1,8 @@
+import { Copy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cardLabel } from "../model/cards";
+import { inOpeningRound } from "../model/engine";
 import { segmentsText } from "../model/gameLog";
 import { caravanName } from "../model/names";
 import { type GameScores, getCaravanScores } from "../model/scoring";
@@ -23,6 +25,11 @@ import { Sidebar } from "./Sidebar";
 const EMPTY_SET: ReadonlySet<number> = new Set();
 const EMPTY_STRINGS: ReadonlySet<string> = new Set();
 const NOOP = (): void => undefined;
+
+const GAMEOVER_COPY = {
+    human: { label: "You won the game", title: "You win!" },
+    ai: { label: "AI won the game", title: "AI wins" }
+} as const;
 
 // Below the breakpoint the sidebar is a hamburger drawer; at and above it
 // the rail docks. Measured live: rail (~330-400px) + hands (~185-250px) +
@@ -92,7 +99,6 @@ function CaravanColumn({
                 const meta =
                     playerId === Human ? scores.humanPoints[laneIndex] : scores.aiPoints[laneIndex];
                 const sellable = meta.isSellable;
-                const isEmpty = caravan.rows.length === 0;
                 const sold = isGameOver && meta.isSold;
 
                 // Equal rendered widths via the calibrated table above.
@@ -102,7 +108,7 @@ function CaravanColumn({
 
                 return (
                     <div
-                        className={`caravan ${sellable ? "sellable" : ""} ${isEmpty ? "is-empty" : ""} ${sold ? "is-sold" : ""}`}
+                        className={`caravan ${sellable ? "sellable" : ""} ${sold ? "is-sold" : ""}`}
                         key={laneIndex}
                     >
                         {sold ? (
@@ -135,11 +141,7 @@ function CaravanColumn({
                                     the slot before the first card lands, exactly
                                     like the direction placeholder beside it. */}
                                 <span
-                                    className={
-                                        caravan.suit !== null
-                                            ? `suit card-name ${caravan.suit}`
-                                            : "suit"
-                                    }
+                                    className={["suit", caravan.suit].filter(Boolean).join(" ")}
                                     aria-hidden="true"
                                 />
                                 <span className="sort-icon" aria-hidden="true" />
@@ -340,16 +342,7 @@ export function Board({ store }: { store: GameStore }) {
                             aria-label="Copy activity log and debug info"
                             title="Copy activity log and debug info"
                         >
-                            <svg
-                                viewBox="0 0 16 16"
-                                width="18"
-                                height="18"
-                                fill="currentColor"
-                                aria-hidden="true"
-                            >
-                                <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z" />
-                                <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z" />
-                            </svg>
+                            <Copy size={18} aria-hidden="true" />
                         </button>
                     </div>
                 </header>
@@ -407,9 +400,9 @@ export function Board({ store }: { store: GameStore }) {
         };
     }, []);
 
-    const isGameOver = state.phase === "over";
-    const humanWon = state.winner === Human;
-    const aiWon = isGameOver && state.winner === Ai;
+    // Null while playing: flash gates must not read "not human" as "ai won".
+
+    const winnerSide = state.winner === Human ? "human" : state.winner === Ai ? "ai" : null;
 
     // Winner banner centers on the board via CSS (left: 50%).
 
@@ -461,11 +454,7 @@ export function Board({ store }: { store: GameStore }) {
 
     const discardCard: Nullable<CardModel> =
         sel !== null && humanCanAct && canDiscard ? (humanPlayer.hand[sel] ?? null) : null;
-
-    const canDisbandAny =
-        humanCanAct &&
-        sel === null &&
-        humanPlayer.caravans.every((c) => c.started ?? c.rows.length > 0);
+    const canDisbandAny = humanCanAct && sel === null && !inOpeningRound(humanPlayer);
 
     // Blink the AI's last board move in yellow while the human turn starts.
     // Value plays flash their fresh row; operation plays flash the played
@@ -480,7 +469,7 @@ export function Board({ store }: { store: GameStore }) {
         if (m?.player !== Ai) return null;
 
         if (m.type === "playValueCard") {
-            if (!humanCanAct && !aiWon) return null;
+            if (!humanCanAct && winnerSide !== "ai") return null;
 
             const rows = displayedState.players[Ai].caravans[m.lane].rows;
 
@@ -495,7 +484,7 @@ export function Board({ store }: { store: GameStore }) {
             // played Jack is gone after ack, so gating on humanCanAct would
             // never show it. Removed rows keep the grey pending blink.
 
-            if (!human && !aiWon) return null;
+            if (!human && winnerSide !== "ai") return null;
 
             const played = store.previous?.players[Ai].hand.at(m.handIndex);
 
@@ -505,13 +494,13 @@ export function Board({ store }: { store: GameStore }) {
         }
 
         return null;
-    }, [human, humanCanAct, aiWon, store.lastMove, store.previous, displayedState]);
+    }, [human, humanCanAct, winnerSide, store.lastMove, store.previous, displayedState]);
     const flashKeys = useMemo(
         () =>
-            aiFlashKey !== null && (aiWon || aiFlashKey !== flashOffKey)
+            aiFlashKey !== null && (winnerSide === "ai" || aiFlashKey !== flashOffKey)
                 ? new Set([aiFlashKey])
                 : EMPTY_STRINGS,
-        [aiFlashKey, aiWon, flashOffKey]
+        [aiFlashKey, winnerSide, flashOffKey]
     );
 
     const selectableIndices = useMemo(() => {
@@ -565,11 +554,9 @@ export function Board({ store }: { store: GameStore }) {
             if (!humanCanAct) return;
 
             // `started` is never cleared, so this stays false for the rest of
-            // the game even with an emptied caravan (mirrors inOpeningRound).
+            // the game even with an emptied caravan.
 
-            const inOpening = humanPlayer.caravans.some((c) => !(c.started ?? c.rows.length > 0));
-
-            if (!inOpening) return;
+            if (!inOpeningRound(humanPlayer)) return;
 
             const card = humanPlayer.hand[i];
 
@@ -760,22 +747,20 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     return (
-        <div className={`board ${isGameOver ? (humanWon ? "gameover-human" : "gameover-ai") : ""}`}>
+        <div className={`board ${winnerSide !== null ? `gameover-${winnerSide}` : ""}`}>
             {toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
                 </div>
             ) : null}
-            {isGameOver ? (
+            {winnerSide !== null ? (
                 <div
                     role="alertdialog"
-                    aria-label={humanWon ? "You won the game" : "AI won the game"}
+                    aria-label={GAMEOVER_COPY[winnerSide].label}
                     aria-describedby="gameover-detail"
-                    className={`gameover-banner ${humanWon ? "human" : "ai"}`}
+                    className={`gameover-banner ${winnerSide}`}
                 >
-                    <span className="gameover-banner-title">
-                        {humanWon ? "You win!" : "AI wins"}
-                    </span>
+                    <span className="gameover-banner-title">{GAMEOVER_COPY[winnerSide].title}</span>
                     <span id="gameover-detail" className="gameover-banner-detail">
                         Caravans {scores.humanWins} – {scores.aiWins}
                     </span>
@@ -818,7 +803,7 @@ export function Board({ store }: { store: GameStore }) {
                                     caravans={aiPlayer.caravans}
                                     selection={aiSelection}
                                     scores={scores}
-                                    isGameOver={isGameOver}
+                                    isGameOver={winnerSide !== null}
                                     onCardClick={onCardClick}
                                     onPlaceholderClick={NOOP}
                                     onAcknowledge={onAcknowledge}
@@ -831,7 +816,7 @@ export function Board({ store }: { store: GameStore }) {
                                     caravans={humanPlayer.caravans}
                                     selection={humanSelection}
                                     scores={scores}
-                                    isGameOver={isGameOver}
+                                    isGameOver={winnerSide !== null}
                                     onCardClick={onCardClick}
                                     onPlaceholderClick={onPlaceholderClick}
                                     onAcknowledge={onAcknowledge}

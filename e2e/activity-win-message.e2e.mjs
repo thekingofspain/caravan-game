@@ -36,13 +36,13 @@ const aiCaravans = [aDayglow, aNewReno, aHub];
 const programmedState = {
   players: [mkPlayer(humanCaravans, [], []), mkPlayer(aiCaravans, [], [])],
   current: 0,
-  phase: "over",
+  phase: "gameOver",
   winner: 0,
   log: [{ id: 1, text: "You win the caravan!", segments: [{type:"actor",player:0,form:"subject"}," win the caravan!"], detail: [] }],
   started: true,
 };
 await page.evaluate((s) => window.__setCaravanState(s), programmedState);
-await page.waitForFunction(() => window.__caravanStore?.state?.phase === "over", null, { timeout: 5000 });
+await page.waitForFunction(() => window.__caravanStore?.state?.phase === "gameOver", null, { timeout: 5000 });
 if ((await page.locator(".activity").count()) === 0) {
     // The game-over banner shares the top band with the hamburger and can
     // cover it: dispatch the click directly (same pattern as the

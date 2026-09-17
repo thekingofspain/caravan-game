@@ -29,7 +29,7 @@ const aHub = caravanOf([[makeCard(7,"5","clubs")]], null,"clubs");
 
 const state = {
   players: [mkPlayer([hBoneyard,hRedding,hShady],[],[]), mkPlayer([aDayglow,aNewReno,aHub],[],[])],
-  current: 1, phase:"over", winner:1,
+  current: 1, phase:"gameOver", winner:1,
   log: [
     {id:1, segments:[{type:"actor",player:0,form:"subject"}," played ",makeCard(11,"9","diamonds")," to ",{type:"caravan",player:0,lane: 0}], text:"You played {9♦} to Boneyard", detail:[]},
     {id:2, segments:[{type:"actor",player:1,form:"subject"}," played ",makeCard(12,"Joker",null,"Red")," on ",{type:"actor",player:0,form:"possessive"},{type:"caravan",player:0,lane: 0}," ",makeCard(13,"5","clubs")], text:"AI played {Red Joker} on You's Boneyard {5♣}", detail: [

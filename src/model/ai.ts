@@ -233,12 +233,13 @@ function removalWeight(oppPoints: number): number {
     return gap <= 10 ? 1 : 10 / gap;
 }
 
-export function tacticalMoveBonus(
+/** Move-shaping weight for operation plays (J/Q/K/Joker): sale breaks, busts, strangling. Level-independent. */
+
+export function operationShapingWeight(
     prev: GameState,
     move: Move,
     next: GameState,
-    acting: PlayerId,
-    level: AiLevel = "hard"
+    acting: PlayerId
 ): number {
     const opp = otherPlayer(acting);
 
@@ -346,25 +347,37 @@ export function tacticalMoveBonus(
         return 0;
     }
 
+    return 0;
+}
+
+/** Seller-count weight for value plays: closing our second seller (+30), letting the opponent reach two (-40). */
+
+export function sellerCountWeight(
+    prev: GameState,
+    move: Move,
+    next: GameState,
+    acting: PlayerId
+): number {
     if (move.type === "playValueCard") {
-        // Seller-count is scored only above hard: closing and blocking matter more
-        // than raw points once the match comes down to two sellers.
-
-        if (level === "hard") return 0;
-
         const myBefore = sellersOf(prev, acting).filter((s) => s === 1).length;
         const myAfter = sellersOf(next, acting).filter((s) => s === 1).length;
         const oppBefore = sellersOf(prev, acting).filter((s) => s === -1).length;
         const oppAfter = sellersOf(next, acting).filter((s) => s === -1).length;
-        let bonus = 0;
+        let weight = 0;
 
-        if (myBefore === 1 && myAfter === 2) bonus += 30;
+        if (myBefore === 1 && myAfter === 2) weight += 30;
 
-        if (oppBefore < 2 && oppAfter === 2) bonus -= 40;
+        if (oppBefore < 2 && oppAfter === 2) weight -= 40;
 
-        return bonus;
+        return weight;
     }
 
+    return 0;
+}
+
+/** Discard weight: throwing away a playable value card hurts; ditching a dead card is fine. */
+
+export function discardWeight(prev: GameState, move: Move, acting: PlayerId): number {
     if (move.type === "discardCard") {
         const card = prev.players[acting].hand.at(move.handIndex);
 
@@ -375,25 +388,57 @@ export function tacticalMoveBonus(
                 canPlaceCard(card, prev.players[acting].caravans[lane])
             );
 
-            // Throwing away a playable value card hurts; ditching a dead card is fine.
-
             return playable ? -4 : -0.2;
         }
 
         return -2;
     }
 
-    // Only disbandCaravan reaches here: every other move type returns above.
+    return 0;
+}
+
+/** Disband weight: base eval already prices the lost seller; weight only frees busted lanes. */
+
+export function disbandWeight(prev: GameState, move: Move, acting: PlayerId): number {
+    if (move.type !== "disbandCaravan") return 0;
 
     const points = calculatePoints(prev.players[acting].caravans[move.lane]);
-
-    // Base eval already prices the lost seller; bonus only frees busted lanes.
 
     return points > MAX_SELLABLE ? 10 : 0;
 }
 
+/** Difficulty-level move weight: standalone per level, composite of methodology weights. */
+
+export function difficultyWeight(
+    prev: GameState,
+    move: Move,
+    next: GameState,
+    acting: PlayerId,
+    level: AiLevel
+): number {
+    if (level === "normal") return 0;
+
+    let weight =
+        operationShapingWeight(prev, move, next, acting) +
+        discardWeight(prev, move, acting) +
+        disbandWeight(prev, move, acting);
+
+    // Seller-count awareness above hard: closing and blocking matter more
+    // than raw points once the match comes down to two sellers.
+
+    if (level === "expert" || level === "master") {
+        weight += sellerCountWeight(prev, move, next, acting);
+    }
+
+    if (level === "master") {
+        weight += riskRewardWeight(prev, move, next, acting);
+    }
+
+    return weight;
+}
+
 function isWinningState(next: GameState, acting: PlayerId): boolean {
-    return gameWinner(next) === acting || (next.phase === "over" && next.winner === acting);
+    return gameWinner(next) === acting || (next.phase === "gameOver" && next.winner === acting);
 }
 
 /** Guardrail: immediate-loss moves are only picked when nothing else exists. */
@@ -412,7 +457,7 @@ function nonLosingMoves(state: GameState, acting: PlayerId): Move[] {
 function determineTacticalBestMove(state: GameState, acting: PlayerId, rng: Rng): Move {
     const acts = nonLosingMoves(state, acting);
 
-    let bestScore = -Infinity;
+    let bestWeight = -Infinity;
     let best: Move[] = [];
 
     for (const a of acts) {
@@ -420,12 +465,13 @@ function determineTacticalBestMove(state: GameState, acting: PlayerId, rng: Rng)
 
         if (isWinningState(next, acting)) return a;
 
-        const sc = evaluateTacticalBoard(next, acting) + tacticalMoveBonus(state, a, next, acting);
+        const sc =
+            evaluateTacticalBoard(next, acting) + difficultyWeight(state, a, next, acting, "hard");
 
-        if (sc > bestScore) {
-            bestScore = sc;
+        if (sc > bestWeight) {
+            bestWeight = sc;
             best = [a];
-        } else if (sc === bestScore) best.push(a);
+        } else if (sc === bestWeight) best.push(a);
     }
 
     return pick(best, rng);
@@ -437,43 +483,64 @@ function determineExpertBestMove(
     state: GameState,
     acting: PlayerId,
     rng: Rng,
-    extraBonus: (prev: GameState, move: Move, next: GameState, acting: PlayerId) => number = () =>
-        0,
+    strategyWeight: (
+        prev: GameState,
+        move: Move,
+        next: GameState,
+        acting: PlayerId
+    ) => number = () => 0,
     level: AiLevel = "expert"
 ): Move {
     const opp = otherPlayer(acting);
     const acts = nonLosingMoves(state, acting);
 
-    // 1-ply ordering: full reply search only runs on the top-K candidates.
+    // Score every move once to decide which ones deserve the full opponent-reply search.
 
-    const ordered = acts.map((a) => {
-        const next = applyMove(state, a);
+    const rankedMoves = acts.map((currentMove) => {
+        const next = applyMove(state, currentMove);
 
-        if (isWinningState(next, acting)) return { a, next, win: true, s1: Infinity, bonus: 0 };
+        if (isWinningState(next, acting)) {
+            return {
+                currentMove,
+                next,
+                isImmediateWin: true,
+                baseMoveWeight: Infinity,
+                moveWeight: 0
+            };
+        }
 
-        const bonus =
-            tacticalMoveBonus(state, a, next, acting, level) + extraBonus(state, a, next, acting);
+        const moveWeight =
+            difficultyWeight(state, currentMove, next, acting, level) +
+            strategyWeight(state, currentMove, next, acting);
 
-        return { a, next, win: false, s1: evaluateTacticalBoard(next, acting) + bonus, bonus };
+        return {
+            currentMove,
+            next,
+            isImmediateWin: false,
+            baseMoveWeight: evaluateTacticalBoard(next, acting) + moveWeight,
+            moveWeight
+        };
     });
 
-    const immediate = ordered.find((o) => o.win);
+    const immediate = rankedMoves.find((o) => o.isImmediateWin);
 
-    if (immediate) return immediate.a;
+    if (immediate) return immediate.currentMove;
 
-    ordered.sort((x, y) => y.s1 - x.s1);
+    rankedMoves.sort((x, y) => y.baseMoveWeight - x.baseMoveWeight);
 
-    const candidates =
-        ordered.length <= EXPERT_BREADTH + 4 ? ordered : ordered.slice(0, EXPERT_BREADTH);
+    const candidateMoves =
+        rankedMoves.length <= EXPERT_BREADTH + 4
+            ? rankedMoves
+            : rankedMoves.slice(0, EXPERT_BREADTH);
 
-    let bestScore = -Infinity;
+    let bestWeight = -Infinity;
     let best: Move[] = [];
 
-    for (const { a, next, bonus } of candidates) {
-        let final: number;
+    for (const { currentMove, next, moveWeight } of candidateMoves) {
+        let currentWeight: number;
 
-        if (next.phase === "over") {
-            final = next.winner === acting ? Infinity : -Infinity;
+        if (next.phase === "gameOver") {
+            currentWeight = next.winner === acting ? Infinity : -Infinity;
         } else {
             const replies = legalMoves(next);
 
@@ -484,53 +551,44 @@ function determineExpertBestMove(
 
                 return {
                     next2,
-                    suicide: isWinningState(next2, acting),
-                    kill: isWinningState(next2, opp)
+                    isGameWinningMove: isWinningState(next2, acting),
+                    isGameLosingMove: isWinningState(next2, opp)
                 };
             });
-            const pool = evaluated.filter((e) => !e.suicide);
+            const pool = evaluated.filter((e) => !e.isGameWinningMove);
             const considered = pool.length > 0 ? pool : evaluated;
-            let minReply = Infinity;
+            let bestOpponentCounterMoveWeight = Infinity;
 
             for (const e of considered) {
-                if (e.kill) {
-                    minReply = -Infinity;
+                if (e.isGameLosingMove) {
+                    bestOpponentCounterMoveWeight = -Infinity;
                     break;
                 }
 
                 const v = evaluateTacticalBoard(e.next2, acting);
 
-                if (v < minReply) minReply = v;
+                if (v < bestOpponentCounterMoveWeight) bestOpponentCounterMoveWeight = v;
             }
 
-            final = minReply + bonus;
+            currentWeight = bestOpponentCounterMoveWeight + moveWeight;
         }
 
-        if (final > bestScore) {
-            bestScore = final;
-            best = [a];
-        } else if (final === bestScore) best.push(a);
+        if (currentWeight > bestWeight) {
+            bestWeight = currentWeight;
+            best = [currentMove];
+        } else if (currentWeight === bestWeight) best.push(currentMove);
     }
 
     return pick(best, rng);
 }
 
-// ---- Master: risk-vs-reward on top of the expert shape ----
+/** Progress weight: points of distance-to-sellable closed, capped so steady progress never outranks a sale-break. */
 
-/** Reward points gained per point of distance-to-sellable closed. */
+const PROGRESS_WEIGHT_PER_POINT = 2;
+const PROGRESS_WEIGHT_CAP = 16;
 
-const MASTER_REWARD_PER_POINT = 2;
-
-/** Cap so steady progress never outranks a sale-break. */
-
-const MASTER_REWARD_CAP = 16;
-
-/** Bonus per opponent ply-to-win pushed out (negative when letting it shrink). */
-
-const MASTER_RISK_PER_PLY = 30;
-
-function masterReward(prev: GameState, next: GameState, acting: PlayerId): number {
-    if (prev.phase === "over" || next.phase === "over") return 0;
+export function progressWeight(prev: GameState, next: GameState, acting: PlayerId): number {
+    if (prev.phase === "gameOver" || next.phase === "gameOver") return 0;
 
     const dist = (points: number): number => Math.max(0, MIN_SELLABLE - points);
     let closed = 0;
@@ -544,7 +602,7 @@ function masterReward(prev: GameState, next: GameState, acting: PlayerId): numbe
         closed += Math.max(0, dist(before) - dist(after));
     }
 
-    return Math.min(closed * MASTER_REWARD_PER_POINT, MASTER_REWARD_CAP);
+    return Math.min(closed * PROGRESS_WEIGHT_PER_POINT, PROGRESS_WEIGHT_CAP);
 }
 
 /**
@@ -552,7 +610,11 @@ function masterReward(prev: GameState, next: GameState, acting: PlayerId): numbe
  * (any value card closes up to 10 per turn). Busted lanes are unwinnable.
  */
 
-function oppLanePlies(state: GameState, acting: PlayerId, lane: (typeof LANE_INDICES)[number]): number {
+function opponentLaneDistance(
+    state: GameState,
+    acting: PlayerId,
+    lane: (typeof LANE_INDICES)[number]
+): number {
     const opp = otherPlayer(acting);
     const myPoints = calculatePoints(state.players[acting].caravans[lane]);
     const oppPoints = calculatePoints(state.players[opp].caravans[lane]);
@@ -583,29 +645,40 @@ function oppLanePlies(state: GameState, acting: PlayerId, lane: (typeof LANE_IND
 
 /** Minimal opponent plays to win the game: the two closest lanes (two win). */
 
-function oppGamePlies(state: GameState, acting: PlayerId): number {
-    const plies = LANE_INDICES.map((lane) => oppLanePlies(state, acting, lane)).sort((a, b) => a - b);
+function opponentGameDistance(state: GameState, acting: PlayerId): number {
+    const distances = LANE_INDICES.map((lane) => opponentLaneDistance(state, acting, lane)).sort(
+        (a, b) => a - b
+    );
 
-    return (plies[0] ?? 99) + (plies[1] ?? 99);
+    return (distances[0] ?? 99) + (distances[1] ?? 99);
 }
 
-function masterRisk(prev: GameState, next: GameState, acting: PlayerId): number {
-    if (prev.phase === "over" || next.phase === "over") return 0;
+/** Opponent-distance weight: plies-to-win pushed out (negative when letting it shrink). */
 
-    return MASTER_RISK_PER_PLY * (oppGamePlies(next, acting) - oppGamePlies(prev, acting));
+const OPPONENT_DISTANCE_WEIGHT_PER_PLY = 30;
+
+export function opponentDistanceWeight(prev: GameState, next: GameState, acting: PlayerId): number {
+    if (prev.phase === "gameOver" || next.phase === "gameOver") return 0;
+
+    return (
+        OPPONENT_DISTANCE_WEIGHT_PER_PLY *
+        (opponentGameDistance(next, acting) - opponentGameDistance(prev, acting))
+    );
 }
 
-export function masterMoveBonus(
+/** Risk-reward weight: progress toward selling plus opponent-distance pressure. Master only. */
+
+export function riskRewardWeight(
     prev: GameState,
     _move: Move,
     next: GameState,
     acting: PlayerId
 ): number {
-    return masterReward(prev, next, acting) + masterRisk(prev, next, acting);
+    return progressWeight(prev, next, acting) + opponentDistanceWeight(prev, next, acting);
 }
 
 function determineMasterBestMove(state: GameState, acting: PlayerId, rng: Rng): Move {
-    return determineExpertBestMove(state, acting, rng, masterMoveBonus, "master");
+    return determineExpertBestMove(state, acting, rng, riskRewardWeight, "master");
 }
 
 export function determineBestMove(
@@ -625,7 +698,7 @@ export function determineBestMove(
 
     const acts = nonLosingMoves(state, actingPlayerId);
 
-    let bestScore = -Infinity;
+    let bestWeight = -Infinity;
     let best: Move[] = [];
 
     for (const a of acts) {
@@ -637,10 +710,10 @@ export function determineBestMove(
 
         if (a.type === "discardCard") sc -= 0.5;
 
-        if (sc > bestScore) {
-            bestScore = sc;
+        if (sc > bestWeight) {
+            bestWeight = sc;
             best = [a];
-        } else if (sc === bestScore) best.push(a);
+        } else if (sc === bestWeight) best.push(a);
     }
 
     return best[Math.floor(rng() * best.length)];

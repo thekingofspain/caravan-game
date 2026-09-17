@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { makeCard } from "../src/model/cards";
-import { setupGame, applyMove, legalMoves, resolveTerminal, forfeitNoMoves } from "../src/model/engine";
+import {
+    setupGame,
+    applyMove,
+    legalMoves,
+    resolveTerminal,
+    forfeitNoMoves
+} from "../src/model/engine";
 import { canPlaceCard } from "../src/model/rules/caravanCardRules";
 import { calculatePoints } from "../src/model/scoring";
 import {
@@ -35,12 +41,16 @@ function caravanOf(ranks: ValueRank[], suit: Suit): Caravan {
     }
     return { rows, direction, suit: ranks.length ? suit : null };
 }
-const EMPTY: Caravan[] = [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf([], "spades")];
+const EMPTY: Caravan[] = [
+    caravanOf([], "spades"),
+    caravanOf([], "spades"),
+    caravanOf([], "spades")
+];
 function mkPlayer(caravans: Caravan[], hand: Card[]): PlayerState {
     return { shoe: [], hand, discard: null, caravans };
 }
 function mkGame(p0: PlayerState, p1: PlayerState, current: PlayerId = 0): GameState {
-    return { players: [p0, p1], current, phase: "play", winner: null, log: [], started: false };
+    return { players: [p0, p1], current, phase: "play", winner: null, log: [] };
 }
 
 // Game-chronological order: 1. setup deal → 2. opening must-start → 3. operation-card
@@ -96,7 +106,8 @@ describe("initial round (must-start constraint)", () => {
     it("targets only empty caravans while caravans are empty", () => {
         const s = setupGame({ seed: 7 });
         for (const a of legalMoves(s)) {
-            if (a.type === "playValueCard") expect(s.players[a.player].caravans[a.lane].rows.length).toBe(0);
+            if (a.type === "playValueCard")
+                expect(s.players[a.player].caravans[a.lane].rows.length).toBe(0);
         }
     });
     it("disallows discard while a caravan is empty", () => {
@@ -122,7 +133,11 @@ describe("initial round (must-start constraint)", () => {
             shoe: [],
             hand: [makeCard(1, "5", "hearts")],
             discard: null,
-            caravans: [caravanOf([], "spades"), caravanOf(["10"], "clubs"), caravanOf(["9"], "hearts")]
+            caravans: [
+                caravanOf([], "spades"),
+                caravanOf(["10"], "clubs"),
+                caravanOf(["9"], "hearts")
+            ]
         };
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
         expect(() => applyMove(s, { type: "discardCard", player: 0, handIndex: 0 })).toThrow(
@@ -164,11 +179,11 @@ describe("initial round (must-start constraint)", () => {
 describe("operation cards", () => {
     describe("jacks", () => {
         it("Jack removes the targeted card immediately on the player's own move", () => {
-            const p0 = mkPlayer(EMPTY, [
-                makeCard(1, "J", "spades"),
-                makeCard(1, "3", "hearts")
-            ]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")], []);
+            const p0 = mkPlayer(EMPTY, [makeCard(1, "J", "spades"), makeCard(1, "3", "hearts")]);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")],
+                []
+            );
             const s = mkGame(p0, p1);
             const next = applyMove(s, {
                 type: "playOperationCard",
@@ -180,11 +195,11 @@ describe("operation cards", () => {
         });
 
         it("passes the turn after a Jack", () => {
-            const p0 = mkPlayer(EMPTY, [
-                makeCard(1, "J", "spades"),
-                makeCard(1, "3", "hearts")
-            ]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")], [makeCard(2, "4", "diamonds")]);
+            const p0 = mkPlayer(EMPTY, [makeCard(1, "J", "spades"), makeCard(1, "3", "hearts")]);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")],
+                [makeCard(2, "4", "diamonds")]
+            );
             const s = mkGame(p0, p1);
             const next = applyMove(s, {
                 type: "playOperationCard",
@@ -223,7 +238,9 @@ describe("operation cards", () => {
             expect(oppJackSituation().info.pendingAck?.confirmer).toBe(Human);
         });
         it("points at the jacked card", () => {
-            expect(oppJackSituation().info.pendingAck?.removed).toEqual([{ player: 0, lane: 2, cardIndex: 0 }]);
+            expect(oppJackSituation().info.pendingAck?.removed).toEqual([
+                { player: 0, lane: 2, cardIndex: 0 }
+            ]);
         });
         it("shows the Jack as the played card", () => {
             expect(oppJackSituation().info.pendingAck?.played?.card.rank).toBe("J");
@@ -233,7 +250,11 @@ describe("operation cards", () => {
     describe("joker acknowledgement", () => {
         function jokerAckSituation(host: { player: PlayerId; lane: 0 | 1 | 2; cardIndex: number }) {
             const p0 = mkPlayer(
-                [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")],
+                [
+                    caravanOf(["5"], "hearts"),
+                    caravanOf(["5"], "diamonds"),
+                    caravanOf(["9"], "clubs")
+                ],
                 [makeCard(1, "3", "hearts")]
             );
             const p1 = mkPlayer(
@@ -252,34 +273,53 @@ describe("operation cards", () => {
         }
 
         it("names Human as the confirmer of an opponent-hosted Joker", () => {
-            expect(jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.confirmer).toBe(Human);
+            expect(
+                jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.confirmer
+            ).toBe(Human);
         });
         it("lists Joker removals across both players' lanes", () => {
-            expect(jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.removed).toEqual([
+            expect(
+                jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.removed
+            ).toEqual([
                 { player: 0, lane: 1, cardIndex: 0 },
                 { player: 1, lane: 0, cardIndex: 0 }
             ]);
         });
         it("shows the Joker as the played card", () => {
-            expect(jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.played?.card.rank).toBe("Joker");
+            expect(
+                jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.played
+                    ?.card.rank
+            ).toBe("Joker");
         });
         it("records the Joker host as the played target", () => {
-            expect(jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.played?.at).toEqual({
-                player: 0, lane: 0, cardIndex: 0
+            expect(
+                jokerAckSituation({ player: 0, lane: 0, cardIndex: 0 }).info.pendingAck?.played?.at
+            ).toEqual({
+                player: 0,
+                lane: 0,
+                cardIndex: 0
             });
         });
         it("names Human as the confirmer of an own-caravan Joker", () => {
-            expect(jokerAckSituation({ player: 1, lane: 0, cardIndex: 0 }).info.pendingAck?.confirmer).toBe(Human);
+            expect(
+                jokerAckSituation({ player: 1, lane: 0, cardIndex: 0 }).info.pendingAck?.confirmer
+            ).toBe(Human);
         });
         it("lists the opponent rows cleared by an own-caravan Joker", () => {
-            expect(jokerAckSituation({ player: 1, lane: 0, cardIndex: 0 }).info.pendingAck?.removed).toEqual([
+            expect(
+                jokerAckSituation({ player: 1, lane: 0, cardIndex: 0 }).info.pendingAck?.removed
+            ).toEqual([
                 { player: 0, lane: 0, cardIndex: 0 },
                 { player: 0, lane: 1, cardIndex: 0 }
             ]);
         });
         it("needs no ack when the Joker matches nothing", () => {
             const p0 = mkPlayer(
-                [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")],
+                [
+                    caravanOf(["9"], "hearts"),
+                    caravanOf(["8"], "diamonds"),
+                    caravanOf(["7"], "clubs")
+                ],
                 []
             );
             const p1 = mkPlayer(
@@ -323,7 +363,9 @@ describe("operation cards", () => {
         });
         it("re-attaches the Jack onto the kept row", () => {
             const { s, next, info } = jackSituation();
-            expect(getDisplayedState(s, next, info).players[Human].caravans[2].rows[0]?.[1]?.rank).toBe("J");
+            expect(
+                getDisplayedState(s, next, info).players[Human].caravans[2].rows[0]?.[1]?.rank
+            ).toBe("J");
         });
         it("shows the row gone on the committed board", () => {
             expect(jackSituation().next.players[Human].caravans[2].rows.length).toBe(0);
@@ -341,7 +383,10 @@ describe("operation cards", () => {
     describe("queens", () => {
         function queenReverseSituation() {
             const p0 = mkPlayer(EMPTY, [makeCard(1, "Q", "hearts")]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")], []);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")],
+                []
+            );
             const s = mkGame(p0, p1);
             const next = applyMove(s, {
                 type: "playOperationCard",
@@ -363,7 +408,10 @@ describe("operation cards", () => {
         });
         it("Queen must target the last row", () => {
             const p0 = mkPlayer(EMPTY, [makeCard(1, "Q", "hearts")]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")], []);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")],
+                []
+            );
             const s = mkGame(p0, p1);
             expect(() =>
                 applyMove(s, {
@@ -376,11 +424,15 @@ describe("operation cards", () => {
         });
         it("offers no operation move to a non-last row", () => {
             const p0 = mkPlayer(EMPTY, [makeCard(1, "Q", "hearts")]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")], []);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")],
+                []
+            );
             const s = mkGame(p0, p1);
             expect(
-                legalMoves(s).filter((m) => m.type === "playOperationCard" && m.target.cardIndex === 0)
-                    .length
+                legalMoves(s).filter(
+                    (m) => m.type === "playOperationCard" && m.target.cardIndex === 0
+                ).length
             ).toBe(0);
         });
 
@@ -423,7 +475,10 @@ describe("operation cards", () => {
     describe("kings", () => {
         it("King doubles the targeted row value", () => {
             const p0 = mkPlayer(EMPTY, [makeCard(1, "K", "spades")]);
-            const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")], []);
+            const p1 = mkPlayer(
+                [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["10"], "spades")],
+                []
+            );
             const s = mkGame(p0, p1);
             const next = applyMove(s, {
                 type: "playOperationCard",
@@ -495,7 +550,10 @@ describe("operation cards", () => {
 
 describe("disbandCaravan", () => {
     it("disbands a caravan", () => {
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")], []);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")],
+            []
+        );
         const p1 = mkPlayer(EMPTY, []);
         const s = mkGame(p0, p1, 0);
         const next = applyMove(s, { type: "disbandCaravan", player: 0, lane: 1 });
@@ -506,7 +564,10 @@ describe("disbandCaravan", () => {
         expect(() => applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 })).toThrow();
     });
     it("cannot disband a filled caravan while others are empty", () => {
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf([], "spades"), caravanOf([], "spades")], []);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf([], "spades"), caravanOf([], "spades")],
+            []
+        );
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
         expect(() => applyMove(s, { type: "disbandCaravan", player: 0, lane: 0 })).toThrow();
     });
@@ -534,7 +595,7 @@ describe("illegal actions throw", () => {
     });
     it("game over blocks moves", () => {
         const s = setupGame({ seed: 1 });
-        s.phase = "over";
+        s.phase = "gameOver";
         expect(() => applyMove(s, legalMoves(setupGame({ seed: 1 }))[0])).toThrow();
     });
     it("is pure (does not mutate input state)", () => {
@@ -558,7 +619,11 @@ describe("reddit atomic coverage", () => {
             shoe: [makeCard(1, "2", "clubs")],
             hand: [makeCard(1, "5", "hearts")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, [makeCard(2, "4", "diamonds")]), 0), {
             type: "playValueCard",
@@ -573,7 +638,11 @@ describe("reddit atomic coverage", () => {
             shoe: [makeCard(1, "2", "clubs")],
             hand: [makeCard(1, "5", "hearts")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playValueCard",
@@ -590,7 +659,11 @@ describe("reddit atomic coverage", () => {
             shoe: [makeCard(1, "4", "diamonds")],
             hand: [makeCard(1, "K", "clubs")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "discardCard",
@@ -617,25 +690,36 @@ describe("reddit atomic coverage", () => {
         expect(legalMoves(s).length).toBeGreaterThan(0);
     });
     it("plays operation cards on both your and opponent caravans", () => {
-        const full: Caravan[] = [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")];
+        const full: Caravan[] = [
+            caravanOf(["10"], "spades"),
+            caravanOf(["10"], "spades"),
+            caravanOf(["10"], "spades")
+        ];
         const s = mkGame(mkPlayer(full, [makeCard(1, "J", "spades")]), mkPlayer(full, []), 0);
         const targets = legalMoves(s).filter((m) => m.type === "playOperationCard");
-        expect(targets.some((m) => m.type === "playOperationCard" && m.target.player === 0)).toBe(true);
-        expect(targets.some((m) => m.type === "playOperationCard" && m.target.player === 1)).toBe(true);
+        expect(targets.some((m) => m.type === "playOperationCard" && m.target.player === 0)).toBe(
+            true
+        );
+        expect(targets.some((m) => m.type === "playOperationCard" && m.target.player === 1)).toBe(
+            true
+        );
     });
     it("operation cards ignore suit and direction", () => {
         const p0 = mkPlayer(
-            [caravanOf(["3", "5"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")],
+            [
+                caravanOf(["3", "5"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ],
             [makeCard(1, "K", "spades"), makeCard(1, "4", "clubs")]
         );
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
+        expect(legalMoves(s).filter((m) => m.type === "playValueCard" && m.lane === 0).length).toBe(
+            0
+        );
         expect(
-            legalMoves(s).filter((m) => m.type === "playValueCard" && m.lane === 0).length
-        ).toBe(0);
-        expect(
-            legalMoves(s).filter(
-                (m) => m.type === "playOperationCard" && m.target.lane === 0
-            ).length
+            legalMoves(s).filter((m) => m.type === "playOperationCard" && m.target.lane === 0)
+                .length
         ).toBeGreaterThan(0);
     });
     it("removes the jacked row and its attached operation cards", () => {
@@ -644,9 +728,10 @@ describe("reddit atomic coverage", () => {
             direction: null,
             suit: "spades"
         };
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), loaded], [
-            makeCard(1, "J", "spades")
-        ]);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), loaded],
+            [makeCard(1, "J", "spades")]
+        );
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
@@ -661,7 +746,11 @@ describe("reddit atomic coverage", () => {
             // 5♥ keeps Human out of the opening bind (no discards until
             // every caravan is initialized): without it s1a would end the
             // game with Human to move and no legal moves.
-            hand: [makeCard(1, "Q", "hearts"), makeCard(1, "Q", "clubs"), makeCard(1, "5", "hearts")],
+            hand: [
+                makeCard(1, "Q", "hearts"),
+                makeCard(1, "Q", "clubs"),
+                makeCard(1, "5", "hearts")
+            ],
             discard: null,
             caravans: EMPTY
         };
@@ -669,7 +758,11 @@ describe("reddit atomic coverage", () => {
             shoe: [makeCard(2, "5", "diamonds")],
             hand: [makeCard(2, "2", "clubs"), makeCard(2, "4", "diamonds")],
             discard: null,
-            caravans: [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")]
+            caravans: [
+                caravanOf([], "spades"),
+                caravanOf([], "spades"),
+                caravanOf(["3", "7"], "spades")
+            ]
         };
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
@@ -714,10 +807,14 @@ describe("reddit atomic coverage", () => {
             direction: null,
             suit: "hearts"
         };
-        const p0 = mkPlayer([queenRow, caravanOf(["7"], "hearts"), caravanOf(["A"], "spades")], [
-            makeCard(1, "Joker", "Red")
-        ]);
-        const p1 = mkPlayer([caravanOf(["9"], "spades"), caravanOf(["2"], "clubs"), caravanOf(["3"], "diamonds")], []);
+        const p0 = mkPlayer(
+            [queenRow, caravanOf(["7"], "hearts"), caravanOf(["A"], "spades")],
+            [makeCard(1, "Joker", "Red")]
+        );
+        const p1 = mkPlayer(
+            [caravanOf(["9"], "spades"), caravanOf(["2"], "clubs"), caravanOf(["3"], "diamonds")],
+            []
+        );
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
@@ -734,7 +831,11 @@ describe("reddit atomic coverage", () => {
             [makeCard(1, "Joker", "Red")]
         );
         const p1 = mkPlayer(
-            [caravanOf(["9"], "diamonds"), caravanOf(["10"], "diamonds"), caravanOf(["2"], "clubs")],
+            [
+                caravanOf(["9"], "diamonds"),
+                caravanOf(["10"], "diamonds"),
+                caravanOf(["2"], "clubs")
+            ],
             []
         );
         const next = applyMove(mkGame(p0, p1, 0), {
@@ -754,9 +855,10 @@ describe("reddit atomic coverage", () => {
             direction: null,
             suit: "hearts"
         };
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), loaded], [
-            makeCard(1, "K", "spades")
-        ]);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), loaded],
+            [makeCard(1, "K", "spades")]
+        );
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
@@ -769,7 +871,12 @@ describe("reddit atomic coverage", () => {
     it("disbands a maxed row", () => {
         const maxed: Caravan = {
             rows: [
-                [makeCard(1, "10", "spades"), makeCard(1, "K", "spades"), makeCard(1, "K", "hearts"), makeCard(1, "Q", "diamonds")]
+                [
+                    makeCard(1, "10", "spades"),
+                    makeCard(1, "K", "spades"),
+                    makeCard(1, "K", "hearts"),
+                    makeCard(1, "Q", "diamonds")
+                ]
             ],
             direction: null,
             suit: "spades"
@@ -785,14 +892,20 @@ describe("reddit atomic coverage", () => {
     it("refuses a Jack on a maxed row", () => {
         const maxed: Caravan = {
             rows: [
-                [makeCard(1, "10", "spades"), makeCard(1, "K", "spades"), makeCard(1, "K", "hearts"), makeCard(1, "Q", "diamonds")]
+                [
+                    makeCard(1, "10", "spades"),
+                    makeCard(1, "K", "spades"),
+                    makeCard(1, "K", "hearts"),
+                    makeCard(1, "Q", "diamonds")
+                ]
             ],
             direction: null,
             suit: "spades"
         };
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), maxed], [
-            makeCard(1, "J", "spades")
-        ]);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), maxed],
+            [makeCard(1, "J", "spades")]
+        );
         expect(() =>
             applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
                 type: "playOperationCard",
@@ -804,13 +917,18 @@ describe("reddit atomic coverage", () => {
     });
     it("keeps direction on identical heads after removal", () => {
         const car: Caravan = {
-            rows: [[makeCard(1, "6", "spades")], [makeCard(1, "7", "hearts")], [makeCard(1, "6", "clubs")]],
+            rows: [
+                [makeCard(1, "6", "spades")],
+                [makeCard(1, "7", "hearts")],
+                [makeCard(1, "6", "clubs")]
+            ],
             direction: "desc",
             suit: "clubs"
         };
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), car], [
-            makeCard(1, "J", "spades")
-        ]);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), car],
+            [makeCard(1, "J", "spades")]
+        );
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
@@ -822,13 +940,18 @@ describe("reddit atomic coverage", () => {
     });
     it("recomputes direction after removal otherwise", () => {
         const car: Caravan = {
-            rows: [[makeCard(1, "2", "hearts")], [makeCard(1, "6", "hearts")], [makeCard(1, "4", "hearts")]],
+            rows: [
+                [makeCard(1, "2", "hearts")],
+                [makeCard(1, "6", "hearts")],
+                [makeCard(1, "4", "hearts")]
+            ],
             direction: "desc",
             suit: "hearts"
         };
-        const p0 = mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), car], [
-            makeCard(1, "J", "spades")
-        ]);
+        const p0 = mkPlayer(
+            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), car],
+            [makeCard(1, "J", "spades")]
+        );
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "playOperationCard",
             player: 0,
@@ -838,124 +961,165 @@ describe("reddit atomic coverage", () => {
         expect(next.players[Human].caravans[2].rows.length).toBe(2);
         expect(next.players[Human].caravans[2].direction).toBe("asc");
     });
-describe("reddit gap coverage", () => {
-    it("adds onto a sold caravan and updates the bid", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10", "9", "2"], "spades")],
-            [makeCard(1, "5", "spades")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playValueCard",
-            player: 0,
-            lane: 2,
-            handIndex: 0
-        });
-        expect(next.players[Human].caravans[2].rows.length).toBe(4);
-        expect(calculatePoints(next.players[Human].caravans[2])).toBe(26);
-    });
-    it("sets direction and suit on the second card", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")],
-            [makeCard(1, "5", "hearts")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playValueCard",
-            player: 0,
-            lane: 2,
-            handIndex: 0
-        });
-        expect(next.players[Human].caravans[2].direction).toBe("desc");
-        expect(next.players[Human].caravans[2].suit).toBe("hearts");
-    });
-    it("establishes a new direction and suit on a suit-break", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["3", "5"], "spades")],
-            [makeCard(1, "2", "spades")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playValueCard",
-            player: 0,
-            lane: 2,
-            handIndex: 0
-        });
-        expect(next.players[Human].caravans[2].direction).toBe("desc");
-        expect(next.players[Human].caravans[2].suit).toBe("spades");
-    });
-    it("flips desc to asc on a suit-break", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["9", "7"], "spades")],
-            [makeCard(1, "8", "spades")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playValueCard",
-            player: 0,
-            lane: 2,
-            handIndex: 0
-        });
-        expect(next.players[Human].caravans[2].direction).toBe("asc");
-    });
-    it("throws on equal rank in the engine", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["5"], "spades")],
-            [makeCard(1, "5", "hearts")]
-        );
-        expect(() =>
-            applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+    describe("reddit gap coverage", () => {
+        it("adds onto a sold caravan and updates the bid", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10", "9", "2"], "spades")
+                ],
+                [makeCard(1, "5", "spades")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
                 type: "playValueCard",
                 player: 0,
                 lane: 2,
                 handIndex: 0
-            })
-        ).toThrow(/cannot place/);
-    });
-    it("attaches a face onto the row", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")],
-            [makeCard(1, "K", "spades")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playOperationCard",
-            player: 0,
-            target: { player: 0, lane: 2, cardIndex: 0 },
-            handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].rows.length).toBe(4);
+            expect(calculatePoints(next.players[Human].caravans[2])).toBe(26);
         });
-        expect(next.players[Human].caravans[2].rows.length).toBe(1);
-        expect(next.players[Human].caravans[2].rows[0].length).toBe(2);
-    });
-    it("opens a new row per value card", () => {
-        const p0 = mkPlayer(
-            [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")],
-            [makeCard(1, "5", "hearts")]
-        );
-        const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
-            type: "playValueCard",
-            player: 0,
-            lane: 2,
-            handIndex: 0
+        it("sets direction and suit on the second card", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                [makeCard(1, "5", "hearts")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                type: "playValueCard",
+                player: 0,
+                lane: 2,
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].direction).toBe("desc");
+            expect(next.players[Human].caravans[2].suit).toBe("hearts");
         });
-        expect(next.players[Human].caravans[2].rows.length).toBe(2);
-    });
-    it("removes a maxed-row card with a Joker elsewhere", () => {
-        const maxed: Caravan = {
-            rows: [
-                [makeCard(1, "10", "spades"), makeCard(1, "K", "spades"), makeCard(1, "K", "hearts"), makeCard(1, "Q", "diamonds")]
-            ],
-            direction: null,
-            suit: "spades"
-        };
-        const p0 = mkPlayer([caravanOf(["10"], "hearts"), caravanOf(["10"], "spades"), maxed], [
-            makeCard(1, "Joker", "Red")
-        ]);
-        const p1 = mkPlayer([caravanOf(["9"], "diamonds"), caravanOf(["2"], "clubs"), caravanOf(["3"], "diamonds")], []);
-        const next = applyMove(mkGame(p0, p1, 0), {
-            type: "playOperationCard",
-            player: 0,
-            target: { player: 0, lane: 0, cardIndex: 0 },
-            handIndex: 0
+        it("establishes a new direction and suit on a suit-break", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["3", "5"], "spades")
+                ],
+                [makeCard(1, "2", "spades")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                type: "playValueCard",
+                player: 0,
+                lane: 2,
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].direction).toBe("desc");
+            expect(next.players[Human].caravans[2].suit).toBe("spades");
         });
-        expect(next.players[Human].caravans[2].rows.length).toBe(0);
+        it("flips desc to asc on a suit-break", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["9", "7"], "spades")
+                ],
+                [makeCard(1, "8", "spades")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                type: "playValueCard",
+                player: 0,
+                lane: 2,
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].direction).toBe("asc");
+        });
+        it("throws on equal rank in the engine", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["5"], "spades")
+                ],
+                [makeCard(1, "5", "hearts")]
+            );
+            expect(() =>
+                applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                    type: "playValueCard",
+                    player: 0,
+                    lane: 2,
+                    handIndex: 0
+                })
+            ).toThrow(/cannot place/);
+        });
+        it("attaches a face onto the row", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                [makeCard(1, "K", "spades")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                type: "playOperationCard",
+                player: 0,
+                target: { player: 0, lane: 2, cardIndex: 0 },
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].rows.length).toBe(1);
+            expect(next.players[Human].caravans[2].rows[0].length).toBe(2);
+        });
+        it("opens a new row per value card", () => {
+            const p0 = mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                [makeCard(1, "5", "hearts")]
+            );
+            const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
+                type: "playValueCard",
+                player: 0,
+                lane: 2,
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].rows.length).toBe(2);
+        });
+        it("removes a maxed-row card with a Joker elsewhere", () => {
+            const maxed: Caravan = {
+                rows: [
+                    [
+                        makeCard(1, "10", "spades"),
+                        makeCard(1, "K", "spades"),
+                        makeCard(1, "K", "hearts"),
+                        makeCard(1, "Q", "diamonds")
+                    ]
+                ],
+                direction: null,
+                suit: "spades"
+            };
+            const p0 = mkPlayer(
+                [caravanOf(["10"], "hearts"), caravanOf(["10"], "spades"), maxed],
+                [makeCard(1, "Joker", "Red")]
+            );
+            const p1 = mkPlayer(
+                [
+                    caravanOf(["9"], "diamonds"),
+                    caravanOf(["2"], "clubs"),
+                    caravanOf(["3"], "diamonds")
+                ],
+                []
+            );
+            const next = applyMove(mkGame(p0, p1, 0), {
+                type: "playOperationCard",
+                player: 0,
+                target: { player: 0, lane: 0, cardIndex: 0 },
+                handIndex: 0
+            });
+            expect(next.players[Human].caravans[2].rows.length).toBe(0);
+        });
     });
-});
 });
 
 describe("reddit red coverage", () => {
@@ -1043,7 +1207,11 @@ describe("reddit red coverage", () => {
     it("Joker-removed cards vanish (no discard pile)", () => {
         const target = makeCard(1, "10", "spades");
         const p0 = mkPlayer(
-            [{ rows: [[target]], direction: null, suit: "spades" }, caravanOf(["5"], "hearts"), caravanOf(["A"], "spades")],
+            [
+                { rows: [[target]], direction: null, suit: "spades" },
+                caravanOf(["5"], "hearts"),
+                caravanOf(["A"], "spades")
+            ],
             [makeCard(1, "Joker", "Red")]
         );
         const p1 = mkPlayer(
@@ -1068,9 +1236,9 @@ describe("reddit red coverage", () => {
             caravans: [caravanOf(["10"], "spades"), emptied, emptied]
         };
         const s = mkGame(p0, mkPlayer(EMPTY, []), 0);
-        expect(
-            legalMoves(s).filter((m) => m.type === "playOperationCard").length
-        ).toBeGreaterThan(0);
+        expect(legalMoves(s).filter((m) => m.type === "playOperationCard").length).toBeGreaterThan(
+            0
+        );
     });
     it("removed cards leave the face-up discard untouched", () => {
         const removed = makeCard(1, "10", "spades");
@@ -1114,7 +1282,11 @@ describe("reddit red coverage", () => {
             shoe: [makeCard(1, "A", "hearts")],
             hand: [makeCard(1, "K", "clubs")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const next = applyMove(mkGame(p0, mkPlayer(EMPTY, []), 0), {
             type: "discardCard",
@@ -1125,24 +1297,39 @@ describe("reddit red coverage", () => {
         expect(ids.some((id) => id.endsWith("KC"))).toBe(false);
     });
     it("declares the opponent winner when cards run out", () => {
-        const full: Caravan[] = [caravanOf(["10"], "spades"), caravanOf(["9"], "spades"), caravanOf(["8"], "spades")];
+        const full: Caravan[] = [
+            caravanOf(["10"], "spades"),
+            caravanOf(["9"], "spades"),
+            caravanOf(["8"], "spades")
+        ];
         const s: GameState = {
             players: [
                 { shoe: [], hand: [], discard: null, caravans: full },
-                { shoe: [], hand: [], discard: null, caravans: [caravanOf(["10"], "spades"), caravanOf(["9"], "spades"), caravanOf(["8"], "spades")] },
+                {
+                    shoe: [],
+                    hand: [],
+                    discard: null,
+                    caravans: [
+                        caravanOf(["10"], "spades"),
+                        caravanOf(["9"], "spades"),
+                        caravanOf(["8"], "spades")
+                    ]
+                }
             ],
             current: 0,
             phase: "play",
             winner: null,
-            log: [],
-            started: true
+            log: []
         };
         resolveTerminal(s);
         expect(s.winner).toBe(Ai);
     });
     it("reverses the caravan's numerical direction", () => {
         const p0 = mkPlayer(EMPTY, [makeCard(1, "Q", "hearts")]);
-        const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")], []);
+        const p1 = mkPlayer(
+            [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")],
+            []
+        );
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
@@ -1153,7 +1340,10 @@ describe("reddit red coverage", () => {
     });
     it("changes the caravan suit to the Queen's suit", () => {
         const p0 = mkPlayer(EMPTY, [makeCard(1, "Q", "hearts")]);
-        const p1 = mkPlayer([caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")], []);
+        const p1 = mkPlayer(
+            [caravanOf([], "spades"), caravanOf([], "spades"), caravanOf(["3", "7"], "spades")],
+            []
+        );
         const next = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
             player: 0,
@@ -1183,15 +1373,27 @@ describe("reddit red coverage", () => {
     it("allows at most three operation cards on one value card", () => {
         const p0: PlayerState = {
             shoe: [makeCard(1, "9", "diamonds")],
-            hand: [makeCard(1, "K", "spades"), makeCard(1, "K", "hearts"), makeCard(1, "Q", "diamonds")],
+            hand: [
+                makeCard(1, "K", "spades"),
+                makeCard(1, "K", "hearts"),
+                makeCard(1, "Q", "diamonds")
+            ],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const p1: PlayerState = {
             shoe: [makeCard(2, "8", "clubs")],
             hand: [makeCard(2, "2", "clubs"), makeCard(2, "4", "diamonds")],
             discard: null,
-            caravans: [caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts")]
+            caravans: [
+                caravanOf(["10"], "hearts"),
+                caravanOf(["10"], "hearts"),
+                caravanOf(["10"], "hearts")
+            ]
         };
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
@@ -1220,13 +1422,21 @@ describe("reddit red coverage", () => {
             shoe: [],
             hand: [makeCard(1, "K", "spades"), makeCard(1, "K", "hearts")],
             discard: null,
-            caravans: [caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")]
+            caravans: [
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades"),
+                caravanOf(["10"], "spades")
+            ]
         };
         const p1: PlayerState = {
             shoe: [makeCard(2, "5", "diamonds")],
             hand: [makeCard(2, "2", "clubs")],
             discard: null,
-            caravans: [caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts")]
+            caravans: [
+                caravanOf(["10"], "hearts"),
+                caravanOf(["10"], "hearts"),
+                caravanOf(["10"], "hearts")
+            ]
         };
         const s1 = applyMove(mkGame(p0, p1, 0), {
             type: "playOperationCard",
@@ -1258,7 +1468,9 @@ describe("opening determinism", () => {
         expect(handsOf(42)[1]).toEqual(handsOf(42)[1]);
     });
     it("deals the same Human shoe for the same seed", () => {
-        expect(setupGame({ seed: 42 }).players[Human].shoe).toEqual(setupGame({ seed: 42 }).players[Human].shoe);
+        expect(setupGame({ seed: 42 }).players[Human].shoe).toEqual(
+            setupGame({ seed: 42 }).players[Human].shoe
+        );
     });
 });
 
@@ -1282,10 +1494,10 @@ describe("joker ace-suit vs rank clearing (state after applyMove)", () => {
     function jokerNext(hostHead: ValueCard, p0lanes: Caravan[], p1extra: Caravan[]): GameState {
         const p0 = mkPlayer(p0lanes, [makeCard(1, "3", "hearts"), makeCard(1, "4", "diamonds")]);
         const host: Caravan = { rows: [rowOf(hostHead)], direction: null, suit: hostHead.suit };
-        const p1 = mkPlayer(
-            [host, ...p1extra] as Caravan[],
-            [makeCard(1, "Joker", "Red"), makeCard(2, "6", "clubs")]
-        );
+        const p1 = mkPlayer([host, ...p1extra] as Caravan[], [
+            makeCard(1, "Joker", "Red"),
+            makeCard(2, "6", "clubs")
+        ]);
         return applyMove(mkGame(p0, p1, 1), {
             type: "playOperationCard",
             player: 1,
@@ -1294,43 +1506,83 @@ describe("joker ace-suit vs rank clearing (state after applyMove)", () => {
         });
     }
     it("clears same-suit rows on an Ace host", () => {
-        const next = jokerNext(makeCard(1, "A", "hearts"), [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")], [caravanOf(["7"], "hearts"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "A", "hearts"),
+            [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")],
+            [caravanOf(["7"], "hearts"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
     });
     it("keeps a different-suit row on an Ace host", () => {
-        const next = jokerNext(makeCard(1, "A", "hearts"), [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")], [caravanOf(["7"], "hearts"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "A", "hearts"),
+            [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")],
+            [caravanOf(["7"], "hearts"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[1].rows.length).toBe(1);
     });
     it("clears a same-suit row on the Joker owner's other lane for an Ace host", () => {
-        const next = jokerNext(makeCard(1, "A", "hearts"), [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")], [caravanOf(["7"], "hearts"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "A", "hearts"),
+            [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")],
+            [caravanOf(["7"], "hearts"), caravanOf([], "spades")]
+        );
         expect(next.players[Ai].caravans[1].rows.length).toBe(0);
     });
     it("attaches the Joker to an Ace host row", () => {
-        const next = jokerNext(makeCard(1, "A", "hearts"), [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")], [caravanOf(["7"], "hearts"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "A", "hearts"),
+            [caravanOf(["5"], "hearts"), caravanOf(["5"], "diamonds"), caravanOf(["9"], "clubs")],
+            [caravanOf(["7"], "hearts"), caravanOf([], "spades")]
+        );
         expect(next.players[Ai].caravans[0].rows[0][1]?.rank).toBe("Joker");
     });
     it("clears same-rank rows on a non-Ace host", () => {
-        const next = jokerNext(makeCard(1, "5", "hearts"), [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "hearts"),
+            [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[0].rows.length).toBe(0);
     });
     it("keeps a same-suit different-rank row on a non-Ace host", () => {
-        const next = jokerNext(makeCard(1, "5", "hearts"), [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "hearts"),
+            [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[1].rows.length).toBe(1);
     });
     it("attaches the Joker to a non-Ace host row", () => {
-        const next = jokerNext(makeCard(1, "5", "hearts"), [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "hearts"),
+            [caravanOf(["5"], "diamonds"), caravanOf(["6"], "hearts"), caravanOf(["9"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Ai].caravans[0].rows[0][1]?.rank).toBe("Joker");
     });
     it("clears nothing when the Joker matches no row", () => {
-        const next = jokerNext(makeCard(1, "5", "spades"), [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "spades"),
+            [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[0].rows.length).toBe(1);
     });
     it("keeps every other row when the Joker matches nothing", () => {
-        const next = jokerNext(makeCard(1, "5", "spades"), [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "spades"),
+            [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Human].caravans[2].rows.length).toBe(1);
     });
     it("still attaches the Joker when it matches nothing", () => {
-        const next = jokerNext(makeCard(1, "5", "spades"), [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")], [caravanOf([], "spades"), caravanOf([], "spades")]);
+        const next = jokerNext(
+            makeCard(1, "5", "spades"),
+            [caravanOf(["9"], "hearts"), caravanOf(["8"], "diamonds"), caravanOf(["7"], "clubs")],
+            [caravanOf([], "spades"), caravanOf([], "spades")]
+        );
         expect(next.players[Ai].caravans[0].rows[0][1]?.rank).toBe("Joker");
     });
 });
@@ -1338,17 +1590,45 @@ describe("joker ace-suit vs rank clearing (state after applyMove)", () => {
 describe("terminal exhaustion guards", () => {
     it("ends the game when a hand runs empty with no winner", () => {
         const s = mkGame(
-            mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")], []),
-            mkPlayer([caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts")], [makeCard(2, "2", "clubs")]),
+            mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                []
+            ),
+            mkPlayer(
+                [
+                    caravanOf(["10"], "hearts"),
+                    caravanOf(["10"], "hearts"),
+                    caravanOf(["10"], "hearts")
+                ],
+                [makeCard(2, "2", "clubs")]
+            ),
             0
         );
         resolveTerminal(s);
-        expect(s.phase).toBe("over");
+        expect(s.phase).toBe("gameOver");
     });
     it("names the opponent as winner when a hand runs empty", () => {
         const s = mkGame(
-            mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")], []),
-            mkPlayer([caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts"), caravanOf(["10"], "hearts")], [makeCard(2, "2", "clubs")]),
+            mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                []
+            ),
+            mkPlayer(
+                [
+                    caravanOf(["10"], "hearts"),
+                    caravanOf(["10"], "hearts"),
+                    caravanOf(["10"], "hearts")
+                ],
+                [makeCard(2, "2", "clubs")]
+            ),
             0
         );
         resolveTerminal(s);
@@ -1356,7 +1636,14 @@ describe("terminal exhaustion guards", () => {
     });
     it("throws from forfeitNoMoves while legal moves remain", () => {
         const s = mkGame(
-            mkPlayer([caravanOf(["10"], "spades"), caravanOf(["10"], "spades"), caravanOf(["10"], "spades")], [makeCard(1, "5", "hearts")]),
+            mkPlayer(
+                [
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades"),
+                    caravanOf(["10"], "spades")
+                ],
+                [makeCard(1, "5", "hearts")]
+            ),
             mkPlayer(EMPTY, []),
             0
         );
@@ -1367,16 +1654,24 @@ describe("terminal exhaustion guards", () => {
             shoe: [],
             hand: [makeCard(1, "K", "clubs")],
             discard: null,
-            caravans: [caravanOf([], "spades"), caravanOf(["10"], "clubs"), caravanOf(["9"], "hearts")]
+            caravans: [
+                caravanOf([], "spades"),
+                caravanOf(["10"], "clubs"),
+                caravanOf(["9"], "hearts")
+            ]
         };
-        expect(forfeitNoMoves(mkGame(p0, mkPlayer(EMPTY, []), 0)).phase).toBe("over");
+        expect(forfeitNoMoves(mkGame(p0, mkPlayer(EMPTY, []), 0)).phase).toBe("gameOver");
     });
     it("names the opponent as winner when forfeiting with no moves", () => {
         const p0: PlayerState = {
             shoe: [],
             hand: [makeCard(1, "K", "clubs")],
             discard: null,
-            caravans: [caravanOf([], "spades"), caravanOf(["10"], "clubs"), caravanOf(["9"], "hearts")]
+            caravans: [
+                caravanOf([], "spades"),
+                caravanOf(["10"], "clubs"),
+                caravanOf(["9"], "hearts")
+            ]
         };
         expect(forfeitNoMoves(mkGame(p0, mkPlayer(EMPTY, []), 0)).winner).toBe(Ai);
     });

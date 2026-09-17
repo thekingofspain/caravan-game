@@ -183,7 +183,7 @@ let after = await page.evaluate(() => {
 console.log("after:", JSON.stringify(after, null, 2));
 
 // Confirm game did end (previous bug: phase stayed "play", winner null)
-assert.equal(after.phase, "over", "BUG REPRO: game should be over after Human makes Shady 26 — phase should be 'over'");
+assert.equal(after.phase, "gameOver", "BUG REPRO: game should be over after Human makes Shady 26");
 assert.equal(after.winner, Human, "Human should win 2-1 (21 vs 26 loses, 26 vs 4 wins, 26 vs 24 wins)");
 assert.equal(after.pair0, Ai, "Boneyard 21 vs 26 -> Ai");
 assert.equal(after.pair1, Human, "Redding 26 vs 4 -> Human");

@@ -13,7 +13,7 @@ function playOut(seed: number) {
     s = applyMove(s, a);
     steps++;
   }
-  return { winner: s.winner, steps, over: s.phase === "over" };
+  return { winner: s.winner, steps, over: s.phase === "gameOver" };
 }
 
 describe("balance sim", () => {

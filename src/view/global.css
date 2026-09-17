@@ -18,18 +18,25 @@
     --c-brown: #8b4513;
     --c-ink: #1a160c;
     --c-deep-rgb: 10, 30, 51;
+    --c-white: #fff;
+    --c-hi: #e6c34d;
+    --c-discard-rgb: 195, 25, 15;
+    --c-gold: #ffd60a;
+    --c-gold-dark: #b38f00;
+    --c-grey: #c8c8c8;
+    --c-grey-dark: #8f8f8f;
     --sp-1: 0.25rem;
     --sp-2: 0.5rem;
     --sp-3: 0.75rem;
     --sp-4: 1rem;
-    --sp-5: 1.5rem;
     --radius: 0.375rem;
     --font-base: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-    /* Cards react to BOTH vw and vh (dv* preferred, vw/vh fallback). The vw
+    /* Cards react to BOTH dvw and dvh (vw/vh fallback). The dvw
        terms dominate at half-width laptop windows, so the whole board (card
        faces, lane widths from --card-w, hand fans, and rem type via html)
        scales down until the minimum below. */
-    --card-h: clamp(2.5rem, min(13.5vh, 13.5dvh, 10.5vw, 10.5dvw), 12.5rem);
+    --card-h: clamp(2.5rem, min(13.5vh, 10.5vw), 12.5rem);
+    --card-h: clamp(2.5rem, min(13.5dvh, 10.5dvw), 12.5rem);
     --card-w: calc(var(--card-h) * 212 / 329);
     --card-offset-x: calc(var(--card-w) * 0.275);
     /* Stack looseness follows vertical excess: tight (corners only) when short,
@@ -63,10 +70,15 @@
             calc(var(--card-w) * 0.75)
         )
     );
-    --caravan-gap-y: clamp(calc(var(--card-h) * 0.15), 2.5vh, calc(var(--card-h) * 0.5));
     /* Lead-in from the track edge facing board center: empty-slot marker and
        first-card landing spot share it, so the stack keys off the marker. */
     --slot-lead: var(--sp-2);
+    /* Shared magic numbers: corner-pin overhang, title width factor (see
+       NAME_SCALES in Board.tsx), and its compact scales. */
+    --pin: 0.6875rem;
+    --title-w: 6.15;
+    --title-compact: 0.75;
+    --icon-compact: 0.85;
     /* High-contrast sort accent. */
     --c-sort: #e9c46a;
     --fan-step: 5.5deg;
@@ -89,14 +101,21 @@
     --card-border: 0.1875rem dashed var(--c-dim);
     --transition-fast: 0.15s ease;
     --relief: clamp(min(2.25rem, 3vmin), calc(var(--card-h) * 0.3), max(3.25rem, 3vmax));
-    /* Fluid type: each step mixes vw AND vh so fonts track either dimension. */
+    --relief: clamp(min(2.25rem, 3dvmin), calc(var(--card-h) * 0.3), max(3.25rem, 3dvmax));
+    /* Fluid type: each step mixes dvw AND dvh so fonts track either dimension. */
     --fs-xs: clamp(0.625rem, 0.35rem + 0.45vw + 0.55vh, 0.8125rem);
+    --fs-xs: clamp(0.625rem, 0.35rem + 0.45dvw + 0.55dvh, 0.8125rem);
     --fs-sm: clamp(0.6875rem, 0.4rem + 0.5vw + 0.65vh, 0.9375rem);
+    --fs-sm: clamp(0.6875rem, 0.4rem + 0.5dvw + 0.65dvh, 0.9375rem);
     --fs-md: clamp(0.8125rem, 0.45rem + 0.6vw + 0.8vh, 1.0625rem);
+    --fs-md: clamp(0.8125rem, 0.45rem + 0.6dvw + 0.8dvh, 1.0625rem);
     --fs-lg: clamp(0.9375rem, 0.55rem + 0.7vw + 0.9vh, 1.3125rem);
+    --fs-lg: clamp(0.9375rem, 0.55rem + 0.7dvw + 0.9dvh, 1.3125rem);
     --fs-xl: clamp(1.125rem, 0.65rem + 0.9vw + 1.1vh, 1.625rem);
-    /* Fluid chrome widths: track vw, floored in rem so narrow phones still fit. */
+    --fs-xl: clamp(1.125rem, 0.65rem + 0.9dvw + 1.1dvh, 1.625rem);
+    /* Fluid chrome widths: track dvw, floored in rem so narrow phones still fit. */
     --activity-w: clamp(16rem, 12rem + 14vw, 21.25rem);
+    --activity-w: clamp(16rem, 12rem + 14dvw, 21.25rem);
 }
 
 /* ── 02 — Reset & base ── */
@@ -113,8 +132,9 @@ body,
 }
 
 html {
-    /* 1rem itself tracks vw AND vh, so every rem-sized component reacts. */
+    /* 1rem itself tracks dvw AND dvh, so every rem-sized component reacts. */
     font-size: clamp(12px, 0.5vw + 1.05vh, 19px);
+    font-size: clamp(12px, 0.5dvw + 1.05dvh, 19px);
 }
 body {
     background: var(--c-felt);
@@ -140,7 +160,7 @@ body {
     left: 50%;
     transform: translateX(-50%);
     background: var(--c-bad);
-    color: #fff;
+    color: var(--c-white);
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     z-index: 100;
@@ -201,24 +221,6 @@ body {
         transform: translate(-50%, -50%) scale(1);
     }
 }
-/* Winner side glows. Loser side stays at full brightness: no dimming. */
-.board.gameover-human .caravans.human .caravan::before,
-.board.gameover-ai .caravans.ai .caravan::before {
-    animation: gameover-glow 1.6s ease-in-out infinite;
-}
-@keyframes gameover-glow {
-    0%,
-    100% {
-        box-shadow:
-            0 0 0.75rem rgba(var(--player-rgb), 0.35),
-            inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
-    }
-    50% {
-        box-shadow:
-            0 0 1.5rem rgba(var(--player-rgb), 0.7),
-            inset 0 0 1rem rgba(var(--player-rgb), 0.3);
-    }
-}
 
 .board {
     position: relative;
@@ -251,6 +253,7 @@ body {
 .side-rail {
     width: var(--activity-w);
     max-width: 85vw;
+    max-width: 85dvw;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -307,19 +310,6 @@ body {
     justify-content: space-between;
 }
 
-.board .controls {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    justify-content: center;
-    align-items: center;
-    gap: var(--sp-2);
-    flex: 0 0 auto;
-    width: 100%;
-    position: relative;
-    z-index: 20;
-}
-
 /* ── 05 — Card primitive ── */
 /* Card — base: .card, modifiers: suit/rank as simple classes */
 .card {
@@ -343,17 +333,6 @@ body {
     min-height: 0;
     justify-content: space-between;
 }
-
-/* /* Hands flank the board center: equal halves share the column height, the AI
-   half packs shoe + hand to its bottom edge and the human half packs hand +
-   shoe to its top edge, so both hands sit against the center gap beside the
-   caravan placeholders. 
-.board .column.hands > .hand-half:first-child {
-    justify-content: flex-end;
-}
-.hand-half.human {
-    justify-content: flex-start;
-} */
 
 .hand-half .hand {
     flex: 0 0 auto;
@@ -426,12 +405,8 @@ body {
     cursor: pointer;
 }
 
-.shoe .card {
-    width: var(--card-w);
-    height: var(--card-h);
-}
-
-.shoe .empty {
+.shoe .empty,
+.discard-slot .empty {
     width: var(--card-w);
     height: var(--card-h);
     border: var(--card-border);
@@ -466,20 +441,8 @@ body {
 button.discard-slot {
     cursor: pointer;
 }
-button.discard-slot:focus-visible {
-    outline: 0.1875rem solid var(--c-accent);
-    outline-offset: 0.125rem;
-}
-.discard-slot .empty {
-    width: var(--card-w);
-    height: var(--card-h);
-    border: var(--card-border);
-    border-radius: var(--radius);
-    background: transparent;
-    opacity: 0.5;
-}
 button.discard-slot.discardable .empty {
-    border-color: rgba(195, 25, 15, 0.9);
+    border-color: rgba(var(--c-discard-rgb), 0.9);
     opacity: 1;
 }
 .discard-slot.filled::before,
@@ -489,12 +452,11 @@ button.discard-slot.discardable::after {
     content: "";
     position: absolute;
     top: 50%;
-    left: 50%;
     width: 88%;
     height: 11%;
     border-radius: 0.25rem;
-    background: rgba(195, 25, 15, 0.88);
-    box-shadow: 0 0 0.75rem rgba(195, 25, 15, 0.55);
+    background: rgba(var(--c-discard-rgb), 0.88);
+    box-shadow: 0 0 0.75rem rgba(var(--c-discard-rgb), 0.55);
     pointer-events: none;
 }
 .discard-slot.filled::before,
@@ -532,7 +494,7 @@ button.discard-slot.discardable::after {
     --caravan-direction: column;
     --track-direction: column;
     --confirm-left: auto;
-    --confirm-right: -0.6875rem;
+    --confirm-right: calc(-1 * var(--pin));
     --stack-margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
     --stack-margin-bottom: 0;
     --badge-left: auto;
@@ -546,11 +508,11 @@ button.discard-slot.discardable::after {
     --player-rgb: var(--c-ai-rgb);
     --caravan-direction: column-reverse;
     --track-direction: column-reverse;
-    --confirm-left: -0.6875rem;
+    --confirm-left: calc(-1 * var(--pin));
     --confirm-right: auto;
     --stack-margin-top: 0;
     --stack-margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
-    --badge-left: -0.6875rem;
+    --badge-left: calc(-1 * var(--pin));
     --badge-right: auto;
     --badge-top: auto;
     --badge-bottom: -0.5625rem;
@@ -565,31 +527,11 @@ button.discard-slot.discardable::after {
     flex: 0 0 auto;
     width: var(--caravan-w);
     min-height: calc((100vh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
+    min-height: calc((100dvh - 2 * var(--relief)) / 2 - 3.5rem - var(--relief));
     position: relative;
     align-items: center;
 }
-.caravan::before {
-    /* No container chrome: no tint, no insets, no border. (This also takes
-       the sellable outline with it — that state keeps its score coloring.) */
-    display: none;
-}
 
-.caravans .caravan::before {
-    border-color: rgba(var(--player-rgb), 0.28);
-    background: rgba(var(--player-rgb), 0.06);
-}
-
-.caravan.sellable::before {
-    border-width: 0.09375rem;
-}
-
-.caravans .caravan.sellable::before {
-    border-color: rgba(var(--player-rgb), 0.85);
-    background: rgba(var(--player-rgb), 0.16);
-    box-shadow:
-        0 0 0.75rem rgba(var(--player-rgb), 0.35),
-        inset 0 0 0.5rem rgba(var(--player-rgb), 0.14);
-}
 /* SOLD stamp: one flat red, no burn effects. Chosen by maximin contrast —
    nothing clears AA on dark felt and white stock at once (opposite
    backgrounds), so this red maximizes the worse side (~2.8:1 both). */
@@ -645,7 +587,7 @@ button.discard-slot.discardable::after {
        is crushed. */
     flex: 0 1 auto;
     min-width: 0;
-    width: calc(var(--fs-md) * 6.15);
+    width: calc(var(--fs-md) * var(--title-w));
     font-size: calc(var(--fs-md) * var(--name-scale, 1));
     /* Single line at fs-xl: row height matches suit/score rows exactly. */
     line-height: var(--fs-xl);
@@ -690,20 +632,6 @@ button.discard-slot.discardable::after {
 }
 /* Flat-DOM sort icon: empty placeholder by default (no direction yet) that
    reserves its box; header[data-dir] hooks paint the mask when one exists. */
-.caravans.ai .caravan {
-    margin-bottom: 0;
-}
-.caravans.human .caravan {
-    margin-top: 0;
-}
-.caravans.human .caravan header {
-    padding-top: 0;
-    padding-bottom: 0;
-}
-.caravans.ai .caravan header {
-    padding-bottom: 0;
-    padding-top: 0;
-}
 .caravan .sort-icon {
     display: block;
     width: var(--fs-xl);
@@ -734,17 +662,17 @@ button.discard-slot.discardable::after {
         padding-left: 0;
     }
     .caravan .title {
-        font-size: calc(var(--fs-md) * var(--name-scale, 1) * 0.75);
-        width: calc(var(--fs-md) * 6.15 * 0.75);
+        font-size: calc(var(--fs-md) * var(--name-scale, 1) * var(--title-compact));
+        width: calc(var(--fs-md) * var(--title-w) * var(--title-compact));
     }
     .caravan .suit {
-        width: calc(var(--fs-xl) * 0.85);
-        height: calc(var(--fs-xl) * 0.85);
+        width: calc(var(--fs-xl) * var(--icon-compact));
+        height: calc(var(--fs-xl) * var(--icon-compact));
     }
     .caravan .sort-icon {
-        width: calc(var(--fs-xl) * 0.85);
-        height: calc(var(--fs-xl) * 0.85);
-        font-size: calc(var(--fs-xl) * 0.85);
+        width: calc(var(--fs-xl) * var(--icon-compact));
+        height: calc(var(--fs-xl) * var(--icon-compact));
+        font-size: calc(var(--fs-xl) * var(--icon-compact));
     }
 }
 /* Mid viewports (tablets, small windows): lanes narrow faster than the fluid
@@ -756,8 +684,8 @@ button.discard-slot.discardable::after {
         gap: 0.4em;
     }
     .caravan .title {
-        font-size: calc(var(--fs-md) * var(--name-scale, 1) * 0.75);
-        width: calc(var(--fs-md) * 6.15 * 0.75);
+        font-size: calc(var(--fs-md) * var(--name-scale, 1) * var(--title-compact));
+        width: calc(var(--fs-md) * var(--title-w) * var(--title-compact));
     }
 }
 /* Very narrow viewports: below ~640px even the compact header cannot fit its
@@ -809,7 +737,7 @@ button.discard-slot.discardable::after {
     font-weight: 400;
     font-variant-numeric: tabular-nums;
     text-align: right;
-    color: #fff;
+    color: var(--c-white);
 }
 
 .caravan .score.sellable {
@@ -979,7 +907,7 @@ button.discard-slot.discardable::after {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #fff;
+    color: var(--c-white);
     background: var(--c-bad);
     border: 0.0625rem solid #e6b0aa;
     border-radius: var(--radius);
@@ -992,7 +920,7 @@ button.discard-slot.discardable::after {
 }
 
 .caravan .disband:focus-visible {
-    outline: 0.125rem solid #fff;
+    outline: 0.125rem solid var(--c-white);
     outline-offset: 0.0625rem;
 }
 
@@ -1059,22 +987,22 @@ button.discard-slot.discardable::after {
 }
 
 .card .badge.king {
-    background: #ffd60a;
+    background: var(--c-gold);
     color: var(--c-ink);
-    border-color: #b38f00;
+    border-color: var(--c-gold-dark);
 }
 
 .caravan .card.pending .badge.king {
-    background: #c8c8c8;
+    background: var(--c-grey);
     color: var(--c-ink);
-    border-color: #8f8f8f;
+    border-color: var(--c-grey-dark);
 }
 
 /* ── 14 — Confirm & removal animations ── */
 .confirm {
     position: absolute;
-    top: -0.6875rem;
-    right: var(--confirm-right, -0.6875rem);
+    top: calc(-1 * var(--pin));
+    right: var(--confirm-right, calc(-1 * var(--pin)));
     left: var(--confirm-left, auto);
     width: 1.375rem;
     height: 1.375rem;
@@ -1103,9 +1031,9 @@ button.discard-slot.discardable::after {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 0.6875rem;
+    width: var(--pin);
     height: 0.125rem;
-    background: #fff;
+    background: var(--c-white);
     border-radius: 0.0625rem;
     transform: translate(-50%, -50%) rotate(45deg);
 }
@@ -1119,7 +1047,7 @@ button.discard-slot.discardable::after {
 }
 
 .confirm:focus-visible {
-    outline: 0.125rem solid #fff;
+    outline: 0.125rem solid var(--c-white);
     outline-offset: 0.125rem;
 }
 
@@ -1237,8 +1165,8 @@ button.discard-slot.discardable::after {
 }
 
 .btn:hover {
-    background: #e6c34d;
-    border-color: #e6c34d;
+    background: var(--c-hi);
+    border-color: var(--c-hi);
 }
 
 .btn:disabled {
@@ -1259,7 +1187,7 @@ button.discard-slot.discardable::after {
     color: var(--c-accent);
 }
 .menu-button:hover .menu-icon span {
-    background: #e6c34d;
+    background: var(--c-hi);
 }
 /* Narrow screens: the toggle floats over the top-left board gutter, so no
    header row takes space from the field. */
@@ -1294,6 +1222,7 @@ button.discard-slot.discardable::after {
     bottom: 0;
     width: var(--activity-w);
     max-width: 85vw;
+    max-width: 85dvw;
     display: flex;
     flex-direction: column;
     gap: var(--sp-3);
@@ -1524,22 +1453,12 @@ button.discard-slot.discardable::after {
 .log .details .detail {
     margin: 0;
 }
-
 .overlay header {
     display: flex;
     align-items: center;
     gap: var(--sp-4);
     color: var(--c-fg);
     font-weight: 700;
-}
-
-.overlay .close {
-    background: none;
-    border: none;
-    color: var(--c-fg);
-    font-size: var(--fs-lg);
-    line-height: 1;
-    cursor: pointer;
 }
 
 .overlay .cards {
@@ -1558,8 +1477,6 @@ button.discard-slot.discardable::after {
         transition: none;
     }
     .gameover-banner,
-    .board.gameover-human .caravans.human .caravan::before,
-    .board.gameover-ai .caravans.ai .caravan::before,
     .caravan.is-sold,
     .caravan .card.pending::after {
         animation: none;

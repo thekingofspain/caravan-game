@@ -52,7 +52,7 @@ const end = await page.evaluate(() => {
   return { phase: s.phase, winner: s.winner, lastLog: s.log[s.log.length - 1]?.text ?? null };
 });
 console.log("after AI moves into the bind", end);
-assert.equal(end.phase, "over", "game ends when the bound player has no moves");
+assert.equal(end.phase, "gameOver", "game ends when the bound player has no moves");
 assert.equal(end.winner, 1, "bound player with no moves loses");
 assert.ok(end.lastLog && /ran out of moves/.test(end.lastLog), `terminal log should say ran out of moves, got ${end.lastLog}`);
 

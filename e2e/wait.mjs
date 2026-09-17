@@ -33,7 +33,7 @@ export async function waitTurn(page, player, timeout = 15000) {
 }
 
 export async function waitGameOver(page, timeout = 15000) {
-  await page.waitForFunction(() => window.__caravanStore.state.phase === "over", null, { timeout });
+  await page.waitForFunction(() => window.__caravanStore.state.phase === "gameOver", null, { timeout });
 }
 
 export async function waitNoPendingAck(page, timeout = DEFAULT_TIMEOUT) {

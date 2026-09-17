@@ -52,7 +52,7 @@ function playOut(
     levelSecond: secondLevel,
     winner: s.winner as PlayerId | null,
     steps,
-    over: s.phase === "over",
+    over: s.phase === "gameOver",
   };
 }
 
