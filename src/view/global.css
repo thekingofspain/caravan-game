@@ -35,14 +35,14 @@
     /* Stack looseness follows vertical excess: tight (corners only) when short,
        loose (more corner showing) when tall. Middle term is pure vh. */
     --card-offset-y: clamp(
-        calc(var(--card-h) * 0.16),
-        calc(100vh / 38),
-        calc(var(--card-h) * 0.45)
+        calc(var(--card-h) * 0.16 * 1.26),
+        calc(100vh / 38 * 1.26),
+        calc(var(--card-h) * 0.45 * 1.26)
     );
     --card-offset-y: clamp(
-        calc(var(--card-h) * 0.16),
-        calc(100dvh / 38),
-        calc(var(--card-h) * 0.45)
+        calc(var(--card-h) * 0.16 * 1.26),
+        calc(100dvh / 38 * 1.26),
+        calc(var(--card-h) * 0.45 * 1.26)
     );
     /* Caravan width: min 2.86 cards, max 3.3 cards, preferred = even share
        of available row width (cqw resolves against the .caravans container),
