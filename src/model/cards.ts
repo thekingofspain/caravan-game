@@ -14,7 +14,8 @@ import {
     SUITS,
     VALUE_RANKS,
     ValueCard,
-    ValueRank} from "./types";
+    ValueRank
+} from "./types";
 
 function cardId(
     deckId: number,
@@ -67,11 +68,13 @@ export function cardNameText(card: Card): string {
 export function buildDeck(deckId: number): Card[] {
     const out: Card[] = [];
 
-    for (const r of VALUE_RANKS)
-        {for (const s of SUITS) out.push(makeCard(deckId, r, s));}
+    for (const r of VALUE_RANKS) {
+        for (const s of SUITS) out.push(makeCard(deckId, r, s));
+    }
 
-    for (const r of FACE_RANKS)
-        {for (const s of SUITS) out.push(makeCard(deckId, r, s));}
+    for (const r of FACE_RANKS) {
+        for (const s of SUITS) out.push(makeCard(deckId, r, s));
+    }
 
     out.push(makeCard(deckId, "Joker", "Red"));
     out.push(makeCard(deckId, "Joker", "Black"));
@@ -95,6 +98,10 @@ const RANK_CLASS: Record<Rank, string> = {
     K: "king",
     Joker: "joker"
 };
+
+export function cx(...parts: (string | false | null | undefined)[]): string {
+    return parts.filter(Boolean).join(" ");
+}
 
 export function cardClassName(base: string, card: Card): string {
     const suitOrJokerClass = isJokerCard(card) ? card.jokerType.toLowerCase() : card.suit;

@@ -1,8 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
-import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
+import { memo, useCallback } from "react";
 
-import { cardClassName } from "../model/cards";
+import { cardClassName, cx } from "../model/cards";
 import { caravanName } from "../model/names";
 import type { CaravanPointsMeta } from "../model/scoring";
 import {
@@ -14,7 +13,8 @@ import {
     Nullable,
     PlayerId,
     SelectionState,
-    TargetRef} from "../model/types";
+    TargetRef
+} from "../model/types";
 import { targetKey } from "../viewmodel/transition";
 
 interface CaravanProps {
@@ -31,7 +31,6 @@ interface CaravanProps {
     // non-focusable marker.
 
     placeholderInteractive?: boolean;
-
 }
 
 // Fixed pseudo-random tilt per caravan row: lane is the caravan column, row
@@ -43,94 +42,76 @@ interface CaravanProps {
 // inside the minimum exposed strip (--card-offset-y ≥ 0.16·h), so a tilted
 // card never covers the primary (top-left) corner marking of its neighbour.
 
-const CARAVAN_TILTS = [-4, 2.5, -1.5, 3.5, -3, 1.5, -2.5, 4] as const;
+function tiltIndex(playerId: PlayerId, lane: LaneIndex, rowIndex: number): number {
+    const h = lane * 31 + rowIndex * 17 + (playerId === Human ? 0 : 11);
 
-export function caravanTilt(playerId: PlayerId, lane: LaneIndex, rowIndex: number): number {
-    const salt = playerId === Human ? 0 : 11;
-    const h = lane * 31 + rowIndex * 17 + salt;
+    return ((h % 8) + 8) % 8;
+}
 
-    return CARAVAN_TILTS[((h % CARAVAN_TILTS.length) + CARAVAN_TILTS.length) % CARAVAN_TILTS.length];
+function rowCardIndex(e: React.SyntheticEvent): Nullable<number> {
+    const wrap = (e.target as HTMLElement).closest("[data-index]");
+
+    if (!wrap) return null;
+
+    return Number(wrap.getAttribute("data-index"));
+}
+
+function rowClasses(
+    head: CaravanRow[number],
+    playerId: PlayerId,
+    lane: LaneIndex,
+    index: number,
+    selection: SelectionState
+): string {
+    const key = targetKey({ player: playerId, lane, cardIndex: index });
+
+    return cx(
+        cardClassName("card", head),
+        selection.targetSet.has(key) && "target",
+        selection.pendingRemovalSet.has(key) && "pending",
+        selection.flashKeys?.has(key) && "lastmove",
+        selection.removingSet.has(key) && "pending-remove"
+    );
 }
 
 interface PortalRemoveProps {
-    anchorRef: React.RefObject<Nullable<HTMLDivElement>>;
-    isHuman: boolean;
     onAcknowledge: () => void;
     label: string;
     symbol: string;
 }
 
-function PortalRemove({ anchorRef, isHuman, onAcknowledge, label, symbol }: PortalRemoveProps) {
-    const [pos, setPos] = useState<Nullable<{ left: number; top: number }>>(null);
+function PortalRemove({ onAcknowledge, label, symbol }: PortalRemoveProps) {
+    // X rides inside the row button (a span: button-in-button is invalid
+    // HTML, and the old body portal needed pixel measuring). The row's own
+    // tilt transform applies, so the X sits on the visible strip with no
+    // measuring: human/AI corner differs via the side's --confirm-* vars.
+    // The row lifts above neighbours via .track > .card:has(.confirm).
 
-    // Web pages cannot move the system cursor; keyboard focus on the X plus
-    // revealing its card is the closest equivalent.
+    const focusRef = useCallback((node: Nullable<HTMLSpanElement>) => {
+        node?.focus({ preventScroll: true });
+    }, []);
 
-    const focusRef = useCallback(
-        (node: Nullable<HTMLButtonElement>) => {
-            if (!node) return;
-
-            node.focus({ preventScroll: true });
-            anchorRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
-        },
-        [anchorRef]
-    );
-
-    // AI tracks stack in reverse (column-reverse) with ascending z-index, so
-    // each row paints OVER the row visually above it: a row's own face only
-    // shows at its BOTTOM strip. Human tracks are the mirror image (own face
-    // at the TOP strip). Pin the X to the visible strip per side, outer edge.
-
-    useLayoutEffect(() => {
-        const update = () => {
-            const el = anchorRef.current;
-
-            if (!el) return;
-
-            const r = el.getBoundingClientRect();
-            const left = isHuman ? r.right - 11 : r.left - 11;
-            const top = isHuman ? r.top - 11 : r.bottom - 11;
-
-            setPos({ left, top });
-        };
-
-        update();
-        window.addEventListener("resize", update);
-        window.addEventListener("scroll", update, true);
-        const ro = new ResizeObserver(update);
-
-        if (anchorRef.current) ro.observe(anchorRef.current);
-
-        return () => {
-            window.removeEventListener("resize", update);
-            window.removeEventListener("scroll", update, true);
-            ro.disconnect();
-        };
-    }, [anchorRef, isHuman]);
-    if (!pos || typeof document === "undefined") return null;
-
-    return createPortal(
-        <button
+    return (
+        <span
             ref={focusRef}
-            type="button"
-            className="confirm portal"
+            role="button"
+            tabIndex={0}
+            className="confirm"
             aria-label={label}
             onClick={(e) => {
                 e.stopPropagation();
                 onAcknowledge();
             }}
-            style={{
-                position: "fixed",
-                left: pos.left,
-                top: pos.top,
-                margin: 0,
-                transform: "none",
-                zIndex: 9999
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAcknowledge();
+                }
             }}
         >
             {symbol}
-        </button>,
-        document.body
+        </span>
     );
 }
 
@@ -146,67 +127,54 @@ function CaravanImpl({
     placeholderInteractive = true
 }: CaravanProps) {
     const isHuman = playerId === Human;
+    const handleCardClick = useCallback(
+        (e: React.MouseEvent) => {
+            const cardIndex = rowCardIndex(e);
 
-    function handleCardClick(e: React.MouseEvent) {
-        const wrap = (e.target as HTMLElement).closest("[data-index]");
+            if (cardIndex !== null) onCardClick({ player: playerId, lane, cardIndex });
+        },
+        [playerId, lane, onCardClick]
+    );
 
-        if (!wrap) return;
+    const handleCardKeyDown = useCallback(
+        (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                const cardIndex = rowCardIndex(e);
 
-        const cardIndex = Number(wrap.getAttribute("data-index"));
+                if (cardIndex !== null) onCardClick({ player: playerId, lane, cardIndex });
+            }
+        },
+        [playerId, lane, onCardClick]
+    );
 
-        onCardClick({ player: playerId, lane, cardIndex });
-    }
+    const getCardClasses = useCallback(
+        (caravanRow: CaravanRow, index: number) =>
+            rowClasses(caravanRow[0], playerId, lane, index, selection),
+        [playerId, lane, selection]
+    );
 
-    function handleCardKeyDown(e: React.KeyboardEvent) {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            const wrap = (e.target as HTMLElement).closest("[data-index]");
-
-            if (!wrap) return;
-
-            const cardIndex = Number(wrap.getAttribute("data-index"));
-
-            onCardClick({ player: playerId, lane, cardIndex });
-        }
-    }
-
-    function getCardClasses(caravanRow: CaravanRow, index: number): string {
-        const head = caravanRow[0];
-        const key = targetKey({ player: playerId, lane, cardIndex: index });
-        const isTarget = selection.targetSet.has(key);
-        const classes = [cardClassName("card", head)];
-
-        if (isTarget) classes.push("target");
-
-        if (selection.pendingRemovalSet.has(key)) classes.push("pending");
-
-        if (selection.flashKeys?.has(key)) classes.push("lastmove");
-
-        if (selection.removingSet.has(key)) classes.push("pending-remove");
-
-        return classes.join(" ");
-    }
-
-    function getCardStyle(index: number): CSSProperties {
-        return { zIndex: index + 1, "--caravan-tilt": `${String(caravanTilt(playerId, lane, index))}deg` } as CSSProperties;
-    }
+    const handlePlaceholderClick = useCallback(() => {
+        onPlaceholderClick(lane);
+    }, [lane, onPlaceholderClick]);
 
     return (
         <div
-            className={`track ${isHuman && selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
+            className={cx(
+                "track",
+                isHuman && selection.legalCaravans.includes(lane) && "selectable"
+            )}
         >
             {children}
             {caravan.rows.map((caravanRow, k) => (
-                <CaravanRowButton
+                <CaravanRowButtonMemo
                     key={caravanRow[0].id}
                     caravanRow={caravanRow}
                     k={k}
                     playerId={playerId}
                     lane={lane}
                     selection={selection}
-                    isHuman={isHuman}
                     getCardClasses={getCardClasses}
-                    getCardStyle={getCardStyle}
                     handleCardClick={handleCardClick}
                     handleCardKeyDown={handleCardKeyDown}
                     onAcknowledge={onAcknowledge}
@@ -216,11 +184,12 @@ function CaravanImpl({
                 placeholderInteractive ? (
                     <button
                         type="button"
-                        className={`empty ${selection.legalCaravans.includes(lane) ? "selectable" : ""}`}
+                        className={cx(
+                            "empty",
+                            selection.legalCaravans.includes(lane) && "selectable"
+                        )}
                         aria-label={`Play a card to ${caravanName(playerId, lane)}`}
-                        onClick={() => {
-                            onPlaceholderClick(lane);
-                        }}
+                        onClick={handlePlaceholderClick}
                     />
                 ) : (
                     <span className="empty" aria-hidden="true" />
@@ -236,9 +205,7 @@ function CaravanRowButton({
     playerId,
     lane,
     selection,
-    isHuman,
     getCardClasses,
-    getCardStyle,
     handleCardClick,
     handleCardKeyDown,
     onAcknowledge
@@ -248,9 +215,7 @@ function CaravanRowButton({
     playerId: PlayerId;
     lane: 0 | 1 | 2;
     selection: SelectionState;
-    isHuman: boolean;
     getCardClasses: (r: CaravanRow, i: number) => string;
-    getCardStyle: (i: number) => CSSProperties;
     handleCardClick: (e: React.MouseEvent) => void;
     handleCardKeyDown: (e: React.KeyboardEvent) => void;
     onAcknowledge: () => void;
@@ -271,6 +236,7 @@ function CaravanRowButton({
 
         if (c.rank === "J" && jackIdx === -1) jackIdx = i;
     });
+
     const kingBadge = kingCount > 0 ? `×${String(Math.pow(2, kingCount))}` : "";
 
     // Joker removals clear other rows, so the played Joker sits on a target
@@ -281,29 +247,34 @@ function CaravanRowButton({
     const isJokerTargetConfirm =
         !removable && selection.pendingJokerKey !== null && rowKey === selection.pendingJokerKey;
     const confirmationSymbol = removable || isJokerTargetConfirm ? "×" : null;
-    const anchorRef = useRef<HTMLDivElement>(null);
+
+    // Visible X only where the played card rides: a removable Jack row hosts
+    // its Jack; a Joker host rides its pending Joker. Plain removed rows
+    // (Joker victims with no attachments) get no X — the old body portal
+    // rendered null there via a missing anchor.
+
+    const hasConfirmAnchor = attachments.some(
+        (a, j) =>
+            (a.rank === "J" && j === jackIdx && !!confirmationSymbol) ||
+            (isJokerCard(a) && isJokerTargetConfirm)
+    );
 
     return (
         <button
             type="button"
             className={getCardClasses(caravanRow, k)}
             data-index={k}
-            style={getCardStyle(k)}
+            data-tilt={tiltIndex(playerId, lane, k)}
             onClick={handleCardClick}
             onKeyDown={handleCardKeyDown}
         >
             {attachments.map((a, j) => {
-                const isJackConfirm = a.rank === "J" && j === jackIdx && !!confirmationSymbol;
-                const isJokerConfirm = isJokerCard(a) && isJokerTargetConfirm;
-                const showConfirmation = isJackConfirm || isJokerConfirm;
                 const isFlashed = selection.flashKeys?.has(`${rowKey}#${a.id}`) ?? false;
 
                 return (
                     <div
                         key={a.id}
-                        ref={showConfirmation ? anchorRef : undefined}
-                        className={`${cardClassName("card", a)}${isFlashed ? " lastmove" : ""}`}
-                        style={{ "--c": j + 1 } as CSSProperties}
+                        className={cx(cardClassName("card", a), isFlashed && "lastmove")}
                     >
                         {j === lastKingIndex && kingBadge && (
                             <span className="badge king">{kingBadge}</span>
@@ -311,10 +282,8 @@ function CaravanRowButton({
                     </div>
                 );
             })}
-            {confirmationSymbol && (removable || isJokerTargetConfirm) && (
+            {confirmationSymbol && hasConfirmAnchor && (
                 <PortalRemove
-                    anchorRef={anchorRef}
-                    isHuman={isHuman}
                     onAcknowledge={onAcknowledge}
                     label={`Acknowledge removal of card ${head.rank} of ${String(head.suit)}`}
                     symbol={confirmationSymbol}
@@ -324,16 +293,25 @@ function CaravanRowButton({
     );
 }
 
+const CaravanRowButtonMemo = memo(CaravanRowButton);
+
 export function CaravanPoints({ meta }: { meta: CaravanPointsMeta }) {
     const statusText = meta.isSold ? "sold" : meta.status;
 
     return (
         <span
-            className={`score ${meta.isSellable ? "sellable" : "unsellable"} ${meta.isSold ? "sold" : ""} ${meta.status === "busted" ? "busted" : ""}`}
+            className={cx(
+                "score",
+                meta.isSellable ? "sellable" : "unsellable",
+                meta.isSold && "sold",
+                meta.status === "busted" && "busted"
+            )}
             data-total={meta.points}
             data-sellable={meta.isSellable ? "1" : "0"}
         >
-            <span className="total" aria-hidden="true">{meta.points}</span>
+            <span className="total" aria-hidden="true">
+                {meta.points}
+            </span>
             <span className="visually-hidden">{`${String(meta.points)} points, ${statusText}`}</span>
         </span>
     );

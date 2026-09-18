@@ -358,6 +358,57 @@ body {
     transform-origin: center bottom;
     height: calc(var(--card-h) * 1.4);
 }
+.hand .cards[data-fan-count="0"] {
+    --fan-count: 0;
+}
+.hand .cards[data-fan-count="1"] {
+    --fan-count: 1;
+}
+.hand .cards[data-fan-count="2"] {
+    --fan-count: 2;
+}
+.hand .cards[data-fan-count="3"] {
+    --fan-count: 3;
+}
+.hand .cards[data-fan-count="4"] {
+    --fan-count: 4;
+}
+.hand .cards[data-fan-count="5"] {
+    --fan-count: 5;
+}
+.hand .cards[data-fan-count="6"] {
+    --fan-count: 6;
+}
+.hand .cards[data-fan-count="7"] {
+    --fan-count: 7;
+}
+.hand .cards[data-fan-count="8"] {
+    --fan-count: 8;
+}
+.hand .slot[data-i="0"] {
+    --i: 0;
+}
+.hand .slot[data-i="1"] {
+    --i: 1;
+}
+.hand .slot[data-i="2"] {
+    --i: 2;
+}
+.hand .slot[data-i="3"] {
+    --i: 3;
+}
+.hand .slot[data-i="4"] {
+    --i: 4;
+}
+.hand .slot[data-i="5"] {
+    --i: 5;
+}
+.hand .slot[data-i="6"] {
+    --i: 6;
+}
+.hand .slot[data-i="7"] {
+    --i: 7;
+}
 
 /* Hands are placed by flexbox alone: no runtime nudges. */
 
@@ -490,11 +541,12 @@ button.discard-slot.discardable::after {
 
 .caravans.human {
     --player-color: var(--c-human);
-    --player-rgb: var(--c-human-rgb);
     --caravan-direction: column;
     --track-direction: column;
     --confirm-left: auto;
     --confirm-right: calc(-1 * var(--pin));
+    --confirm-top: calc(-1 * var(--pin));
+    --confirm-bottom: auto;
     --stack-margin-top: calc(-1 * (var(--card-h) - var(--card-offset-y)));
     --stack-margin-bottom: 0;
     --badge-left: auto;
@@ -505,11 +557,12 @@ button.discard-slot.discardable::after {
 
 .caravans.ai {
     --player-color: var(--c-ai);
-    --player-rgb: var(--c-ai-rgb);
     --caravan-direction: column-reverse;
     --track-direction: column-reverse;
     --confirm-left: calc(-1 * var(--pin));
     --confirm-right: auto;
+    --confirm-top: auto;
+    --confirm-bottom: calc(-1 * var(--pin));
     --stack-margin-top: 0;
     --stack-margin-bottom: calc(-1 * (var(--card-h) - var(--card-offset-y)));
     --badge-left: calc(-1 * var(--pin));
@@ -552,6 +605,18 @@ button.discard-slot.discardable::after {
     white-space: nowrap;
     pointer-events: none;
 }
+.sold-stamp[data-lane="0"] {
+    --sold-top: 38%;
+    --sold-rot: -16deg;
+}
+.sold-stamp[data-lane="1"] {
+    --sold-top: 54%;
+    --sold-rot: -8deg;
+}
+.sold-stamp[data-lane="2"] {
+    --sold-top: 46%;
+    --sold-rot: -13deg;
+}
 .caravan header {
     width: 100%;
     height: auto;
@@ -571,15 +636,37 @@ button.discard-slot.discardable::after {
 }
 .caravan .score {
     /* Fixed width fitting bold 2-digit totals with room to spare; digits stay
-       right-aligned via the flex rules in the text block further down. A
-       freak 3-digit total clips with ellipsis instead of shifting the row —
-       scores past 99 need absurd stacking and never occur in real games. */
+       right-aligned via justify-content below. A freak 3-digit total clips
+       with ellipsis instead of shifting the row — scores past 99 need absurd
+       stacking and never occur in real games. */
     flex: 0 0 auto;
     width: calc(var(--fs-md) * 1.9 + var(--sp-2));
     padding-left: var(--sp-2);
     padding-right: 0;
     overflow: hidden;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-size: calc(var(--fs-md) * 1.25);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--c-white);
 }
+
+.caravan .score.sellable {
+    color: var(--player-color);
+}
+
+.caravan .score.sold,
+.caravan .score.busted {
+    font-weight: 700;
+}
+.caravan .score.busted {
+    color: var(--c-bust);
+}
+
 .caravan .title {
     /* Fixed width: the per-name scale (see NAME_SCALES) renders every name at
        C × fs-md, so a C-wide track always hugs its text and the eye-gap after
@@ -596,6 +683,29 @@ button.discard-slot.discardable::after {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+/* Title type scale per location, calibrated so every name renders the same
+   pixel width: factors are C/k with C = 6.15 and k the measured per-em text
+   width of each name (4.91/4.28/6.80/4.29/4.91/4.29 — stable across
+   viewports since per-em advances scale linearly). Retune from fresh
+   measurements if the names or the typeface change. */
+.caravan .title[data-name="Boneyard"] {
+    --name-scale: 1.253;
+}
+.caravan .title[data-name="Redding"] {
+    --name-scale: 1.436;
+}
+.caravan .title[data-name="Shady Sands"] {
+    --name-scale: 0.904;
+}
+.caravan .title[data-name="Dayglow"] {
+    --name-scale: 1.435;
+}
+.caravan .title[data-name="New Reno"] {
+    --name-scale: 1.252;
+}
+.caravan .title[data-name="The Hub"] {
+    --name-scale: 1.435;
 }
 /* Sigil: suit + direction icons as one slot. The spec lists no gap between
    them, so they sit adjacent with a hairline. The suit pip is a baked SVG
@@ -727,30 +837,6 @@ button.discard-slot.discardable::after {
     -webkit-mask-image: url("/icons/sort-ai-desc.svg");
     mask-image: url("/icons/sort-ai-desc.svg");
 }
-/* Score readout text styling; placement is handled by the flex row above. */
-.caravan .score {
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    font-size: calc(var(--fs-md) * 1.25);
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    color: var(--c-white);
-}
-
-.caravan .score.sellable {
-    color: var(--player-color);
-}
-
-.caravan .score.sold,
-.caravan .score.busted {
-    font-weight: 700;
-}
-.caravan .score.busted {
-    color: var(--c-bust);
-}
 
 .caravan .total {
     min-width: 2.5ch;
@@ -781,10 +867,6 @@ button.discard-slot.discardable::after {
     margin-bottom: var(--stack-margin-bottom);
 }
 
-.caravan .track > .card.pending-remove {
-    z-index: 51 !important;
-}
-
 /* ── 11 — Card states & attachments ── */
 /* Card states */
 
@@ -795,11 +877,45 @@ button.discard-slot.discardable::after {
 
 .caravan .track > .card {
     position: relative;
-    /* Per-row pseudo-random tilt (see caravanTilt): pivot sits on the primary
+    /* Stacking mirrors the old inline zIndex (index + 1): column-reverse AI
+       tracks invert paint order without it. attr() is Chromium-only;
+       elsewhere paint order applies (ponytail: per-row z-index if
+       non-Chromium stacking matters). */
+    z-index: calc(attr(data-index type(<integer>), 0) + 1);
+    /* Per-row pseudo-random tilt (see tiltIndex in Caravan.tsx; values on
+       .card[data-tilt] below): pivot sits on the primary
        top-left corner marking so the corner itself never translates and the
        ±4deg sweep stays inside the exposed strip of the row beneath. */
     transform: rotate(var(--caravan-tilt, 0deg));
     transform-origin: 12% 10%;
+}
+.caravan .track > .card[data-tilt="0"] {
+    --caravan-tilt: -4deg;
+}
+.caravan .track > .card[data-tilt="1"] {
+    --caravan-tilt: 2.5deg;
+}
+.caravan .track > .card[data-tilt="2"] {
+    --caravan-tilt: -1.5deg;
+}
+.caravan .track > .card[data-tilt="3"] {
+    --caravan-tilt: 3.5deg;
+}
+.caravan .track > .card[data-tilt="4"] {
+    --caravan-tilt: -3deg;
+}
+.caravan .track > .card[data-tilt="5"] {
+    --caravan-tilt: 1.5deg;
+}
+.caravan .track > .card[data-tilt="6"] {
+    --caravan-tilt: -2.5deg;
+}
+.caravan .track > .card[data-tilt="7"] {
+    --caravan-tilt: 4deg;
+}
+
+.caravan .track > .card.pending-remove {
+    z-index: 51;
 }
 
 .caravan .card > .card {
@@ -819,14 +935,17 @@ button.discard-slot.discardable::after {
 
 .caravan .card > .card:nth-of-type(1) {
     --col-tilt: 2deg;
+    --c: 1;
 }
 
 .caravan .card > .card:nth-of-type(2) {
     --col-tilt: -2.5deg;
+    --c: 2;
 }
 
 .caravan .card > .card:nth-of-type(3) {
     --col-tilt: 1deg;
+    --c: 3;
 }
 
 .caravans.human .card > .card:nth-of-type(1) {
@@ -1001,7 +1120,8 @@ button.discard-slot.discardable::after {
 /* ── 14 — Confirm & removal animations ── */
 .confirm {
     position: absolute;
-    top: calc(-1 * var(--pin));
+    top: var(--confirm-top, calc(-1 * var(--pin)));
+    bottom: var(--confirm-bottom, auto);
     right: var(--confirm-right, calc(-1 * var(--pin)));
     left: var(--confirm-left, auto);
     width: 1.375rem;
@@ -1013,16 +1133,6 @@ button.discard-slot.discardable::after {
     cursor: pointer;
     z-index: 10;
     padding: 0;
-}
-
-.confirm.portal {
-    position: fixed;
-    right: auto;
-    left: auto;
-    top: auto;
-    transform: none;
-    z-index: 9999;
-    margin: 0;
 }
 
 .confirm::before,
@@ -1414,17 +1524,13 @@ button.discard-slot.discardable::after {
     margin-left: -0.25em;
 }
 
-.log .card-name.red,
-.log .card-name.black,
-.log .card-name.hearts,
-.log .card-name.spades,
-.log .card-name.diamonds,
-.log .card-name.clubs {
+/* Card names in the log: bold at log size; four-suit palette shared by
+   the log and the caravan header readout. */
+.log .card-name {
     font-weight: 700;
     font-size: var(--fs-sm);
 }
 
-/* Four-suit palette, shared by the log and the caravan header readout. */
 .card-name.red,
 .card-name.hearts {
     /* Matches the hearts pips in public/cards/*.svg (fill="red"). */

@@ -60,7 +60,7 @@ await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 1,
   target: { player: 1, lane: 0, cardIndex: 1 }, handIndex: 0,
 }));
-await page.waitForFunction(() => window.__caravanStore?.transition?.pendingAck && document.querySelector(".confirm.portal"), null, { timeout: 5000 });
+await page.waitForFunction(() => window.__caravanStore?.transition?.pendingAck && document.querySelector(".confirm"), null, { timeout: 5000 });
 
 const pre = await page.evaluate(() => {
   const s = window.__caravanStore.state;
@@ -81,8 +81,8 @@ const pre = await page.evaluate(() => {
     stateShady: s.players[0].caravans[2].rows.map((r) => r.map((c) => c.rank)),
     stateDayglow: s.players[1].caravans[0].rows.map((r) => r.map((c) => c.rank)),
     jokers, pendings,
-    ackX: document.querySelectorAll(".confirm.portal").length,
-    ackLabel: document.querySelector(".confirm.portal")?.getAttribute("aria-label") ?? null,
+    ackX: document.querySelectorAll(".confirm").length,
+    ackLabel: document.querySelector(".confirm")?.getAttribute("aria-label") ?? null,
     selectable: document.querySelectorAll(".slot.selectable").length,
   };
 });
@@ -107,12 +107,12 @@ assert.match(pre.ackLabel ?? "", /Acknowledge removal/, "X must label the remova
 assert.equal(pre.selectable, 0, "human blocked until ack");
 
 console.log("Human clicks confirm X...");
-await page.waitForSelector(".confirm.portal", { timeout: 5000 });
-await page.evaluate(() => document.querySelector(".confirm.portal")?.click());
+await page.waitForSelector(".confirm", { timeout: 5000 });
+await page.evaluate(() => document.querySelector(".confirm")?.click());
 // NOTE: window.__caravanStore.transition goes stale on the ack path (the app
 // clears it via setUi without re-publishing hooks), so wait on the user-visible
 // signal — the confirm X unmounting — rather than waitNoPendingAck.
-await page.waitForFunction(() => document.querySelectorAll(".confirm.portal").length === 0, null, { timeout: 5000 });
+await page.waitForFunction(() => document.querySelectorAll(".confirm").length === 0, null, { timeout: 5000 });
 
 const post = await page.evaluate(() => {
   const s = window.__caravanStore.state;
@@ -125,7 +125,7 @@ const post = await page.evaluate(() => {
     jokerDom: document.querySelectorAll(".caravan .card.joker").length,
     jokerSide: j ? side : null,
     hostIndex: hostBtn?.getAttribute("data-index") ?? null,
-    ackX: document.querySelectorAll(".confirm.portal").length,
+    ackX: document.querySelectorAll(".confirm").length,
     pending: document.querySelectorAll(".caravan .card.pending, .caravan .card.pending-remove").length,
     current: s.current,
     phase: s.phase,

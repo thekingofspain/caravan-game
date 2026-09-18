@@ -63,10 +63,10 @@ await page.evaluate(() => window.__act({
   type: "playOperationCard", player: 1,
   target: { player: 0, lane: 0, cardIndex: 0 }, handIndex: 0,
 }));
-await page.waitForSelector(".confirm.portal", { timeout: 10000 });
+await page.waitForSelector(".confirm", { timeout: 10000 });
 console.log("Human acknowledges the removal...");
-await page.locator(".confirm.portal").first().click({ force: true });
-await page.waitForFunction(() => document.querySelectorAll(".confirm.portal").length === 0, null, { timeout: 10000 });
+await page.locator(".confirm").first().click({ force: true });
+await page.waitForFunction(() => document.querySelectorAll(".confirm").length === 0, null, { timeout: 10000 });
 await page.waitForFunction(
   () => window.__caravanStore?.state?.current === 0 && document.querySelectorAll(".hand.human .slot.selectable").length > 0,
   null, { timeout: 10000 }

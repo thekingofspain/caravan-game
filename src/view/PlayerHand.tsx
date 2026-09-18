@@ -1,9 +1,7 @@
 import { memo } from "react";
 
-import { cardClassName, cardLabel } from "../model/cards";
+import { cardClassName, cardLabel, cx } from "../model/cards";
 import { Human, Nullable, PlayerId, PlayerState } from "../model/types";
-
-const SLOT_KEYS = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"];
 
 interface PlayerHandProps {
     playerId: PlayerId;
@@ -30,33 +28,26 @@ function PlayerHandImpl({
             className={`hand ${isHuman ? "human" : "ai"}`}
             aria-label={`${label} hand, ${String(player.hand.length)} cards`}
         >
-            <div
-                className="cards"
-                style={{ "--fan-count": player.hand.length } as React.CSSProperties}
-            >
-                {SLOT_KEYS.map((slotKey) => {
-                    const i = Number(slotKey.slice(1));
+            <div className="cards" data-fan-count={player.hand.length}>
+                {Array.from({ length: 8 }, (_, i) => {
                     const card = player.hand.at(i);
-                    const slotStyle = { "--i": i } as React.CSSProperties;
+                    const slotKey = `s${String(i)}`;
 
                     if (card === undefined) {
-                        return (
-                            <div
-                                key={slotKey}
-                                className="slot"
-                                style={slotStyle}
-                                aria-hidden="true"
-                            />
-                        );
+                        return <div key={slotKey} className="slot" data-i={i} aria-hidden="true" />;
                     }
 
                     if (isHuman) {
                         return (
                             <button
                                 type="button"
-                                className={`slot ${selectableIndices.has(i) ? "selectable" : ""} ${selectedHandIndex === i ? "selected" : ""}`}
-                                key={card.id}
-                                style={slotStyle}
+                                className={cx(
+                                    "slot",
+                                    selectableIndices.has(i) && "selectable",
+                                    selectedHandIndex === i && "selected"
+                                )}
+                                key={slotKey}
+                                data-i={i}
                                 onClick={() => {
                                     onCardClick(i);
                                 }}
@@ -67,7 +58,10 @@ function PlayerHandImpl({
                                 aria-pressed={selectedHandIndex === i}
                             >
                                 <div
-                                    className={`${cardClassName("card", card)} ${selectedHandIndex === i ? "selected" : ""}`}
+                                    className={cx(
+                                        cardClassName("card", card),
+                                        selectedHandIndex === i && "selected"
+                                    )}
                                     aria-hidden="true"
                                 />
                             </button>
@@ -75,7 +69,7 @@ function PlayerHandImpl({
                     }
 
                     return (
-                        <div key={card.id} className="slot ai" style={slotStyle} aria-hidden="true">
+                        <div key={slotKey} className="slot ai" data-i={i} aria-hidden="true">
                             <div className="card back deck2" />
                         </div>
                     );

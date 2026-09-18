@@ -77,7 +77,7 @@ await page.waitForFunction(
   () => window.__caravanStore.transition?.pendingAck?.confirmer === 0,
   null, { timeout: 10000 }
 );
-await page.waitForSelector(".confirm.portal", { timeout: 5000 });
+await page.waitForSelector(".confirm", { timeout: 5000 });
 
 // 1) Confirmation state: AI move needs Human ack.
 const state = await page.evaluate(() => {
@@ -91,8 +91,8 @@ const state = await page.evaluate(() => {
     playedRank: t?.pendingAck?.played?.card?.rank ?? null,
     pendingDom: document.querySelectorAll(".caravan .card.pending").length,
     jokerDom: document.querySelectorAll(".caravan .card.joker").length,
-    ackX: document.querySelectorAll(".confirm.portal").length,
-    ackLabel: document.querySelector(".confirm.portal")?.getAttribute("aria-label") ?? null,
+    ackX: document.querySelectorAll(".confirm").length,
+    ackLabel: document.querySelector(".confirm")?.getAttribute("aria-label") ?? null,
     selectable: document.querySelectorAll(".slot.selectable").length,
   };
 });
@@ -137,12 +137,12 @@ assert.equal(state.selectable, 0, "human has no selectable slots while ack is pe
 await page.locator(".caravans.human .caravan").first().click({ force: true });
 // Board clicks must not clear the ack: re-assert presence after click handling settles.
 await page.waitForFunction(
-  () => document.querySelectorAll(".confirm.portal").length >= 1
+  () => document.querySelectorAll(".confirm").length >= 1
     && window.__caravanStore.transition?.pendingAck != null,
   null, { timeout: 5000 }
 );
 const stillPending = await page.evaluate(() => ({
-  ackX: document.querySelectorAll(".confirm.portal").length,
+  ackX: document.querySelectorAll(".confirm").length,
   pending: document.querySelectorAll(".caravan .card.pending").length,
 }));
 assert.equal(stillPending.ackX >= 1, true, "ack X persists until explicitly confirmed");
@@ -153,12 +153,12 @@ console.log("Human clicks confirm X...");
 // observations; a synthetic mouse click can land between repositions and
 // miss. Click the settled element directly so the test asserts the ack
 // flow (not pointer hit-testing of the floating portal).
-await page.waitForSelector(".confirm.portal", { timeout: 5000 });
-await page.evaluate(() => document.querySelector(".confirm.portal")?.click());
+await page.waitForSelector(".confirm", { timeout: 5000 });
+await page.evaluate(() => document.querySelector(".confirm")?.click());
 // Ack is a ui-only update (no state change), so window.__caravanStore keeps a
 // stale pendingAck: gate on DOM signals instead (portal detaches ~320ms after X).
 await page.waitForFunction(
-  () => document.querySelectorAll(".confirm.portal").length === 0,
+  () => document.querySelectorAll(".confirm").length === 0,
   null, { timeout: 10000 }
 );
 await page.waitForFunction(
@@ -167,7 +167,7 @@ await page.waitForFunction(
 );
 
 const after = await page.evaluate(() => ({
-  ackX: document.querySelectorAll(".confirm.portal").length,
+  ackX: document.querySelectorAll(".confirm").length,
   pending: document.querySelectorAll(".caravan .card.pending, .caravan .card.pending-remove").length,
   jokerDom: document.querySelectorAll(".caravan .card.joker").length,
   current: window.__caravanStore.state.current,

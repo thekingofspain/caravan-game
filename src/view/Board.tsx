@@ -1,7 +1,7 @@
 import { Copy } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
-import { cardLabel } from "../model/cards";
+import { cardLabel, cx } from "../model/cards";
 import { inOpeningRound } from "../model/engine";
 import { segmentsText } from "../model/gameLog";
 import { caravanName } from "../model/names";
@@ -40,11 +40,10 @@ const GAMEOVER_COPY = {
 
 const WIDE_SIDEBAR_QUERY = "(min-width: 1500px)";
 
-// Branding-iron stamp placement per caravan: heights staggered so the three
-// across never line up vertically; tilt inverts around -12deg within ±5deg.
+// Branding-iron stamp placement per lane lives on .sold-stamp[data-lane] in
+// global.css: heights staggered so the three across never line up
+// vertically; tilt inverts around -12deg within ±5deg.
 
-const SOLD_STAMP_TOPS = ["38%", "54%", "46%"] as const;
-const SOLD_STAMP_ROTS = ["-16deg", "-8deg", "-13deg"] as const;
 const SHOE_PEEK_ENABLED =
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("peekShoe");
 const BRACE_RE = /\{([^{}]+)\}/g;
@@ -54,20 +53,81 @@ const BRACE_RE = /\{([^{}]+)\}/g;
 // sort-human-desc.svg, ai asc → sort-ai-asc.svg, ai desc → sort-ai-desc.svg.
 // Human arrows point down, AI arrows always point up; digits toggle 1-9 / 9-1.
 
-// Title type scale per location, calibrated so every name renders the same
-// pixel width: factors are C/k with C = 6.15 and k the measured per-em text
-// width of each name (4.91/4.28/6.80/4.29/4.91/4.29 — stable across
-// viewports since per-em advances scale linearly). Retune from fresh
-// measurements if the names or the typeface change.
+// Title type scale per location lives on .caravan .title[data-name] in
+// global.css, calibrated so every name renders the same pixel width.
 
-const NAME_SCALES: Record<string, number> = {
-    Boneyard: 1.253,
-    Redding: 1.436,
-    "Shady Sands": 0.904,
-    Dayglow: 1.435,
-    "New Reno": 1.252,
-    "The Hub": 1.435
-};
+function AiLevelControl({
+    aiLevel,
+    onAiLevelChange
+}: {
+    aiLevel: AiLevel;
+    onAiLevelChange: (level: AiLevel) => void;
+}) {
+    return (
+        <label className="ai-level">
+            Difficulty level
+            <select
+                className="btn"
+                aria-label="AI difficulty"
+                value={aiLevel}
+                onChange={(e) => {
+                    onAiLevelChange(e.target.value as AiLevel);
+                }}
+            >
+                <option value="normal">Normal</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+                <option value="master">Master</option>
+            </select>
+        </label>
+    );
+}
+
+const MenuItems = memo(function MenuItems({
+    log,
+    menuState,
+    menuScores,
+    aiLevel,
+    onAiLevelChange,
+    onNewGame,
+    onCopyActivity
+}: {
+    log: GameStore["state"]["log"];
+    menuState: GameStore["state"];
+    menuScores: GameScores;
+    aiLevel: AiLevel;
+    onAiLevelChange: (level: AiLevel) => void;
+    onNewGame: () => void;
+    onCopyActivity: () => void;
+}) {
+    return (
+        <>
+            <div className="menu-controls">
+                <button type="button" className="btn" onClick={onNewGame}>
+                    New game
+                </button>
+                <AiLevelControl aiLevel={aiLevel} onAiLevelChange={onAiLevelChange} />
+            </div>
+            <section className="activity" role="dialog" aria-label="Activity log">
+                <header>
+                    <span>Activity</span>
+                    <div className="activity-actions">
+                        <button
+                            type="button"
+                            className="copy"
+                            onClick={onCopyActivity}
+                            aria-label="Copy activity log and debug info"
+                            title="Copy activity log and debug info"
+                        >
+                            <Copy size={18} aria-hidden="true" />
+                        </button>
+                    </div>
+                </header>
+                <Sidebar log={log} state={menuState} scores={menuScores} />
+            </section>
+        </>
+    );
+});
 
 function CaravanColumn({
     playerId,
@@ -101,38 +161,23 @@ function CaravanColumn({
                 const sellable = meta.isSellable;
                 const sold = isGameOver && meta.isSold;
 
-                // Equal rendered widths via the calibrated table above.
+                // Equal rendered widths via the calibrated title scales in global.css.
 
                 const name = caravanName(playerId, laneIndex);
-                const nameScale = NAME_SCALES[name] ?? 1;
 
                 return (
                     <div
-                        className={`caravan ${sellable ? "sellable" : ""} ${sold ? "is-sold" : ""}`}
+                        className={cx("caravan", sellable && "sellable", sold && "is-sold")}
                         key={laneIndex}
                     >
                         {sold ? (
-                            <div
-                                className="sold-stamp"
-                                style={
-                                    {
-                                        "--sold-top": SOLD_STAMP_TOPS[laneIndex as 0 | 1 | 2],
-                                        "--sold-rot": SOLD_STAMP_ROTS[laneIndex as 0 | 1 | 2]
-                                    } as React.CSSProperties
-                                }
-                                aria-hidden="true"
-                            >
+                            <div className="sold-stamp" data-lane={laneIndex} aria-hidden="true">
                                 Sold
                             </div>
                         ) : null}
                         <header data-dir={caravan.direction ?? undefined}>
                             <CaravanPoints meta={meta} />
-                            <span
-                                className="title"
-                                style={
-                                    { "--name-scale": nameScale.toFixed(3) } as React.CSSProperties
-                                }
-                            >
+                            <span className="title" data-name={name}>
                                 {name}
                             </span>
                             <span className="sigil">
@@ -188,7 +233,7 @@ function DiscardSlot({
         return (
             <button
                 type="button"
-                className={`discard-slot${last ? " filled" : ""} discardable`}
+                className={cx("discard-slot discardable", last && "filled")}
                 onClick={onDiscard}
                 aria-label={`Discard ${cardLabel(discardCard)} to your discard pile`}
                 title={`Discard ${cardLabel(discardCard)} to your discard pile`}
@@ -236,26 +281,8 @@ export function Board({ store }: { store: GameStore }) {
     const awaitingHumanAck = transition?.pendingAck?.confirmer === Human;
     const humanCanAct = human && !awaitingHumanAck;
     const scores = useMemo(() => getCaravanScores(state), [state]);
-    const aiLevelControl = (
-        <label className="ai-level">
-            Difficulty level
-            <select
-                className="btn"
-                aria-label="AI difficulty"
-                value={store.aiLevel}
-                onChange={(e) => {
-                    store.setAiLevel(e.target.value as AiLevel);
-                }}
-            >
-                <option value="normal">Normal</option>
-                <option value="hard">Hard</option>
-                <option value="expert">Expert</option>
-                <option value="master">Master</option>
-            </select>
-        </label>
-    );
 
-    const onCopyActivity = async () => {
+    const onCopyActivity = useCallback(async () => {
         const lines: string[] = [];
         const params =
             typeof window !== "undefined"
@@ -309,47 +336,7 @@ export function Board({ store }: { store: GameStore }) {
         } catch {
             setToast("Copy failed");
         }
-    };
-
-    // Shared sidebar contents: docked rail on wide screens, drawer on narrow.
-    // New game also closes the drawer (no-op when docked).
-
-    const menuItems = (
-        <>
-            <div className="menu-controls">
-                <button
-                    type="button"
-                    className="btn"
-                    onClick={() => {
-                        onNewGame();
-                        setMenuOpen(false);
-                    }}
-                >
-                    New game
-                </button>
-                {aiLevelControl}
-            </div>
-            <section className="activity" role="dialog" aria-label="Activity log">
-                <header>
-                    <span>Activity</span>
-                    <div className="activity-actions">
-                        <button
-                            type="button"
-                            className="copy"
-                            onClick={() => {
-                                void onCopyActivity();
-                            }}
-                            aria-label="Copy activity log and debug info"
-                            title="Copy activity log and debug info"
-                        >
-                            <Copy size={18} aria-hidden="true" />
-                        </button>
-                    </div>
-                </header>
-                <Sidebar log={state.log} state={state} scores={scores} />
-            </section>
-        </>
-    );
+    }, [state, scores]);
 
     // auto-clear toast after 3s
 
@@ -707,6 +694,29 @@ export function Board({ store }: { store: GameStore }) {
         setPendingDisband(null);
     }, []);
 
+    // Shared sidebar contents: docked rail on wide screens, drawer on narrow.
+
+    const handleMenuNewGame = useCallback(() => {
+        onNewGame();
+        setMenuOpen(false);
+    }, [onNewGame]);
+
+    const handleCopyClick = useCallback(() => {
+        void onCopyActivity();
+    }, [onCopyActivity]);
+
+    const menu = (
+        <MenuItems
+            log={state.log}
+            menuState={state}
+            menuScores={scores}
+            aiLevel={store.aiLevel}
+            onAiLevelChange={store.setAiLevel}
+            onNewGame={handleMenuNewGame}
+            onCopyActivity={handleCopyClick}
+        />
+    );
+
     const aiSelection = useMemo(
         () => ({
             selectedHandIndex: null,
@@ -747,7 +757,7 @@ export function Board({ store }: { store: GameStore }) {
     );
 
     return (
-        <div className={`board ${winnerSide !== null ? `gameover-${winnerSide}` : ""}`}>
+        <div className={cx("board", winnerSide !== null && `gameover-${winnerSide}`)}>
             {toast !== null ? (
                 <div role="alert" className="toast">
                     {toast}
@@ -773,7 +783,7 @@ export function Board({ store }: { store: GameStore }) {
                 {isWide ? (
                     <aside className="side-rail" aria-label="Game menu">
                         <span className="brand">Caravan</span>
-                        {menuItems}
+                        {menu}
                     </aside>
                 ) : (
                     <button
@@ -844,7 +854,10 @@ export function Board({ store }: { store: GameStore }) {
                                 <div className="shoe-pair">
                                     <button
                                         type="button"
-                                        className={`shoe ai ${aiPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                        className={cx(
+                                            "shoe ai",
+                                            aiPlayer.shoe.length === 0 && "empty"
+                                        )}
                                         onClick={SHOE_PEEK_ENABLED ? onViewAiShoe : undefined}
                                         aria-label={
                                             SHOE_PEEK_ENABLED
@@ -889,7 +902,10 @@ export function Board({ store }: { store: GameStore }) {
                                 <div className="shoe-pair">
                                     <button
                                         type="button"
-                                        className={`shoe ${humanPlayer.shoe.length === 0 ? "empty" : ""}`}
+                                        className={cx(
+                                            "shoe",
+                                            humanPlayer.shoe.length === 0 && "empty"
+                                        )}
                                         onClick={onShoeClick}
                                         aria-label={
                                             SHOE_PEEK_ENABLED
@@ -946,7 +962,7 @@ export function Board({ store }: { store: GameStore }) {
                                 ×
                             </button>
                         </div>
-                        {menuItems}
+                        {menu}
                     </nav>
                 </div>
             ) : null}

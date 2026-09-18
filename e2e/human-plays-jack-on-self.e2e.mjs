@@ -109,7 +109,7 @@ let after = await page.evaluate(()=>{
     transition: t,
     html: document.querySelector(".caravans.human .caravan")?.innerHTML.slice(0,800),
     pending: document.querySelectorAll(".card.pending, .card.pending-remove").length,
-    ackX: document.querySelectorAll(".confirm.portal").length,
+    ackX: document.querySelectorAll(".confirm").length,
     badgeAfter: document.querySelector(".caravans.human .caravan .badge.king")?.textContent || null,
     boneyardCardCount: document.querySelector(".caravans.human .caravan")?.querySelectorAll(".card").length,
     boneyardEmpty: document.querySelector(".caravans.human .caravan .empty") ? 1 : 0,
@@ -142,7 +142,7 @@ await page.waitForFunction(
   () => document.querySelectorAll(".slot.selectable").length > 0,
   null, { timeout: 10000 }
 );
-let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackX: document.querySelectorAll(".confirm.portal").length }));
+let afterAI = await page.evaluate(()=> ({ current: window.__caravanStore.state.current, humanSel: document.querySelectorAll(".slot.selectable").length, pending: document.querySelectorAll(".card.pending, .card.pending-remove").length, ackX: document.querySelectorAll(".confirm").length }));
 console.log(` after AI auto move: current=${afterAI.current} humanSelectable=${afterAI.humanSel} pending=${afterAI.pending} ackX=${afterAI.ackX}`);
 assert.equal(afterAI.current, Human, "after AI auto move, back to Human turn");
 assert.equal(afterAI.pending, 0, "transient pending grey cleared once AI moved");

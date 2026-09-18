@@ -94,7 +94,7 @@ await page.waitForFunction(
 
 const afterHuman = await page.evaluate(() => ({
   confirmer: window.__caravanStore.transition?.pendingAck?.confirmer ?? null,
-  ackX: document.querySelectorAll(".confirm.portal").length,
+  ackX: document.querySelectorAll(".confirm").length,
   pending: document.querySelectorAll(".caravan .card.pending").length,
   current: window.__caravanStore.state.current,
 }));
@@ -115,7 +115,7 @@ await page.waitForFunction(
   () => window.__caravanStore.transition?.pendingAck?.confirmer === 0,
   null, { timeout: 10000 }
 );
-await page.waitForSelector(".confirm.portal", { timeout: 5000 });
+await page.waitForSelector(".confirm", { timeout: 5000 });
 
 const afterAi = await page.evaluate(() => {
   const t = window.__caravanStore.transition;
@@ -125,8 +125,8 @@ const afterAi = await page.evaluate(() => {
     playedRank: t?.pendingAck?.played?.card?.rank ?? null,
     current: window.__caravanStore.state.current,
     pendingDom: document.querySelectorAll(".caravan .card.pending").length,
-    ackX: document.querySelectorAll(".confirm.portal").length,
-    ackLabels: Array.from(document.querySelectorAll(".confirm.portal")).map(
+    ackX: document.querySelectorAll(".confirm").length,
+    ackLabels: Array.from(document.querySelectorAll(".confirm")).map(
       (el) => el.getAttribute("aria-label")
     ),
     jokerDom: Array.from(document.querySelectorAll(".caravan .card .card")).filter(

@@ -60,7 +60,7 @@ console.log("AI plays J♣ on Shady Sands {5♥} k=4");
 await page.evaluate(()=> window.__act({ type:"playOperationCard", player:1, target:{ player:0, lane: 2, cardIndex:4 }, handIndex:0 }));
 // The AI Jack creates a pendingAck with a portal confirm X; wait for both the
 // portal and the pending highlight rather than a fixed sleep.
-await page.waitForSelector(".confirm.portal", { timeout: 10000 });
+await page.waitForSelector(".confirm", { timeout: 10000 });
 await page.waitForFunction(
   () => document.querySelector('.caravans.human .caravan .card[data-index="4"]')?.classList.contains("pending"),
   null,
@@ -79,7 +79,7 @@ try {
   console.log(`📸 Shady caravan screenshot saved to ${caravanPath} (${fs.statSync(caravanPath).size} bytes)`);
 } catch (e) { console.log("caravan screenshot failed", e.message); }
 try {
-  const xLoc = page.locator(".confirm.portal").first();
+  const xLoc = page.locator(".confirm").first();
   if (await xLoc.count() > 0) {
     await xLoc.screenshot({ path: xClosePath });
     console.log(`📸 X close-up saved to ${xClosePath}`);
@@ -90,7 +90,7 @@ try {
 
 // --- Visual + structural assertions ---
 let info = await page.evaluate(()=>{
-  const xEl = document.querySelector(".confirm.portal");
+  const xEl = document.querySelector(".confirm");
   const xRect = xEl ? xEl.getBoundingClientRect() : null;
   const pendingRow = document.querySelector('.caravans.human .caravan .card[data-index="4"]');
   const nextRow = document.querySelector('.caravans.human .caravan .card[data-index="5"]');
@@ -98,7 +98,7 @@ let info = await page.evaluate(()=>{
   const pendingZ = pendingRow ? getComputedStyle(pendingRow).zIndex : null;
   const nextZ = nextRow ? getComputedStyle(nextRow).zIndex : null;
   const xZ = xEl ? getComputedStyle(xEl).zIndex : null;
-  const xHasPortalClass = xEl ? xEl.classList.contains("portal") : false;
+  const xInRow = xEl ? xEl.closest('.caravans.human .caravan .card[data-index="4"]') !== null : false;
   const xAria = xEl ? xEl.getAttribute("aria-label") : null;
   // Get Shady caravan width
   const shadyCaravan = document.querySelectorAll('.caravans.human .caravan')[2];
@@ -113,7 +113,7 @@ let info = await page.evaluate(()=>{
     topElClass = topEl ? topEl.className : null;
     isOnTop = topEl ? (topEl.classList.contains("confirm") || !!topEl.closest(".confirm")) : false;
   }
-  // Portal X lives in document.body (position:fixed) — check it is fully inside the viewport, not clipped
+  // Anchor-child X rides inside its row — check it is fully inside the viewport, not clipped
   let fullyVisible = false;
   if (xRect) {
     fullyVisible = xRect.width > 0 && xRect.height > 0 &&
@@ -125,7 +125,7 @@ let info = await page.evaluate(()=>{
     pendingZ,
     nextZ,
     xZ,
-    xHasPortalClass,
+    xInRow,
     xAria,
     isOnTop,
     topElClass,
@@ -135,14 +135,12 @@ let info = await page.evaluate(()=>{
     fullyVisible,
   };
 });
-console.log("info", JSON.stringify(info,null,2));
 
 console.log("\n--- Assertions (should FAIL before fix, PASS after) ---");
 let failures = [];
 if (!info.pendingHasClass) failures.push(`pending row missing pending class (got ${info.pendingRowClass})`);
-if (info.pendingZ !== "5") failures.push(`pending row zIndex should be 5 (stack order index+1), got ${info.pendingZ}`);
-if (!info.xHasPortalClass) failures.push(`confirm X should have portal class (body portal, over king)`);
-if (info.xZ !== "9999") failures.push(`confirm zIndex should be 9999 (over king), got ${info.xZ}`);
+if (!info.xInRow) failures.push(`confirm X should ride inside the pending row, got ${info.pendingRowClass}`);
+if (info.xZ !== "10") failures.push(`confirm zIndex should be 10 (row lifts via :has), got ${info.xZ}`);
 if (!info.xAria || !info.xAria.startsWith("Acknowledge removal of")) failures.push(`confirm X aria-label should start "Acknowledge removal of", got ${info.xAria}`);
 if (!info.isOnTop) failures.push(`confirm X not on top (elementFromPoint hits ${info.topElClass}, not X) — X occluded`);
 // Check that X is fully inside the viewport (entire circle visible, not half clipped)
