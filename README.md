@@ -1,1 +1,1 @@
-Play the game at https://github.com.io/thekingofspain/caravan-game/index.html
+Play the game at https://thekingofspain.github.io/caravan-game/
