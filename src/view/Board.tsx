@@ -245,7 +245,7 @@ function DiscardSlot({
 
     if (last === null) {
         return (
-            <div className="discard-slot" aria-label={`${label} discard pile, empty`}>
+            <div className="discard-slot" role="region" aria-label={`${label} discard pile, empty`}>
                 <div className="empty" aria-hidden="true" />
             </div>
         );
